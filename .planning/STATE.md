@@ -5,15 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** Generate and publish complete social media posts (single or carousel) in one wizard run, with AI-generated images, WhatsApp preview, and automatic publishing to Instagram + Facebook
-**Current focus:** Planning next milestone
+**Current focus:** v1.2 Stories Publishing — defining requirements
 
 ## Current Position
 
-Milestone: v1.1 Automatic Publishing — SHIPPED 2026-04-17
-Next: `/gsd:new-milestone` to define v1.2 requirements and roadmap
-Last activity: 2026-04-17 — v1.1 milestone archived. 73-node workflow live on Azure. 9 phases, 14 plans, 74 commits over 7 days.
+Milestone: v1.2 Stories Publishing
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-17 — Milestone v1.2 started. Research phase next.
 
-Progress: [██████████] 100% (v1.0 complete) — [██████████] 100% (v1.1 complete)
+Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [░░░░░░░░░░] 0% (v1.2)
 
 ## Performance Metrics
 

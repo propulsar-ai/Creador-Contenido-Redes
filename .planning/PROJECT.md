@@ -45,7 +45,22 @@ Generate and publish complete social media posts (single or carousel) in one wiz
 
 ### Active
 
-(None — define with `/gsd:new-milestone`)
+**Milestone v1.2 Stories Publishing** — requirements defined in `.planning/REQUIREMENTS.md`
+
+## Current Milestone: v1.2 Stories Publishing
+
+**Goal:** Tras aprobar SI en WhatsApp, el sistema publica una Story vertical 9:16 en Instagram + Facebook con imagen generada por IA, scheduling limitado a <22h (ventana útil) y audit trail completo — reutilizando el pipeline existente de v1.0/v1.1 sin romperlo.
+
+**Target features:**
+- Nuevo formato "Historia" en Wizard PASO 3 (además de single post y carousel)
+- Generación de imagen vertical 9:16 (1080x1920) con Ideogram v3 / Flux 2 Pro / Nano Banana Pro
+- Publicación a Instagram Story vía Meta Graph API v22 (`media_type=STORIES`)
+- Publicación a Facebook Page Story vía `photo_stories` (2-step: upload unpublished → publish as story)
+- Preview WhatsApp con imagen vertical + caption para decisión SI/NO (caption NO se envía a Meta)
+- Scheduling con warning si > 22h (la Story expira 24h post-publicación)
+- Log Google Sheets con `Format=story` + columna `Expires_At`
+- Skip hashtag comment en Stories (no soportado por Meta)
+- Error handling reusando el subgraph de v1.1
 
 ### Out of Scope
 
@@ -55,7 +70,7 @@ Generate and publish complete social media posts (single or carousel) in one wiz
 - Mobile app — server-side pipeline only
 - IG Insights analytics — requires 24h post-publish; separate workflow
 - A/B testing of captions — requires analytics layer first
-- Story publishing — different aspect ratio + ephemeral; separate milestone
+<!-- Story publishing MOVED to Active — v1.2 -->
 - Multi-account publishing — requires multi-tenant token management
 - Scheduling beyond 24h — Azure Container Apps scale-to-zero risk
 - IG native `publish_at` parameter — doesn't exist in IG Graph API
@@ -103,4 +118,4 @@ Generate and publish complete social media posts (single or carousel) in one wiz
 | Fan-in without Merge node | Both Wait and IF FALSE wire to same target | ✓ Good — simpler |
 
 ---
-*Last updated: 2026-04-17 after v1.1 milestone*
+*Last updated: 2026-04-17 after starting v1.2 Stories milestone*
