@@ -37,7 +37,7 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 
 **Milestone Goal:** Tras aprobar SI en WhatsApp, publicar Story vertical 9:16 en Instagram + Facebook con imagen AI, scheduling <22h, audit trail — reutilizando pipeline v1.0/v1.1 sin romperlo.
 
-- [ ] **Phase 10: Wizard Historia Format** - Add "Historia" as a third format in Wizard with Story-aware scheduling and model restrictions
+- [x] **Phase 10: Wizard Historia Format** - Add "Historia" as a third format in Wizard with Story-aware scheduling and model restrictions (completed 2026-04-19)
 - [ ] **Phase 11: Story Image Generation** - Route story briefs to Ideogram 9:16 in n8n with Supabase session persistence and WA preview disclaimer
 - [ ] **Phase 12: Instagram Story Publishing** - Create IG Story container, publish, retrieve permalink/expiry, wire error handler; SCHED-02 guard in same phase
 - [ ] **Phase 13: Facebook Story + Log + Notifications** - Publish FB Story, extend Sheets log schema, send Story-specific WA success notification
@@ -106,7 +106,7 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 | 7. Carousel Publishing (IG + FB) | v1.1 | 3/3 | Complete | 2026-04-17 |
 | 8. Scheduling | v1.1 | 2/2 | Complete | 2026-04-17 |
 | 9. Error Hardening + Hashtags + Token Alerts | v1.1 | 3/3 | Complete | 2026-04-17 |
-| 10. Wizard Historia Format | v1.2 | 0/TBD | Not started | - |
+| 10. Wizard Historia Format | v1.2 | Complete    | 2026-04-19 | - |
 | 11. Story Image Generation | v1.2 | 0/TBD | Not started | - |
 | 12. Instagram Story Publishing | v1.2 | 0/TBD | Not started | - |
 | 13. Facebook Story + Log + Notifications | v1.2 | 0/TBD | Not started | - |
