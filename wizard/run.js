@@ -275,6 +275,74 @@ function parsePublishTime(input) {
   return { publish_at, wait_minutes: Math.round(diffMs / 60000) };
 }
 
+// ─── 9:16 image validator (Stories) ────────────────────────
+async function validateImageIs916(url, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'Range': 'bytes=0-2048' }
+    });
+    clearTimeout(timer);
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status} al acceder a la imagen` };
+
+    const buf = Buffer.from(await res.arrayBuffer());
+    let width, height;
+
+    // PNG: magic bytes 89 50 4E 47, dimensions at bytes 16-24
+    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47 && buf.length >= 24) {
+      width  = buf.readUInt32BE(16);
+      height = buf.readUInt32BE(20);
+    }
+    // JPEG: magic bytes FF D8, walk SOF markers
+    else if (buf[0] === 0xFF && buf[1] === 0xD8) {
+      let i = 2;
+      while (i < buf.length - 10) {
+        if (buf[i] !== 0xFF) break;
+        const marker = buf[i + 1];
+        if ((marker >= 0xC0 && marker <= 0xC3) || (marker >= 0xC5 && marker <= 0xC7) ||
+            (marker >= 0xC9 && marker <= 0xCB) || (marker >= 0xCD && marker <= 0xCF)) {
+          height = buf.readUInt16BE(i + 5);
+          width  = buf.readUInt16BE(i + 7);
+          break;
+        }
+        const segLen = buf.readUInt16BE(i + 2);
+        i += 2 + segLen;
+      }
+    }
+    // WebP: RIFF signature — can't parse dimensions with this method
+    else if (buf.slice(0, 4).toString('ascii') === 'RIFF') {
+      return { ok: null, warning: 'Formato WebP detectado — no se pueden leer dimensiones automáticamente. ¿Confirmás que es 9:16 vertical?' };
+    }
+    else {
+      return { ok: null, warning: 'Formato de imagen no reconocido. ¿Confirmás que es 9:16 vertical?' };
+    }
+
+    if (!width || !height) {
+      return { ok: null, warning: 'No se pudieron leer las dimensiones. ¿Confirmás que es 9:16 vertical?' };
+    }
+
+    // 9:16 = 0.5625, ±5% tolerance
+    const ratio  = width / height;
+    const target = 9 / 16;
+    if (Math.abs(ratio - target) > 0.05) {
+      return {
+        ok: false,
+        error: `La imagen es ${width}×${height} (ratio ${ratio.toFixed(3)}). Las Stories requieren 9:16 vertical (ej: 1080×1920). Usá una imagen vertical.`
+      };
+    }
+    return { ok: true, width, height };
+
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') {
+      return { ok: null, warning: 'La URL tardó demasiado en responder. ¿Confirmás que es 9:16 vertical?' };
+    }
+    return { ok: null, warning: `No se pudo acceder a la imagen (${err.message}). ¿Confirmás que es 9:16 vertical?` };
+  }
+}
+
 // ─── WIZARD PRINCIPAL ──────────────────────────────────────
 async function runWizard() {
   console.log("\n");
