@@ -1,239 +1,268 @@
-# Project Research Summary
+# Project Research Summary — v1.2 Stories Publishing
 
-**Project:** Propulsar Content Engine — v1.1 Automatic Publishing
-**Domain:** Social media auto-publishing via Meta Graph API + Azure Blob + n8n scheduling
-**Researched:** 2026-04-10
-**Confidence:** HIGH
+**Project:** Propulsar Content Engine — v1.2 Stories Publishing
+**Domain:** Instagram + Facebook Page Stories auto-publishing via Meta Graph API
+**Researched:** 2026-04-18
+**Confidence:** HIGH for integration architecture; MEDIUM for IG Stories API host and FB `photo_stories` flow (require live verification)
+
+---
 
 ## Executive Summary
 
-v1.1 is a publishing pipeline extension to the existing v1.0 content generation system. The existing stack (Node.js Wizard, n8n 2.14.2 on Azure Container Apps, GPT-4o, Flux/Ideogram/Nano Banana, YCloud WhatsApp, Supabase, Google Sheets) is proven and requires no changes. The new work adds exactly three components after the SI approval gate: Azure Blob Storage for image re-hosting, Meta Graph API v22 calls for IG and FB publishing, and an n8n Wait node for optional scheduling. All four researchers independently converged on the same phase build order — foundation/re-host first, then IG single, then FB single, then carousels, then scheduling, then error hardening — because each phase is a direct dependency of the next.
+v1.2 Stories Publishing is a **targeted extension** to the existing v1.0/v1.1 pipeline — adding a third format ("Historia") alongside single post and carousel. Nearly all infrastructure is reused: Azure Blob re-hosting, WhatsApp preview, scheduling, error handler, Supabase sessions, Google Sheets log. The new work is: Wizard format selector + 9:16 image generation + IG Story publish chain + FB Page Story publish + Sheets schema extension (`Formato`, `Expires_At`).
 
-The recommended approach is entirely within n8n using built-in nodes: HTTP Request node for Azure Blob PUT (SAS pattern) and Meta Graph API calls, Wait node for scheduling, and Code nodes for dynamic array construction (FB carousel `attached_media`). No new npm packages are needed. The entire new sub-flow attaches at one point in the existing workflow: between `retrieve-session` and `log-sheets`. Meta tokens (already confirmed working since 2026-04-10) are long-lived Page tokens that do not expire by time, eliminating any refresh complexity for v1.1.
+The recommended 4-phase build order — Wizard format → n8n image gen for 9:16 → IG Story publish → FB Story publish + Sheets/notifications — matches existing GSD pipeline patterns. Researchers converged on reusing existing infrastructure (routing via chained IF v1 nodes, separate terminal branch for Stories to avoid hashtag comment bug, WA preview reused unchanged).
 
-The three critical risks are: (1) passing Ideogram ephemeral URLs directly to Meta — they expire before Meta fetches them, making Azure re-hosting non-negotiable; (2) calling `media_publish` more than once (not idempotent — produces duplicate live posts); (3) using IF v2 or Switch v3 nodes, which always route to TRUE in n8n 2.14.2. A secondary infrastructure risk is Azure Container Apps scale-to-zero behavior killing Wait node executions — verifying min-replicas=1 must happen before the scheduling phase goes live.
+**Three critical conflicts emerged between researchers** that require live API verification before production build:
+
+1. **IG Stories API host — HIGHEST RISK.** Stack and Features research claimed `graph.facebook.com/{IG_ID}/media?media_type=STORIES` (same endpoint as FEED). Pitfalls agent validated Meta's live content publishing docs (HTTP 200, 2026-04-18) which state *"Reels and stories are not supported"* on that chain and require `graph.instagram.com` host. **Resolution:** plan for `graph.instagram.com` with a live API verification task as the first task in Phase 12. Highest-confidence signal points to Pitfalls being correct (it's the only claim grounded in live docs).
+
+2. **FB Page Story flow.** Stack and Features claimed single-step `POST /{PAGE_ID}/photo_stories?url=X`. Pitfalls inferred 2-step `POST /photos?published=false` → `POST /photo_stories?photo_id=X` by analogy with v1.1 FB carousel. Official `/photo_stories` docs returned 404 for all agents. **Resolution:** Phase 13 must begin with a live API test task that determines the correct flow before building production nodes.
+
+3. **Image model 9:16 compatibility.** All three models claim support, but Pitfalls flagged Flux `portrait_4_3` = 896×1152 (wrong ratio 0.778) and Nano Banana borderline at 1080×1918. **Resolution:** v1.2 ships with Ideogram-only for Stories (`ASPECT_9_16` = 1080×1920 exact). Flux and Nano Banana for Stories deferred until empirically verified in a later milestone.
+
+Secondary risks: Stories don't support caption/text overlays via API (text must be burned into the image by Ideogram), hashtag comments must be completely bypassed for Stories (separate terminal branch), and scheduling cap for Stories is 22h (not 24h) to guarantee ≥2h visibility.
+
+---
 
 ## Key Findings
 
-### Recommended Stack
-
-The v1.1 stack additions are minimal and leverage existing infrastructure. No new services are required beyond Azure Blob Storage (already in the Azure resource group) and Meta Graph API access (tokens already verified). The existing n8n 2.14.2 instance on Azure Container Apps supports all required nodes natively.
-
-**Core technology additions:**
-
-- **Meta Graph API v22.0**: IG + FB publishing — v22 is stable; avoid v25 (too new, churning). Use `graph.instagram.com` for IG calls (not the deprecated `graph.facebook.com` IG path). Pin the version explicitly in all URLs.
-- **n8n Azure Storage node / HTTP Request PUT + SAS**: Image re-hosting — the native Azure Storage node supports blob create/delete. For SAS-based uploads, the HTTP Request node PUT pattern works directly. Use public-access-level container to eliminate SAS expiry risk for the blob serve URL.
-- **n8n Wait node (At Specified Time)**: Scheduling — on v2.14.2, waits >65s persist to DB and survive restarts. All real scheduling use cases (minutes to 24h ahead) are well above the threshold. Full durability fix landed in v2.16.0 (April 2026), but the current version is safe for production scheduling windows.
-- **Long-lived Page Access Token**: Authentication — does not expire by time; invalidated only by password change, admin role removal, or explicit revocation. No refresh cron needed. Current tokens from Susana's session are confirmed working.
-
-**New environment variables required:** `AZURE_STORAGE_ACCOUNT`, `AZURE_CONTAINER`, `AZURE_SAS_PARAMS` (write SAS for uploads). `META_PAGE_TOKEN`, `INSTAGRAM_ACCOUNT_ID`, `FACEBOOK_PAGE_ID` are already in `.env` since 2026-04-10.
-
-### Expected Features
-
-All researchers agreed on the same MVP scope. The key dependency insight: image re-hosting must happen before any Meta API call, making Azure Blob the gating dependency for the entire pipeline.
-
-**Must have (table stakes — v1.1 MVP):**
-- Image re-hosting to Azure Blob — gating dependency; Ideogram signed URLs expire and Meta rejects them
-- IG single-photo publish (2-step: create container → media_publish)
-- FB single-photo publish (`POST /{page-id}/photos`)
-- IG carousel publish (3-step: N child containers → parent carousel container → media_publish)
-- FB carousel publish (`attached_media` pattern with N unpublished photos)
-- Container readiness polling — IG containers are async; publish before FINISHED causes cryptic errors
-- WhatsApp success notification with IG permalink + FB post URL
-- WhatsApp failure notification with error code and reason
-- Google Sheets log update (add `IG_URL`, `FB_URL`, `Publicado_En` columns)
-- Scheduling: publish now path (default — no Wait node needed)
-- Scheduling: specific time path (Wizard CET/CEST → UTC → n8n Wait node)
-
-**Should have (add after core validation — v1.1 patch or v1.2):**
-- First-comment hashtag posting — low complexity, high algorithmic value; `POST /{media_id}/comments` immediately after media_publish
-- Full retry logic with exponential backoff — start with single retry + notify; full backoff after observing real failure patterns
-
-**Defer to v2+:**
-- IG Insights analytics (requires 24h post-publish; build as separate scheduled workflow)
-- A/B caption testing (requires analytics layer first)
-- Story publishing (separate Wizard flow, 9:16 aspect ratio, different brief)
-- Multi-account publishing (multi-tenant milestone for agency use)
-- Video carousel support (requires separate video generation pipeline)
-- Native FB `scheduled_publish_time` (only if Wait node proves unreliable, which it won't)
-
-**Anti-features confirmed (do not build):**
-- IG native `publish_at` API param — does not exist on IG Graph API
-- Manual caption editing before publish — breaks full-automation model; improve the GPT-4o prompt instead
-- FB `scheduled_publish_time` in v1.1 — creates two scheduling code paths for one concept
-
-### Architecture Approach
-
-The new sub-flow attaches at a single point in the existing workflow (between `retrieve-session` and `log-sheets`), following a linear sequence: check-scheduled → (optional Wait) → check-carousel → two parallel paths (single vs carousel) → success/error notification → Sheets log. All n8n patterns from v1.0 carry forward directly: N-item sequential HTTP execution (no SplitInBatches), collect-after-loop via `$()` reference, IF v1 string comparison routing, and `$env` in HTTP Request parameters (not Code nodes).
-
-**Major components:**
-
-1. **Wizard (wizard/run.js)** — gains one new prompt (publish_when: now / today / tomorrow) and CET/CEST → UTC conversion; adds `publish_at` field to brief JSON
-2. **n8n scheduling gate** — `check-scheduled` IF v1 node + `wait-until-publish` Wait node; merges back into publish chain after Wait fires
-3. **Azure Blob re-hosting sub-flow** — download image as binary (HTTP Request GET) → PUT to Azure Blob (HTTP Request PUT with SAS) → construct public URL (Code node hardcoding non-secret values)
-4. **IG publishing sub-flow** — `POST /{ig-user-id}/media` → (30s Wait or status poll) → `POST /{ig-user-id}/media_publish`; carousel variant adds N child container loop + `Collect container IDs` Code node before parent container creation
-5. **FB publishing sub-flow** — `POST /{page-id}/photos?published=false` → `POST /{page-id}/feed` with `attached_media`; carousel uses N unpublished photo uploads then `attached_media[N]` array built in Code node
-6. **Notification + log sub-flow** — `Preparar WA éxito` Code node → YCloud WA send → Google Sheets log update; error branches use HTTP Request node error output (typeVersion 4.2) → `Preparar error WA` → WA send → Sheets error row
-
-**Key constraint:** `$env` is not accessible inside Code node jsCode in n8n 2.14.2. All `META_PAGE_TOKEN`, `INSTAGRAM_ACCOUNT_ID`, `FACEBOOK_PAGE_ID`, and `AZURE_SAS_PARAMS` values must be referenced in HTTP Request node URL/body/header fields only. Non-secret config (storage account name, container name) can be hardcoded in Code node strings.
-
-### Critical Pitfalls
-
-1. **`media_publish` is not idempotent — disable retries on that node.** Calling it twice (e.g., after a timeout where the first call actually succeeded) produces two live posts. Disable "Retry on Fail" specifically on the publish node. Before any retry, check `GET /{container_id}?fields=status_code` — if status is PUBLISHED, do not retry.
-
-2. **Ideogram URLs expire before Meta fetches them — re-host first, always.** Never pass a `cdn.ideogram.ai` URL directly to any Meta API call. Meta fetches asynchronously and signed URLs can expire in 1–2 hours. Azure Blob re-hosting is a non-negotiable gating step, not an optimization.
-
-3. **IF v2 / Switch v3 always routes to TRUE in n8n 2.14.2 — all new IF nodes must use typeVersion 1.** This is a confirmed bug from v1.0. Every new conditional node (`check-scheduled`, `check-carousel`, error branch routing) must be explicitly set to `typeVersion: 1` with string comparisons. Add a pre-upload grep check: no `typeVersion` > 1 in workflow.json.
-
-4. **Carousel child containers must reach FINISHED before creating the parent — poll or use a fixed Wait.** Creating the parent container while children are IN_PROGRESS returns `(#9007) The provided image URL is not accessible`. Use a fixed 30s Wait node after child container creation (acceptable for single images; implement status polling for production carousels).
-
-5. **n8n Wait node gets stuck indefinitely if the scheduled time is in the past.** Known bug (issue #14198/#15123). Add a past-time guard in the Wizard: if `scheduledTime <= now`, override to "publish now" and warn the user. Add a secondary guard in n8n: Code node before the Wait node compares `publish_at` to `Date.now()`.
-
-6. **Azure Container App scale-to-zero kills Wait node executions.** Verify `min-replicas=1` in Azure Portal before the scheduling phase goes live. Without this, scheduled posts silently never publish after idle scale-down.
-
-7. **Credential re-linking required after every workflow.json upload.** Known n8n API limitation: credential bindings break on import. After every deployment, manually relink all credential-dependent nodes in the n8n UI. Document the node list in SETUP.md.
-
-## Implications for Roadmap
-
-All four research files independently converged on the same phase ordering based on hard dependencies. The build order below is not a preference — it is dictated by what each phase requires from the prior one.
-
-### Phase 1 — Foundation: Azure Blob Re-hosting
-
-**Rationale:** Image re-hosting is the gating dependency for ALL Meta API work. Without stable public URLs, no IG or FB container creation can be tested end-to-end. Ideogram ephemeral URLs cannot be used in any subsequent phase. Building this first also validates the Azure Blob setup (SAS params, public access level, Content-Type headers) in isolation before Meta API complexity is added.
-
-**Delivers:** Any Ideogram/FAL URL can be downloaded as binary and re-hosted to a permanent Azure Blob public URL. Verified accessible from the public internet. Azure environment variables confirmed in Container App.
-
-**Addresses:** Image re-hosting (table stakes P1), blob naming convention, Azure SAS write access setup, public container access level configuration.
-
-**Avoids:** Pitfall 3 (Ideogram URL expiry), Pitfall 4 (SAS URL expiry for scheduled posts). Also validates `$env` is not used in Code nodes (establishes the correct architecture pattern for all subsequent phases).
-
-**Research flag:** Standard patterns — Azure Blob SAS PUT is well-documented. No additional research needed. One-time Azure portal setup required (AllowBlobPublicAccess, container access level).
-
-### Phase 2 — IG Single-Photo Publishing
-
-**Rationale:** Simpler than carousel (1 image, no loops). Validates the full Meta Graph API integration end-to-end — re-host → create container → poll status → media_publish → retrieve permalink — before adding carousel complexity. Establishes the HTTP Request node patterns (token in URL/body params, `$env` usage, error output branching) that Phase 3 and 4 will reuse.
-
-**Delivers:** Full single-post IG publish flow from WA approval to live IG post. WhatsApp success + failure notifications. Google Sheets log update with IG permalink.
-
-**Addresses:** IG single-photo publish (P1), container readiness polling (P1), WhatsApp success notification (P1), WhatsApp failure notification (P1), Google Sheets log update (P1).
-
-**Avoids:** Pitfall 1 (idempotency — disable retries on media_publish), Pitfall 3 (Ideogram URL expiry — resolved by Phase 1), Pitfall 7 (IF v1 for error branch routing).
-
-**Research flag:** Standard patterns — well-documented 2-step IG container → publish flow. All endpoints verified against official Meta docs. No additional research needed.
-
-### Phase 3 — FB Single-Photo Publishing
-
-**Rationale:** FB single photo uses a different endpoint pattern than IG (`POST /{page-id}/photos` instead of the 2-step container flow). Validate it separately before merging with carousel complexity. Same Azure Blob URL from Phase 1 is reused. Same Meta token works for both platforms.
-
-**Delivers:** FB single-photo publish working in parallel with IG publish (both triggered from same approval gate, sharing the same Azure Blob URL). Full audit trail (both IG + FB URLs in Sheets log, both in WA success notification).
-
-**Addresses:** FB single-photo publish (P1), WhatsApp success notification updated with FB URL (P1).
-
-**Avoids:** FB carousel `attached_media` anti-pattern (not needed here — that comes in Phase 4).
-
-**Research flag:** Standard patterns — single API call. No additional research needed.
-
-### Phase 4 — Carousel Publishing (IG + FB)
-
-**Rationale:** Builds directly on the Azure upload and Meta HTTP patterns from Phases 1-3. Adds N-item loops using the proven v1.0 pattern (sequential HTTP execution, collect-after-loop via `$()`). IG and FB carousel have different API flows and must be built as separate code paths. This is the most complex phase.
-
-**Delivers:** Both IG carousel (3-step: N child containers → parent carousel container → media_publish) and FB carousel (`attached_media` multi-photo pattern) working end-to-end from WA approval.
-
-**Addresses:** IG carousel publish (P1), FB carousel publish (P1), Code node for dynamic `attached_media` array construction.
-
-**Avoids:** Pitfall 2 (child containers not FINISHED before parent — use 30s Wait after child container loop), SplitInBatches anti-pattern (use N-item sequential HTTP execution as proven in v1.0 Ideogram slide generation), IF v1 requirement for `check-carousel` routing node.
-
-**Research flag:** Needs attention during planning — the FB carousel `attached_media` array construction in n8n Code node and the IG child container collection pattern are the two most complex pieces. Both have verified solutions in ARCHITECTURE.md (Code node snippets included) but require careful implementation. Recommend `/gsd:research-phase` if the FB `attached_media` Code node construction is unclear.
-
-### Phase 5 — Scheduling
-
-**Rationale:** Scheduling is a pure addition to the already-working publish flow. No publishing logic changes — only a new Wizard prompt + UTC conversion + `check-scheduled` IF v1 node + Wait node inserted before the re-hosting step. Phases 1-4 must be solid before adding a time delay into the execution chain.
-
-**Delivers:** Wizard accepts "publish now / today at HH:MM / tomorrow at HH:MM" input, converts to UTC, sends in `publish_at` brief field. n8n holds execution until target time, then runs identical publish chain.
-
-**Addresses:** Scheduling: specific time path (P1), CET/CEST → UTC conversion in Wizard (differentiator).
-
-**Avoids:** Pitfall 5 (Wait node stuck on past time — add Wizard guard + n8n Code node guard before Wait), Pitfall 6 (scale-to-zero — verify min-replicas=1 BEFORE this phase goes live).
-
-**Research flag:** Verify min-replicas=1 as a prerequisite check at the start of this phase. The Wait node "At Specified Time" behavior on n8n 2.14.2 specifically must be tested with a 2-minute window before trusting production schedules (known issue #14723).
-
-### Phase 6 — Error Handling Hardening
-
-**Rationale:** Error paths are secondary flows. Core success path must be solid first. Once Phases 1-5 are validated, add error branches to all Meta HTTP Request nodes, ensure every failure surfaces via WhatsApp, and add the `OAuthException 190` → WhatsApp alert for token expiry detection.
-
-**Delivers:** All Meta API error codes handled. WhatsApp failure notifications include `message`, `type`, `code`, and `fbtrace_id`. Sheets error rows logged. Token expiry detected and alerted immediately.
-
-**Addresses:** WhatsApp failure notification (P1 — partially in Phase 2, hardened here), full retry logic (P2), OAuthException detection (ongoing operations).
-
-**Avoids:** Pitfall 1 mitigation (verify disable-retries on media_publish held through all prior phases), credential re-linking documentation updated for all new nodes.
-
-**Research flag:** Standard patterns — n8n HTTP Request node error output (typeVersion 4.2) is well-documented. No additional research needed.
-
-### Phase Ordering Rationale
-
-- **Foundation first**: Azure Blob (Phase 1) is a hard prerequisite for every Meta API call. No subsequent phase can be tested end-to-end without it.
-- **Simple before complex**: IG single (Phase 2) → FB single (Phase 3) → carousels (Phase 4) follows increasing API call complexity. Each phase reuses the patterns validated in the prior one.
-- **Platforms separated**: IG and FB have meaningfully different API patterns (2-step container vs direct photos, carousel child vs attached_media). Testing them in separate phases isolates failures.
-- **Scheduling last before hardening**: Scheduling adds only a Wait node — it does not change publishing logic. Adding it after publishing is stable avoids debugging time-delay issues while the core flow is unvalidated.
-- **Error hardening at end**: Success path confidence required before investing in failure path complexity.
-
-### Research Flags
-
-Phases needing extra attention during planning:
-- **Phase 4 (Carousels):** FB `attached_media` array construction in Code node and IG child container collection pattern are implementation-sensitive. ARCHITECTURE.md includes complete Code node snippets — use them verbatim.
-- **Phase 5 (Scheduling):** Must verify `min-replicas=1` in Azure Container Apps before this phase is tested. Must validate Wait node behavior with a 2-minute test window on n8n 2.14.2 before trusting longer schedules.
-
-Phases with standard patterns (research-phase not needed):
-- **Phase 1 (Azure Blob):** One-time Azure portal configuration + standard HTTP Request PUT pattern.
-- **Phase 2 (IG Single):** Well-documented 2-step Meta container flow. Official docs confirm all endpoint details.
-- **Phase 3 (FB Single):** Single API call. No ambiguity.
-- **Phase 6 (Error Handling):** Standard n8n error output branching pattern.
+### 1. Integration Architecture (HIGH confidence)
+
+- **Wizard PASO 3** becomes 3-way (single / carousel / story). Adds `format: "story"`, `aspect_ratio: "9:16"`, `num_images: 1`, `story_expires_at` to brief JSON.
+- **Wizard PASO 6** adds 22h cap warning for Stories (Story expires 24h after publish; scheduling >22h = <2h visibility).
+- **n8n routing** uses chained IF v1 nodes: after `🖼️ ¿Imagen propia?` FALSE → new `🔀 ¿Story?` IF routes to Story image gen or existing Ideogram router. Post-rehost: new `🔀 ¿Formato Story?` IF on FALSE output of existing `🔀 ¿Formato Carrusel?`.
+- **Stories branch is a separate terminal path** — MUST NOT share hashtag comment nodes with FEED (Stories don't support comments).
+- **WhatsApp preview reused unchanged** (`📤 Enviar preview imagen`). Only `📱 Preparar mensaje WA` modified to add story format line + vertical-image disclaimer.
+- **Error handler subgraph (9 nodes) reused unchanged** — Meta error codes (190, 2207026, 100) apply identically. Only wire new Story publish nodes' `onError` outputs into existing Tag IG/FB Error nodes.
+- **Sheets log:** 2 new additive columns (`Formato`, `Expires_At`). Existing log nodes get `Formato` only (backward-compat, blanks in old rows). New `📊 Google Sheets Log (Story)` node for Story success path.
+
+### 2. Stories API Mechanics (MEDIUM confidence — requires Phase 12/13 verification)
+
+**IG Stories (highest-risk assumption):**
+- Host: `graph.instagram.com` (NOT `graph.facebook.com`) — per Pitfalls live-docs validation
+- Container: `POST /v22.0/{IG_ID}/media` with `media_type=STORIES`, no `caption`
+- Publish: `POST /v22.0/{IG_ID}/media_publish` with `creation_id`
+- Container wait: **45s** (not 30s — matches carousel pattern for safety margin)
+- `media_publish` NOT idempotent → `retryOnFail=false`
+- Permalink + expiry: `GET /{media-id}?fields=permalink,expires_at`
+- Scopes: `instagram_content_publish` + `instagram_basic` (already granted in v1.1)
+
+**FB Page Stories (flow uncertain — Phase 13 live test required):**
+- Likely 2-step: `POST /{PAGE_ID}/photos?published=false` → `POST /{PAGE_ID}/photo_stories?photo_id=X`
+- Alternative: single-step `POST /{PAGE_ID}/photo_stories?url=X`
+- Step 2 NOT idempotent → `retryOnFail=false`
+- No stable public URL returned (API returns only `{ success: true }` per Pitfalls inference)
+- Scopes: `pages_manage_posts` + `pages_read_engagement` (already granted in v1.1)
+
+**Caption / text behavior (HIGH confidence):**
+- Neither platform accepts `caption`/`message` for Stories — parameters silently ignored
+- All text must be **burned into the image** by Ideogram/Flux/Nano Banana
+- WA preview caption is user-facing review only — NOT sent to Meta
+- WA preview must include disclaimer: *"el texto es solo para tu revisión — la Story solo mostrará la imagen"*
+
+**Stories don't support:**
+- Comments (hashtag-as-first-comment must be bypassed)
+- Link stickers, poll/question/quiz/countdown stickers (API unavailable for all tiers)
+- Music, boomerangs, GIFs (API unavailable)
+- Scheduling >24h from now (expires immediately — Wizard caps at 22h)
+
+### 3. Image Generation for 9:16 (MEDIUM confidence)
+
+- **Ideogram v3:** `aspect_ratio: "ASPECT_9_16"` → 1080×1920 exact (0.5625 ratio) — **SAFE for v1.2**
+- **Flux 2 Pro:** Available `portrait_4_3` = 896×1152 (ratio 0.778, WRONG) — **NOT safe** for Stories without custom `{width:1080,height:1920}` verification
+- **Nano Banana Pro:** `"9:16"` produced 1080×1918 (ratio 0.5636) — **borderline**, Δ=0.0011 from target
+
+**v1.2 decision:** Default Stories to **Ideogram only**. Wizard model selector hides Flux and Nano Banana for Stories (or warns "no verificado para Historias"). Flux/Nano Banana Story support deferred to future milestone pending verification.
+
+### 4. Scheduling for Stories (HIGH confidence)
+
+- Story expires 24h after publish. `expires_at` metadata only — auto-expiry on Meta side.
+- Wizard cap: 22h for Stories (leaves ≥2h visibility)
+- Two-layer enforcement:
+  - Wizard PASO 6: `parsePublishTime` rejects >22h for Stories with user-facing warning
+  - n8n Code node `🕐 Compute wait_seconds`: reads `format` from session, applies 22h cap
+- Session storage: Supabase session save MUST include `format: 'story'` so Code node can read it
+
+### 5. WhatsApp Preview for Vertical Images (MEDIUM confidence)
+
+- YCloud renders 9:16 images in ~4:3 / 1:1 container → black bars or extreme crop possible
+- Preview DOES NOT represent full-screen Instagram view
+- WA preview message must include disclaimer text: *"(Imagen vertical 9:16 — en Instagram se verá a pantalla completa)"*
+
+### 6. Success Notification + Sheets Log (HIGH confidence)
+
+- WA notification for Stories:
+  ```
+  ✅ Historia publicada en Instagram y Facebook.
+  ⏰ Expira: {publish_time + 24h in CET}
+  📸 Instagram: {permalink} (válido 24h)
+  📘 Facebook: Historia publicada (sin URL permanente)
+  📝 Tema: {topic}
+  ```
+- Sheets new columns:
+  - `Formato`: `single` / `carousel` / `story`
+  - `Expires_At`: ISO timestamp (`publish_time + 86400000` or from IG `GET expires_at`)
+- IG_URL column for Stories contains ephemeral permalink (dead after 24h) — acceptable since `Expires_At` flags it
+
+---
+
+## Consolidated Feature Landscape
+
+### Table Stakes (v1.2 must ship)
+
+| Feature | Complexity | v1.1 Reuse |
+|---------|------------|------------|
+| Wizard "Historia" format option (PASO 3) | LOW | Format selector pattern |
+| 9:16 image gen (Ideogram `ASPECT_9_16`) | LOW | Existing Ideogram node |
+| Story-specific vertical image prompt | LOW | Existing GPT-4o node (branch) |
+| IG Story publish (`media_type=STORIES`) | LOW-MED | Azure Blob rehost, container polling, Meta token |
+| FB Page Story publish | LOW-MED | Azure Blob rehost, Meta token |
+| Skip hashtag comment for Stories | LOW | Separate terminal branch |
+| Scheduling >22h warning (Wizard + n8n guard) | LOW | PASO 6, Code node |
+| WA preview vertical-image disclaimer | LOW | `📱 Preparar mensaje WA` modified |
+| WA success notification with expiry | LOW | Notification node template |
+| Sheets log: `Formato` + `Expires_At` columns | LOW | Log nodes |
+| Error handling via existing subgraph | LOW | 9-node subgraph unchanged |
+
+### Anti-Features (explicitly excluded from v1.2)
+
+- **Video Stories** — no video generation pipeline; deferred to future milestone
+- **Text overlays via API** — `caption` ignored; text lives in image only
+- **Link stickers, poll/question stickers, music, boomerangs** — API unavailable for all tiers
+- **Story Highlights** — separate `highlight_reels` API; deferred
+- **Scheduling >24h for Stories** — expires immediately; capped at 22h
+- **Flux / Nano Banana for Stories in v1.2** — aspect ratio not empirically verified; Ideogram-only
+
+---
+
+## Watch Out For (Top 10 Pitfalls)
+
+| # | Pitfall | Phase | Verification |
+|---|---------|-------|--------------|
+| 1 | Wrong IG API host (`graph.facebook.com`) | 12 | Node URL starts with `graph.instagram.com` |
+| 2 | FB Page Story wrong endpoint or flow | 13 | Live test before building production node |
+| 3 | Ideogram-only for Stories; Flux/Nano Banana hidden | 10-11 | Wizard excludes non-verified models |
+| 4 | `format=story` falls through to FEED path | 12 | `🔀 ¿Formato Story?` wired on FALSE of carousel router |
+| 5 | Hashtag comment runs on Story media_id | 12 | Stories branch terminates before hashtag comment nodes |
+| 6 | Scheduling >22h for Stories | 10 + 12 | Wizard rejects >22h; Code node reads `format` |
+| 7 | Aspect ratio rejection (9:16 must be exact 0.5625) | 11 | Ideogram `ASPECT_9_16` only; image is 1080×1920 |
+| 8 | WA preview misleading (9:16 padded in WA) | 11 | Disclaimer text in WA message |
+| 9 | IG Story permalink dead in Sheets after 24h | 13 | `Expires_At` column populated |
+| 10 | FB Story retry creates orphaned photo | 13 | Step 2 `retryOnFail=false` |
+
+Additional operational pitfalls (5-10 minor):
+- 30s Wait too short for Story containers (use 45s)
+- Azure Blob URL with SAS params rejected by Meta Story fetcher (add assertion)
+- Supabase session missing `format=story` breaks routing (verify in E2E)
+- Code node guard no format-awareness (reads `data.format` → 22h cap for Stories)
+- WA success notification includes expiring permalink (OK — expiry timestamp clarifies)
+
+---
+
+## Recommended Phase Structure (4 phases)
+
+**Phase 10 — Wizard Historia format selector**
+- PASO 3: 3-way format picker
+- PASO 5: Ideogram-recommended for Stories; Flux/Nano Banana hidden
+- PASO 6: >22h scheduling warning
+- Brief JSON: `format`, `aspect_ratio`, `num_images=1`, `story_expires_at`
+- Test in isolation: brief routes through existing pipeline (suboptimal output but no crash)
+- **Dependencies:** none
+- **Risk:** LOW (self-contained in Wizard)
+
+**Phase 11 — n8n image generation for 9:16**
+- `🔀 ¿Story?` IF v1 on FALSE of `🖼️ ¿Imagen propia?`
+- `🔤 Ideogram v3 — Story` node (`aspect_ratio: ASPECT_9_16`)
+- `🔗 Normalizar URL imagen — Story`, `💾 Guardar sesión Supabase (Story)`, `🔗 Re-attach session data (Story)` mirror nodes
+- Supabase session includes `format: 'story'`
+- WA preview with vertical disclaimer
+- **Dependencies:** Phase 10 (brief sets `format=story`)
+- **Risk:** LOW (parallel to existing carousel image gen)
+
+**Phase 12 — IG Story publish**
+- **Pre-task:** Live API test — verify `graph.instagram.com` host works with `media_type=STORIES`
+- `🔀 ¿Formato Story?` IF v1 on FALSE of `🔀 ¿Formato Carrusel?`
+- `📤 IG: Create Story Container` (host: `graph.instagram.com`)
+- `⏳ Wait 45s (Story container ready)`
+- `🚀 IG: Story media_publish` (`retryOnFail=false`)
+- `🔗 IG: Get Story Permalink + Expires_At`
+- Error handler wiring (`🏷️ Tag IG Error`)
+- Code node guard: reads `format` → 22h cap for Stories
+- **Dependencies:** Phase 11 (9:16 image in Azure Blob)
+- **Risk:** MEDIUM-HIGH (API host assumption pending live test)
+
+**Phase 13 — FB Story publish + Sheets log + notifications**
+- **Pre-task:** Live API test — determine FB Story flow (single-step `/photo_stories?url=X` vs 2-step with `published=false`)
+- `🌐 FB: Publish Photo Story` (or 2-step) with `retryOnFail=false` on publish step
+- Blob URL assertion (reject SAS params)
+- `✅ Notify WhatsApp Story` (expiry timestamp; no dead permalinks from FB)
+- `📊 Google Sheets Log (Story)` with `Formato` + `Expires_At`
+- Existing Sheets log nodes: add `Formato` column (backward-compat)
+- **Dependencies:** Phase 12 (IG path proven first)
+- **Risk:** MEDIUM (FB Story flow pending live test)
+
+---
+
+## Open Questions (for Phase plans)
+
+1. **IG Stories host:** Does `graph.instagram.com/v22.0/{IG_ID}/media?media_type=STORIES` work with current Meta Page Token? (Phase 12 pre-task)
+2. **FB Page Story flow:** Single-step `/photo_stories?url=X` or 2-step with `published=false`? (Phase 13 pre-task)
+3. **IG Story permalink:** Does `GET /{media-id}?fields=permalink` return a usable URL during Story lifetime? (Phase 12)
+4. **IG Story `expires_at`:** Is the field reliably populated? Fallback to `publish_time + 86400000` if not. (Phase 12)
+5. **FB Story URL:** Does `photo_stories` return any usable URL, or only `{success:true}`? (Phase 13)
+6. **Ideogram `ASPECT_9_16` output dims:** Exactly 1080×1920? (Phase 11 test)
+7. **`instagram_manage_comments` scope:** Doesn't affect Stories (no comments), but should be resolved separately for FEED hashtags to work.
+
+---
+
+## Dependencies on v1.1 Infrastructure
+
+Reused as-is:
+- Wizard base flow (PASO 1-7 structure)
+- n8n webhook entry, Supabase session store/retrieve
+- GPT-4o text generation node
+- Azure Blob re-hosting sub-workflow
+- WhatsApp preview flow (YCloud) + SI/NO approval wait
+- Meta Page Token + IG Account ID + FB Page ID
+- Error handler subgraph (9 nodes)
+- Scheduling Wait node (65s-22h for Stories)
+- Google Sheets log (additive column changes only)
+
+No changes required:
+- Existing carousel publishing path
+- Existing single-photo publishing path
+- Existing hashtag comment nodes (Stories terminal branch never reaches them)
+- Error handler logic (Meta error codes apply identically)
+
+---
 
 ## Confidence Assessment
 
-| Area | Confidence | Notes |
-|------|------------|-------|
-| Stack | HIGH | All critical claims verified against official Meta docs, n8n GitHub PRs, and Azure official docs. Long-lived token behavior and Wait node DB persistence confirmed at source level. |
-| Features | HIGH | IG and FB publishing flows verified against official Meta developer docs. No native IG `publish_at` confirmed (docs absence confirmed). FB `scheduled_publish_time` exists but explicitly deferred. |
-| Architecture | HIGH | Based on direct inspection of existing workflow.json (27 nodes) + official API docs. All node patterns (N-item sequential HTTP, collect-after-loop, IF v1) are proven in v1.0. |
-| Pitfalls | HIGH | IF v2 bug, SplitInBatches bug, credential re-linking — all from v1.0 lived experience (PROJECT.md). `media_publish` idempotency and Wait node stuck-on-past-time are confirmed in Meta official docs and n8n GitHub issues respectively. |
-
-**Overall confidence:** HIGH
-
-### Gaps to Address
-
-- **Azure SAS vs public container decision:** ARCHITECTURE.md recommends SAS for writes and public access for reads. PITFALLS.md warns that SAS expiry breaks scheduled posts. The recommended resolution (public container for serving, SAS only for write operations) should be confirmed during Phase 1 setup by checking whether the Azure storage account created in 2025/2026 has `AllowBlobPublicAccess` disabled by default (it does for accounts created post-2023 — must explicitly enable in Azure Portal).
-
-- **n8n 2.14.2 Wait node "At Specified Time" specific behavior (issue #14723):** ARCHITECTURE.md flags this with MEDIUM confidence. The past-time guard (Pitfall 5) is designed and documented, but the exact behavior on 2.14.2 must be validated with a live 2-minute test in Phase 5 before production scheduling is trusted.
-
-- **FB carousel `attached_media[N]` syntax in n8n HTTP Request node:** The `attached_media[0]={"media_fbid":"..."}` array format requires special handling in n8n's HTTP Request body. The Code node approach (build the feed POST body in a Code node and pass it to HTTP Request as raw JSON) is the documented workaround, but this exact pattern should be tested early in Phase 4 to avoid late-phase surprises.
-
-- **Blob cleanup strategy:** All researchers flag orphaned blob accumulation but none define the exact cleanup timing. Recommend: delete blob in both success and failure branches immediately after publish confirmation (or failure logging). Add to Phase 6 scope.
-
-## Sources
-
-### Primary (HIGH confidence)
-
-- [Meta Instagram Content Publishing Docs](https://developers.facebook.com/docs/instagram-platform/content-publishing/) — endpoint reference, permissions, rate limits, container status codes
-- [Meta Graph API Page Photos Reference](https://developers.facebook.com/docs/graph-api/reference/page/photos/) — FB page photo publish + carousel `attached_media`
-- [Meta Long-Lived Token Guide](https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived/) — page token lifetime and invalidation conditions
-- [Meta Graph API v22 Changelog](https://developers.facebook.com/docs/graph-api/changelog/version22.0) — version reference
-- [n8n PR #27066 — Wait Node Full Durability](https://github.com/n8n-io/n8n/pull/27066) — v2.16.0 merges full DB persistence; v2.14.2 behavior (65s threshold) documented
-- [Azure Blob Anonymous Access Configure](https://learn.microsoft.com/en-us/azure/storage/blobs/anonymous-read-access-configure) — public blob URL setup, account-level AllowBlobPublicAccess requirement
-- [Meta Graph API Error Handling](https://developers.facebook.com/docs/graph-api/guides/error-handling/) — error codes and actions
-- [Existing workflow.json](../../n8n/workflow.json) — direct inspection of all 27 nodes and connection map
-- [PROJECT.md](../PROJECT.md) — IF v2/Switch v3 bug confirmed from v1.0 experience; SplitInBatches bug confirmed; credential re-linking pattern confirmed
-
-### Secondary (MEDIUM confidence)
-
-- [n8n Azure Storage node docs](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.azurestorage/) — supported operations confirmed
-- [n8n community: Azure Blob SAS token thread](https://community.n8n.io/t/azure-blob-storage-support-for-sas-tokens/112080) — SAS not natively supported in credential UI; HTTP Request PUT workaround confirmed
-- [n8n workflow template 4498](https://n8n.io/workflows/4498-schedule-and-publish-all-instagram-content-types-with-facebook-graph-api/) — confirms Graph API approach in n8n
-- [n8n workflow template 3693](https://n8n.io/workflows/3693-create-and-publish-instagram-carousel-posts-with-gpt-41-mini-imgur-and-graph-api/) — carousel pattern verified
-- [n8n GitHub Issue #14723](https://github.com/n8n-io/n8n/issues/14723) — Wait "At Specified Time" broken in some versions
-- [n8n Community: Credential unavailable after API upload](https://community.n8n.io/t/credentials-unavailable-for-workflows-created-via-n8ns-api/183099) — credential re-linking confirmed
-- [n8n Community: Wait node stuck on past time](https://community.n8n.io/t/wait-node-stuck-on-execution-when-time-is-in-the-past/45890) — stuck indefinitely confirmed
+| Area | Level | Reason |
+|------|-------|--------|
+| Existing v1.1 integration points | HIGH | Full workflow.json + wizard/run.js codebase analysis |
+| n8n routing pattern (chained IFs) | HIGH | Proven by existing carousel routing |
+| Wizard modification scope | HIGH | Self-contained in wizard/run.js |
+| IG Stories API host | MEDIUM | Live Meta docs point to `graph.instagram.com` but not yet verified with actual API call using our token |
+| FB Page Story flow (1-step vs 2-step) | LOW-MED | Official `/photo_stories` docs 404; researchers disagreed |
+| Ideogram `ASPECT_9_16` for Stories | MEDIUM | Documented Ideogram v3 enum; not tested with actual Meta Story container |
+| Caption silently ignored for Stories | HIGH | Consistently documented across Meta resources |
+| 45s Wait node sufficient for Story containers | MEDIUM | Matches v1.1 carousel pattern; not Story-specific tested |
+| Hashtag comment bypass via separate branch | HIGH | Clearly correct architecture choice |
+| Scheduling 22h cap for Stories | HIGH | Simple math: 24h expiry - 2h visibility minimum |
 
 ---
-*Research completed: 2026-04-10*
-*Ready for roadmap: yes*
+
+## What NOT to Add (Explicit Exclusions)
+
+- New npm packages in Wizard (no image manipulation libs; just brief JSON)
+- New credentials (existing Meta Page Token + Azure + YCloud + Supabase cover everything)
+- New services (no new Azure resources, no new APIs beyond Meta `/photo_stories`)
+- New image model for Stories (3 existing cover it; Ideogram-only in v1.2)
+- Switch v3 or IF v2 nodes (broken in n8n 2.14.2 — use IF v1 only)
+- Extended container polling (deferred to future milestone; 45s Wait sufficient)
+- IG `publish_at` native parameter (doesn't exist — scheduling via Wait node only)
+- FB `scheduled_publish_time` (would create parallel scheduling paths — stick with Wait node)
+- Video/Reel support in v1.2 — deferred
+- Link stickers — requires `link_sticker` permission review (weeks); deferred
