@@ -587,11 +587,33 @@ async function runWizard() {
     }
 
     let result = parsePublishTime(input.trim());
+    // Apply Story 22h cap after initial parse
+    if (!result.error && isStory && result.publish_at && result.publish_at !== 'now') {
+      const diffMs = new Date(result.publish_at).getTime() - Date.now();
+      if (diffMs > 22 * 60 * 60 * 1000) {
+        result = {
+          error: 'Las Stories expiran en 24h. No podemos programar a más de 22h vista ' +
+                 '(margen de 2h para procesamiento y aprobación). ' +
+                 'Elegí una fecha dentro de las próximas 22h.'
+        };
+      }
+    }
     while (result.error) {
       console.log(c('red', `\n  ✗ ${result.error}`));
       input = await ask('  → Nueva hora (ahora | hoy HH:MM | mañana HH:MM): ');
       if (input.trim().toLowerCase() === 'ahora') { result = { publish_at: 'now' }; break; }
       result = parsePublishTime(input.trim());
+      // Re-apply Story 22h cap after retry parse
+      if (!result.error && isStory && result.publish_at && result.publish_at !== 'now') {
+        const diffMs = new Date(result.publish_at).getTime() - Date.now();
+        if (diffMs > 22 * 60 * 60 * 1000) {
+          result = {
+            error: 'Las Stories expiran en 24h. No podemos programar a más de 22h vista ' +
+                   '(margen de 2h para procesamiento y aprobación). ' +
+                   'Elegí una fecha dentro de las próximas 22h.'
+          };
+        }
+      }
     }
 
     publishAt = result.publish_at;
