@@ -461,6 +461,64 @@ async function runWizard() {
     hasTextInImage = true;
     console.log(c("green", "\n  ✓ Modelo fijo: 🔤 Ideogram v3 (texto en imagen para cada slide)"));
     console.log(c("gray",  "     Precisión tipográfica 90-95% — ideal para slides con texto\n"));
+  } else if (isStory) {
+    div();
+    console.log(c("bright", c("blue", "  🎨 PASO 5 — Modelo de imagen\n")));
+    console.log(c("green",  "  📲 Modelo: 🔤 Ideogram v3 (único disponible para Historia)"));
+    console.log(c("gray",   "     Texto legible en formato 9:16 — best practice para Stories\n"));
+
+    // has_text_in_image: default recomendado = true for Stories (locked decision)
+    const hasTextQ = await ask("  ¿El story lleva texto/dato visible en la imagen? (s/n, recomendado: s) → ");
+    hasTextInImage = hasTextQ.trim().toLowerCase() !== "n"; // default true (Enter or "s" → true; only "n" → false)
+
+    // Optional custom image URL with 9:16 validation
+    const ownImgQ = await ask("  ¿Usás una imagen propia? (s/n) → ");
+    if (ownImgQ.trim().toLowerCase() === "s") {
+      hasOwnImage = true;
+      let validated = false;
+      while (!validated) {
+        imageUrl = (await ask("  → URL de tu imagen (debe ser 9:16 vertical): ")).trim();
+        if (!imageUrl) {
+          console.log(c("yellow", "  ⚠️  URL vacía. Cancelando imagen propia.\n"));
+          hasOwnImage = false;
+          imageUrl = null;
+          break;
+        }
+        console.log(c("gray", "  Validando dimensiones..."));
+        const dim = await validateImageIs916(imageUrl);
+        if (dim.ok === true) {
+          console.log(c("green", `  ✓ Imagen ${dim.width}×${dim.height} (9:16 válido)\n`));
+          validated = true;
+        } else if (dim.ok === false) {
+          console.log(c("red", `  ✗ ${dim.error}`));
+          const retry = await ask("  ¿Probar con otra URL? (s/n) → ");
+          if (retry.trim().toLowerCase() !== "s") {
+            console.log(c("yellow", "  Cancelando imagen propia, usando Ideogram.\n"));
+            hasOwnImage = false;
+            imageUrl = null;
+            break;
+          }
+        } else {
+          // ok === null → warning, let user confirm
+          console.log(c("yellow", `  ⚠️  ${dim.warning}`));
+          const confirm = await ask("  (s/n) → ");
+          if (confirm.trim().toLowerCase() === "s") {
+            validated = true;
+          } else {
+            const retry = await ask("  ¿Probar con otra URL? (s/n) → ");
+            if (retry.trim().toLowerCase() !== "s") {
+              console.log(c("yellow", "  Cancelando imagen propia, usando Ideogram.\n"));
+              hasOwnImage = false;
+              imageUrl = null;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    imageModel = "ideogram";
+    console.log(c("green", `  ✓ 🔤 Ideogram v3 (9:16 optimizado)\n`));
   } else {
     div();
     console.log(c("bright", c("blue", "  🎨 PASO 5 — Modelo de imagen\n")));
