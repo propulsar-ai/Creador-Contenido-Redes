@@ -343,6 +343,21 @@ async function validateImageIs916(url, timeoutMs = 8000) {
   }
 }
 
+// ─── Story brief validator (fail-loud) ─────────────────────
+function validateStoryBrief(brief) {
+  if (brief.format !== 'story') return;
+  const errors = [];
+  if (brief.aspect_ratio !== '9:16')           errors.push('aspect_ratio must be "9:16"');
+  if (brief.num_images !== 1)                  errors.push('num_images must be 1');
+  if (!brief.story_expires_at)                 errors.push('story_expires_at is required');
+  if (!brief.story_expires_at?.endsWith('Z'))  errors.push('story_expires_at must be ISO UTC ending in Z');
+  if (!brief.has_own_image && brief.image_model !== 'ideogram')
+    errors.push('story must use ideogram model unless has_own_image');
+  if (errors.length) {
+    throw new Error('Story brief validation failed:\n  - ' + errors.join('\n  - '));
+  }
+}
+
 // ─── WIZARD PRINCIPAL ──────────────────────────────────────
 async function runWizard() {
   console.log("\n");
@@ -630,6 +645,13 @@ async function runWizard() {
     }
   }
 
+  // Story expiry = publish time + 24h (now() + 24h if publish_at='now')
+  const storyExpiresAt = isStory
+    ? new Date(
+        (publishAt !== 'now' ? new Date(publishAt) : new Date()).getTime() + 24 * 60 * 60 * 1000
+      ).toISOString()
+    : null;
+
   // RESUMEN
   div();
   console.log(c("bright", "  📋 RESUMEN FINAL"));
@@ -675,8 +697,15 @@ async function runWizard() {
       num_images:    numImages,
       image_prompts: [],
     }),
+    ...(isStory && {
+      format:           "story",
+      aspect_ratio:     "9:16",
+      num_images:       1,
+      story_expires_at: storyExpiresAt,
+    }),
   };
 
+  validateStoryBrief(brief);  // fail loud before webhook
   await sendWebhook(brief);
   rl.close();
 }
