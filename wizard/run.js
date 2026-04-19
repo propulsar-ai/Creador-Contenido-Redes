@@ -664,6 +664,19 @@ async function runWizard() {
   if (isCarousel) {
     console.log(`  📊 Formato:     ${c("bright", `Carrusel — ${numImages} slides`)}`);
     console.log(`  🖼️  Modelo:      🔤 Ideogram v3 (fijo para carruseles)`);
+  } else if (isStory) {
+    console.log(`  📲 Formato:     ${c("bright", "Historia (Story 9:16)")}`);
+    if (hasOwnImage && imageUrl) {
+      console.log(`  🖼️  Imagen:      📎 Imagen propia (9:16 validada)`);
+    } else {
+      console.log(`  🖼️  Modelo:      🔤 Ideogram v3 (fijo para Historias)`);
+    }
+    // Expiry display in Madrid local time (uses existing Intl pattern)
+    const expiryLocal = new Intl.DateTimeFormat('es-ES', {
+      timeZone: 'Europe/Madrid',
+      weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(new Date(storyExpiresAt));
+    console.log(`  ⏰ Expira:      ${expiryLocal.charAt(0).toUpperCase() + expiryLocal.slice(1)} (Madrid)`);
   } else {
     const selectedModel = IMAGE_MODELS[imageModel] || { name: "Imagen propia", emoji: "📎" };
     console.log(`  🖼️  Imagen:      ${selectedModel.emoji} ${selectedModel.name || "Imagen propia"}${selectedModel.cost ? c("gray"," · "+selectedModel.cost) : ""}`);
