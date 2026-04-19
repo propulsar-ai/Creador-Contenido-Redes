@@ -53,7 +53,9 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
   2. Wizard brief JSON sent to webhook includes `format: "story"`, `aspect_ratio: "9:16"`, `num_images: 1`, and `story_expires_at`
   3. Wizard PASO 5 model selector only shows Ideogram v3 when format is Historia (Flux and Nano Banana are not offered)
   4. Wizard rejects scheduling a Story more than 22h in the future with a visible error message explaining the 24h Story expiry constraint
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 10-01-PLAN.md — PASO 3 Historia menu + PASO 5 Story branch (Ideogram auto-select) + validateImageIs916 helper
+- [ ] 10-02-PLAN.md — PASO 6 22h cap + story_expires_at + brief spread + validateStoryBrief assert + RESUMEN Story display
 
 ### Phase 11: Story Image Generation
 **Goal**: Approved Story briefs produce a 9:16 vertical image in n8n, the session is persisted with `format: "story"`, and the WhatsApp preview includes the 9:16 vertical disclaimer
