@@ -117,42 +117,40 @@ Reuse v1.1 error subgraph for Story publishing failures.
 
 ## Traceability
 
-*Empty — populated during roadmap creation.*
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WIZ-01 | — | Pending |
-| WIZ-02 | — | Pending |
-| WIZ-03 | — | Pending |
-| WIZ-04 | — | Pending |
-| IMGEN-01 | — | Pending |
-| IMGEN-02 | — | Pending |
-| IMGEN-03 | — | Pending |
-| IMGEN-04 | — | Pending |
-| IGSTORY-01 | — | Pending |
-| IGSTORY-02 | — | Pending |
-| IGSTORY-03 | — | Pending |
-| IGSTORY-04 | — | Pending |
-| IGSTORY-05 | — | Pending |
-| IGSTORY-06 | — | Pending |
-| FBSTORY-01 | — | Pending |
-| FBSTORY-02 | — | Pending |
-| FBSTORY-03 | — | Pending |
-| FBSTORY-04 | — | Pending |
-| SCHED-01 | — | Pending |
-| SCHED-02 | — | Pending |
-| NOTIF-01 | — | Pending |
-| NOTIF-02 | — | Pending |
-| LOG-01 | — | Pending |
-| LOG-02 | — | Pending |
-| ERR-01 | — | Pending |
+| WIZ-01 | Phase 10 | Pending |
+| WIZ-02 | Phase 10 | Pending |
+| WIZ-03 | Phase 10 | Pending |
+| WIZ-04 | Phase 10 | Pending |
+| SCHED-01 | Phase 10 | Pending |
+| IMGEN-01 | Phase 11 | Pending |
+| IMGEN-02 | Phase 11 | Pending |
+| IMGEN-03 | Phase 11 | Pending |
+| IMGEN-04 | Phase 11 | Pending |
+| NOTIF-02 | Phase 11 | Pending |
+| IGSTORY-01 | Phase 12 | Pending |
+| IGSTORY-02 | Phase 12 | Pending |
+| IGSTORY-03 | Phase 12 | Pending |
+| IGSTORY-04 | Phase 12 | Pending |
+| IGSTORY-05 | Phase 12 | Pending |
+| IGSTORY-06 | Phase 12 | Pending |
+| SCHED-02 | Phase 12 | Pending |
+| ERR-01 | Phase 12 | Pending |
+| FBSTORY-01 | Phase 13 | Pending |
+| FBSTORY-02 | Phase 13 | Pending |
+| FBSTORY-03 | Phase 13 | Pending |
+| FBSTORY-04 | Phase 13 | Pending |
+| NOTIF-01 | Phase 13 | Pending |
+| LOG-01 | Phase 13 | Pending |
+| LOG-02 | Phase 13 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 25 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 25
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 
 *Requirements defined: 2026-04-19*
-*Last updated: 2026-04-19 after research synthesis*
+*Last updated: 2026-04-18 — traceability populated during roadmap creation*
