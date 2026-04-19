@@ -344,11 +344,13 @@ async function runWizard() {
   div();
   console.log(c("bright", "  PASO 3 — Formato\n"));
   const fmtChoice = await ask(
-    `  [1] Post normal     — 1 imagen\n` +
-    `  [2] Carrusel        — múltiples slides con texto en imagen\n` +
+    `  [1] 📲 Historia     — Story vertical 9:16 (nuevo!)\n` +
+    `  [2] Post Individual — 1 imagen\n` +
+    `  [3] Carrusel        — múltiples slides con texto en imagen\n` +
     `  → `
   );
-  const isCarousel = fmtChoice.trim() === "2";
+  const isStory    = fmtChoice.trim() === "1";
+  const isCarousel = fmtChoice.trim() === "3";
 
   let numImages = 1;
   if (isCarousel) {
@@ -360,6 +362,9 @@ async function runWizard() {
     const parsedSlides = parseInt(slideInput.trim());
     numImages = slideInput.trim() === "" ? suggestion.count : Math.min(10, Math.max(3, parsedSlides || suggestion.count));
     console.log(c("green", `\n  ✓ Carrusel — ${numImages} slides\n`));
+  } else if (isStory) {
+    console.log(c("green", `\n  ✓ 📲 Historia — Story 9:16 vertical\n`));
+    console.log(c("gray",  `     Expira automáticamente 24h después de publicar\n`));
   } else {
     console.log(c("green", `\n  ✓ Post normal\n`));
   }
