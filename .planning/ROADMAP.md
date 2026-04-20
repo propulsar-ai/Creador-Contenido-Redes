@@ -66,7 +66,9 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
   2. Ideogram v3 generates a 1080×1920 (9:16) image for Story briefs
   3. Supabase session record for the Story brief contains `format: "story"` readable by downstream nodes
   4. WhatsApp preview message includes a disclaimer that the image is 9:16 vertical (may appear cropped in WA) and that the caption is for review only and will not be sent to Meta
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 11-01-PLAN.md — Supabase schema probe + 5 new Story branch nodes + Parsear contenido patch + WA disclaimer + Phase-11 guard
+- [ ] 11-02-PLAN.md — Deploy to n8n-azure + E2E Historia brief + verify Ideogram 9:16 dimensions + Supabase format=story row + WA disclaimer
 
 ### Phase 12: Instagram Story Publishing
 **Goal**: SI-approved Stories are published to Instagram and the permalink with expiry is retrievable; scheduling guard and error handler wiring complete for IG nodes
