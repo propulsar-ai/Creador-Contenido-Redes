@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** Generate and publish complete social media posts (single, carousel, or story) in one wizard run, with AI-generated images, WhatsApp preview, SI approval, and automatic publishing to Instagram + Facebook
-**Current focus:** v1.2 Stories Publishing — Phase 10 COMPLETE ✅, Phase 11 (n8n router) next
+**Current focus:** v1.2 Stories Publishing — Phase 11 Plan 01 COMPLETE ✅, Plan 11-02 (deploy + E2E) next
 
 ## Current Position
 
 Milestone: v1.2 Stories Publishing
-Phase: 10 — Wizard Historia Format ✅ COMPLETE
-Plan: 10-02 complete ✅ — Phase 11 next
-Status: Phase 10 fully shipped (2 plans, 6 commits). Ready for `/gsd:plan-phase 11` or direct execution.
-Last activity: 2026-04-19 — Plan 10-02 shipped (22h cap + storyExpiresAt + brief spread + validateStoryBrief + RESUMEN Story lines)
+Phase: 11 — Story Image Generation (n8n router)
+Plan: 11-01 complete ✅ — Plan 11-02 (deploy + E2E) next
+Status: Plan 11-01 shipped (3 tasks, 3 commits). n8n Story branch fully wired. Workflow ready for deploy to Azure.
+Last activity: 2026-04-22 — Plan 11-01 shipped (Story branch: 5 new nodes + parse-content patch + WA disclaimer + Phase-11 guard)
 
-Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [██░░░░░░░░] ~25% (v1.2 — 2/8 plans)
+Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [███░░░░░░░] ~38% (v1.2 — 3/8 plans)
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Progress: [██████████] 100% (v1.0) — [██████�
 **Velocity (v1.2 in progress):**
 - Plan 10-01: 3 tasks | 3 commits (2972285, a663fb9, 4b6938d) | 1 file (wizard/run.js) | Completed 2026-04-19
 - Plan 10-02: 3 tasks | 3 commits (a057220, 55f0d9c, 2e71563) | 1 file (wizard/run.js) | Completed 2026-04-19 | Duration ~2min
+- Plan 11-01: 3 tasks | 3 commits (cb5333d, 419011c, 190eb26) | 1 file (n8n/workflow.json) | Completed 2026-04-22 | Duration ~25min (incl. schema migration pause)
 
 ## Accumulated Context
 
@@ -57,6 +58,17 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - **validateStoryBrief() fail-loud assert** — synchronous throw right before sendWebhook; catches malformed Story briefs at Wizard boundary so Phase 11+ can trust the contract.
 - **Phase 10 downstream contract** — Stories guarantee ISO-UTC-Z story_expires_at, aspect_ratio="9:16", num_images=1, image_model="ideogram" (unless has_own_image with validated 9:16 URL).
 
+### v1.2 Decisions Locked (Plan 11-01)
+
+- **Pre-edit n8n node count: 73 | Post-edit: 78** — Plan 11-02 deploy check asserts remote node count === 78.
+- **check-is-story uses IF v1 (not v2)** — v2 broken in n8n 2.14.2 per existing STATE.md note; mirrors ¿Carrusel? pattern.
+- **normalize-image-story cross-refs 🔧 Parsear contenido** — needed to restore nested brief shape after Ideogram API response replaces the item (same pattern as normalize-image).
+- **Supabase INSERT happens before WA preview is sent** — session row exists before user sees the preview (matches carousel pattern; safe on retry because session_id is timestamp-based).
+- **reattach-session-data-story maps 15 fields with includeOtherFields:false** — explicit map required for format, aspect_ratio, story_expires_at, num_images; these are needed by disclaimer branch and future Phase 12/13 publish nodes.
+- **Story disclaimer text LOCKED** — 3-bullet tuteo es-LA neutral; single ⚠️ emoji; no prohibited buzzwords; divider matches existing template pattern.
+- **Phase-11 guard inserts before const format = ...** — checks data.format directly to match Phase 5 precedent and avoid any variable ordering issues.
+- **Supabase story_expires_at + aspect_ratio columns added via user-run ALTER TABLE** — probe returned 400 on first run; user migrated in SQL Editor; re-probe returned 201. Both columns now confirmed present.
+
 ### v1.2 Research Flags (resolved in roadmap)
 
 - **IG Story host conflict:** `graph.instagram.com` vs `graph.facebook.com` — IGSTORY-02 requires a live API test as the first task of Phase 12 to resolve before any production node is built.
@@ -65,6 +77,6 @@ Progress: [██████████] 100% (v1.0) — [██████�
 
 ## Session Continuity
 
-Last session: 2026-04-19
-Stopped at: Completed 10-02-PLAN.md (3 tasks, 3 commits). Phase 10 fully shipped. Ready for `/gsd:plan-phase 11` (n8n router Story branch) or direct execution.
-Resume file: .planning/phases/10-wizard-historia-format/10-02-SUMMARY.md
+Last session: 2026-04-22
+Stopped at: Completed 11-01-PLAN.md (3 tasks, 3 commits). n8n Story branch fully wired. Ready for Plan 11-02 (deploy workflow.json to n8n Azure + E2E test with real story brief).
+Resume file: .planning/phases/11-story-image-generation/11-01-SUMMARY.md
