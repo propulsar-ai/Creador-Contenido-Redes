@@ -182,7 +182,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json.message.content;\nlet parsed;\ntry {\n  parsed = JSON.parse(raw.replace(/```json\\n?/g,'').replace(/```\\n?/g,'').trim());\n} catch(e) {\n  throw new Error('JSON inválido de OpenAI: ' + raw.substring(0,200));\n}\nconst b = $('🎯 Webhook Trigger').first().json.body;\nreturn [{ json: {\n  instagram:       parsed.instagram || null,\n  facebook:        parsed.facebook  || null,\n  image_prompt:    parsed.instagram?.image_prompt || '',\n  platforms:       b.platforms,\n  topic:           b.topic,\n  type:            b.type,\n  angle:           b.angle || null,\n  image_model:     b.image_model || 'flux',\n  fal_model_id:    b.fal_model_id || 'fal-ai/flux-pro/v1.1',\n  has_own_image:   b.has_own_image || false,\n  image_url:       b.image_url || null,\n  has_text_in_image: b.has_text_in_image || false,\n  approval_number: b.approval_number,\n  timestamp:       b.timestamp,\n  publish_at:      b.publish_at || 'now'\n}}];"
+        "jsCode": "const raw = $input.first().json.message.content;\nlet parsed;\ntry {\n  parsed = JSON.parse(raw.replace(/```json\\n?/g,'').replace(/```\\n?/g,'').trim());\n} catch(e) {\n  throw new Error('JSON inválido de OpenAI: ' + raw.substring(0,200));\n}\nconst b = $('🎯 Webhook Trigger').first().json.body;\nreturn [{ json: {\n  instagram:       parsed.instagram || null,\n  facebook:        parsed.facebook  || null,\n  image_prompt:    parsed.instagram?.image_prompt || '',\n  platforms:       b.platforms,\n  topic:           b.topic,\n  type:            b.type,\n  angle:           b.angle || null,\n  image_model:     b.image_model || 'flux',\n  fal_model_id:    b.fal_model_id || 'fal-ai/flux-pro/v1.1',\n  has_own_image:   b.has_own_image || false,\n  image_url:       b.image_url || null,\n  has_text_in_image: b.has_text_in_image || false,\n  approval_number: b.approval_number,\n  timestamp:       b.timestamp,\n  format:            b.format || null,\n  aspect_ratio:      b.aspect_ratio || null,\n  num_images:        b.num_images || null,\n  story_expires_at:  b.story_expires_at || null,\n  publish_at:      b.publish_at || 'now'\n}}];"
       },
       "id": "parse-content",
       "name": "🔧 Parsear contenido",
@@ -224,6 +224,26 @@
       "position": [
         864,
         368
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.format }}",
+              "value2": "story"
+            }
+          ]
+        }
+      },
+      "id": "check-is-story",
+      "name": "🔀 ¿Story?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        640
       ]
     },
     {
@@ -306,6 +326,38 @@
     {
       "parameters": {
         "method": "POST",
+        "url": "https://api.ideogram.ai/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "value": "={{ $env.IDEOGRAM_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"image_request\": {\n    \"prompt\": \"{{ $json.image_prompt.replaceAll('\\\"', '\\\\\\\"') }} — vertical 9:16 Story composition, subject centered in upper-middle third, safe zone top and bottom 14% for UI, dark background #1a1a2e, purple and magenta gradient accents, bold readable typography\",\n    \"aspect_ratio\": \"ASPECT_9_16\",\n    \"model\": \"V_2_TURBO\",\n    \"magic_prompt_option\": \"OFF\",\n    \"style_type\": \"DESIGN\"\n  }\n}",
+        "options": {}
+      },
+      "id": "ideogram-generate-story",
+      "name": "🔤 Ideogram v3 — Story",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1232,
+        640
+      ],
+      "notes": "Story 9:16 variant. Mirrors ideogram-generate exactly — V_2_TURBO endpoint, ASPECT_9_16 enum, 1080x1920 target. NOT the true Ideogram v3 endpoint (/v1/ideogram-v3/generate has different Content-Type + multipart body)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
         "url": "https://fal.run/fal-ai/nano-banana",
         "sendHeaders": true,
         "headerParameters": {
@@ -346,6 +398,19 @@
       "position": [
         1520,
         448
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Story variant — Ideogram-only (Stories don't use Flux/NanoBanana in v1.2)\nconst content = $('🔧 Parsear contenido').first().json;\nconst imageData = $input.first().json;\nconst finalUrl = imageData.data?.[0]?.url || null;\nif (!finalUrl) {\n  console.warn('⚠ Story: no se pudo extraer URL de imagen Ideogram. Respuesta:', JSON.stringify(imageData).substring(0, 300));\n}\nreturn [{ json: { ...content, final_image_url: finalUrl, image_provider_response: imageData } }];"
+      },
+      "id": "normalize-image-story",
+      "name": "🔗 Normalizar URL imagen — Story",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        640
       ]
     },
     {
@@ -1379,6 +1444,166 @@
         700
       ],
       "notes": "Inserts a carousel session into content_sessions BEFORE the WA preview is sent. Mirrors 💾 Guardar sesión Supabase (single-post). Uses format='carousel' and image_urls (JSONB array). retryOnFail=true — Supabase INSERT is idempotent by session_id (timestamp-based), safe to retry. Response = array of the inserted row."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/content_sessions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ session_id: 'propulsar_' + Date.now(), approval_number: $json.approval_number, topic: $json.topic, type: $json.type, angle: $json.angle || null, platforms: $json.platforms || [], image_model: $json.image_model || 'ideogram', format: 'story', aspect_ratio: $json.aspect_ratio || '9:16', story_expires_at: $json.story_expires_at, final_image_url: $json.final_image_url, instagram_caption: ($json.instagram && $json.instagram.caption) || $json.instagram_caption || null, facebook_caption: ($json.facebook && $json.facebook.caption) || $json.facebook_caption || null, status: 'pending', publish_at: $json.publish_at || 'now' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "save-session-supabase-story",
+      "name": "💾 Guardar sesión Supabase (Story)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "position": [
+        1632,
+        720
+      ],
+      "notes": "Inserts a Story session into content_sessions BEFORE the WA preview is sent. Mirrors the carousel save pattern. Writes format='story' + aspect_ratio + story_expires_at (all confirmed present in schema by Task 1 probe). retryOnFail=true — INSERT is idempotent by session_id (timestamp-based), safe to retry."
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "sa1",
+              "name": "topic",
+              "type": "string",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.topic }}"
+            },
+            {
+              "id": "sa2",
+              "name": "type",
+              "type": "string",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.type }}"
+            },
+            {
+              "id": "sa3",
+              "name": "angle",
+              "type": "string",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.angle || '' }}"
+            },
+            {
+              "id": "sa4",
+              "name": "platforms",
+              "type": "array",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.platforms }}"
+            },
+            {
+              "id": "sa5",
+              "name": "image_model",
+              "type": "string",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.image_model }}"
+            },
+            {
+              "id": "sa6",
+              "name": "final_image_url",
+              "type": "string",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.final_image_url }}"
+            },
+            {
+              "id": "sa7",
+              "name": "approval_number",
+              "type": "string",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.approval_number }}"
+            },
+            {
+              "id": "sa8",
+              "name": "instagram",
+              "type": "object",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.instagram }}"
+            },
+            {
+              "id": "sa9",
+              "name": "facebook",
+              "type": "object",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.facebook }}"
+            },
+            {
+              "id": "sa10",
+              "name": "session_id",
+              "type": "string",
+              "value": "={{ $json.session_id }}"
+            },
+            {
+              "id": "sa11",
+              "name": "supabase_row_id",
+              "type": "string",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "id": "sa12",
+              "name": "format",
+              "type": "string",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.format }}"
+            },
+            {
+              "id": "sa13",
+              "name": "aspect_ratio",
+              "type": "string",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.aspect_ratio }}"
+            },
+            {
+              "id": "sa14",
+              "name": "story_expires_at",
+              "type": "string",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.story_expires_at }}"
+            },
+            {
+              "id": "sa15",
+              "name": "num_images",
+              "type": "number",
+              "value": "={{ $('🔗 Normalizar URL imagen — Story').item.json.num_images || 1 }}"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "reattach-session-data-story",
+      "name": "🔗 Re-attach session data (Story)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1744,
+        720
+      ],
+      "notes": "Story variant of reattach-session-data. Supabase HTTP Request replaced the item with the inserted row (flat schema). Cross-ref to Normalizar URL imagen — Story restores the nested object shape AND adds Story-specific fields (format, aspect_ratio, story_expires_at, num_images) that the single-post reattach does not need. includeOtherFields:false — MUST explicitly map every field downstream needs."
     },
     {
       "parameters": {
@@ -2572,7 +2797,7 @@
         ],
         [
           {
-            "node": "🎨 ¿Ideogram?",
+            "node": "🔀 ¿Story?",
             "type": "main",
             "index": 0
           }
@@ -3290,6 +3515,68 @@
         [
           {
             "node": "🧹 Extract Blob Names",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Story?": {
+      "main": [
+        [
+          {
+            "node": "🔤 Ideogram v3 — Story",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🎨 ¿Ideogram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔤 Ideogram v3 — Story": {
+      "main": [
+        [
+          {
+            "node": "🔗 Normalizar URL imagen — Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Normalizar URL imagen — Story": {
+      "main": [
+        [
+          {
+            "node": "💾 Guardar sesión Supabase (Story)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Guardar sesión Supabase (Story)": {
+      "main": [
+        [
+          {
+            "node": "🔗 Re-attach session data (Story)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Re-attach session data (Story)": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar preview imagen",
             "type": "main",
             "index": 0
           }
