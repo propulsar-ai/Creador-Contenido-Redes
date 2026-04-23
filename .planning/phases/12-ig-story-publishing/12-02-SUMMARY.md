@@ -99,7 +99,7 @@ Each task / option committed atomically:
 7. **Task 4: Regression single-photo** — `2b96266` + `cbc033d` STATE pointer (test + docs)
 8. **Task 5: Regression carousel** — `d1ecaa3` (test)
 9. **Task 6: Cleanup + SCHED-02** — `fc90a74` (test)
-10. **Task 7: Finalize Phase 12 (this SUMMARY + STATE/ROADMAP close)** — `<final-commit>` (docs)
+10. **Task 7: Finalize Phase 12 (this SUMMARY + STATE/ROADMAP close)** — `d4465e2` (docs)
 
 ## Incident Timeline
 
@@ -324,4 +324,4 @@ None — no external service configuration required for Plan 12-02 itself.
 - cbc033d STATE pointer
 - d1ecaa3 Task 5
 - fc90a74 Task 6
-- Final commit <pending this doc>
+- d4465e2 Task 7 (final close)
