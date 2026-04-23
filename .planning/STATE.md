@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** Generate and publish complete social media posts (single, carousel, or story) in one wizard run, with AI-generated images, WhatsApp preview, SI approval, and automatic publishing to Instagram + Facebook
-**Current focus:** v1.2 Stories Publishing — Phase 12 Plan 01 COMPLETE ✅ (build), Plan 12-02 (E2E) next
+**Current focus:** v1.2 Stories Publishing — Phase 12 Plan 01 COMPLETE ✅, Plan 12-02 IN PROGRESS (Task 3 IG+FB E2E verified, Task 4 next)
 
 ## Current Position
 
 Milestone: v1.2 Stories Publishing
-Phase: 12 — IG Story Publishing — Plan 01 COMPLETE ✅ (build)
-Plan: 12-02 next (E2E + deploy + regression + cleanup)
-Status: Phase 12 Plan 01 built locally. n8n/workflow.json: 78 → 90 nodes (+12 Story publish-chain). Live API verification re-run 2026-04-23: graph.facebook.com confirmed as Story host, expires_at field does not exist, FB /photo_stories reachable with current Page Token perms. IG Story chain wired (Create Container → Wait 45s → media_publish → Get Permalink → Compute Expiry → ¿Platforms FB? router → Assert SAS → FB Upload + Publish → WA notify → Sheets Log → Extract Blob Names). ERR-01 Option B onError wiring verified (3 IG → Tag IG Error, 2 FB → Tag FB Error via main[1]). SCHED-02 22h cap installed, Phase-11 guard removed. REQUIREMENTS.md IGSTORY-02 + FBSTORY-04 APPENDED with audit trail. FBSTORY-04 scope-shifted to close in Phase 12. Not deployed to n8n-azure yet — Plan 12-02 handles deploy + E2E.
-Last activity: 2026-04-23 — Plan 12-01 shipped (4 commits: fafe72e live-verify / 6f1c703 build / c7e45b1 SCHED-02+guard-removal / c38e50d REQUIREMENTS+ROADMAP). Plan 12-02 Task 2 verified: exec 10085, Story IG-only live on @propulsar_ai (media_id 18207353818332680, permalink https://www.instagram.com/stories/propulsar_ai/3881767155259153987, expires 2026-04-24T16:46:15Z). Option D band-aid (commit 1e686a9) verified E2E — exec 9382 Meta 400 on Azure Blob → exec 10085 Meta 200 on Ideogram URL direct.
+Phase: 12 — IG Story Publishing — Plan 01 COMPLETE ✅ / Plan 02 IN PROGRESS
+Plan: 12-02 in progress — Task 1 deploy ✓, Task 2 IG-only ✓, Task 3 IG+FB ✓, Task 4 next (regression single-photo)
+Status: Plan 12-02 halfway. Three tactical fixes landed on top of 12-01 build: Option D (band-aid: Ideogram URL direct for IG — Meta blocks Azure Blob domain), Option B (multipart form upload for FB Story — url= param rejected with 324), Option E (fetch Azure Blob bytes then multipart — Ideogram URL rejected by FB Story with 404/324). Combined stack VERIFIED E2E: exec 10647 published Story to IG (media_id 17932325328235789) + FB Story (post_id 1290303516541171) in 62.9s, user visual-confirmed both live. Critical watch for Task 4: FB feed single-photo uses `/photos?url=` with Ideogram URL direct (Option D pattern); FB endpoints have shown strictness on image URL sources, so this may need Option E pattern extended. Observed Phase 13 scope item: WA Story notification template only mentions IG permalink — will extend in NOTIF-01.
+Last activity: 2026-04-23 — Plan 12-02 Task 3 PASS via exec 10647. Option D (1e686a9) + Option B (1b9365a) + Option E (5e09970) combined, 25-node Story chain with 18 critical nodes OK. FB post 1290303516541171 flagged for Task 6 cleanup. Supabase session 893df3d6-3764-4e01-b36d-eb615c2bf10a. Two pre-fix failures documented for Task 5 failure-injection reference (exec 9382 Meta 400 Azure Blob rejected, exec 10198 FB 324 Ideogram URL rejected, exec 10333 FB Fetch Ideogram 404).
 
 Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [██████░░░░] ~63% (v1.2 — 5/8 plans)
 
@@ -40,6 +40,7 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - **Meta token lifetime:** Depends on Susana maintaining admin role on Propulsar AI Facebook page.
 - **Azure SAS expiry:** 2027-04-10 — renew before that date.
 - **Supabase session status:** Never set to "consumed" after publish — accepted as low-risk tech debt.
+- **WA Story notification only mentions IG permalink** (observed during Plan 12-02 Task 3 exec 10647) — FB Story published successfully but WA preview template does not reference FB. This is Phase 13 NOTIF-01 scope, NOT a Phase 12 gap. Phase 13 will extend the template to include FB Story reference when `platforms` includes `facebook`.
 
 ### v1.2 Decisions Locked (Plan 10-01)
 
