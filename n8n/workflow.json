@@ -1187,7 +1187,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ image_url: $('🔗 Merge Rehost Output').item.json.blob_urls[0].url, caption: $json.instagram_caption, access_token: $env.META_PAGE_TOKEN }) }}",
+        "jsonBody": "={{ JSON.stringify({ image_url: $json.final_image_url, caption: $json.instagram_caption, access_token: $env.META_PAGE_TOKEN }) }}",
         "options": {}
       },
       "id": "ig-create-container",
@@ -1202,7 +1202,7 @@
       "maxTries": 2,
       "waitBetweenTries": 3000,
       "onError": "continueErrorOutput",
-      "notes": "Phase 12.1: consumes blob_urls[0].url from Merge Rehost Output (AFD hostname after REHOST-06 rewrite). Restores Phase 4 \"approved image = published image\" invariant. Idempotent — retry is safe. Output: { id: <container_id> }. Common errors: 9004/2207052 (image_url unreachable — check AFD is operational + container ACL), 190 (token expired)."
+      "notes": "Creates IG media container. Idempotent — retry is safe. Phase 12-02 Option D band-aid: reads $json.final_image_url (raw Ideogram/Flux hosted URL) because Meta fetcher blocks propulsarcontent.blob.core.windows.net domain-wide since 2026-04-17 (evidence: .tmp/poll/F1,F2,CONTROL). TECH DEBT → Phase 12.1 CDN Layer: restore blob_urls[0].url via Azure Front Door. Output: { id: <container_id> }. Common errors: 9004/2207052 (image_url unreachable), 190 (token expired)."
     },
     {
       "parameters": {
@@ -1358,7 +1358,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ url: $('🔗 Merge Rehost Output').item.json.blob_urls[0].url, message: $('🔗 Merge Rehost Output').item.json.facebook_caption || $('🔗 Merge Rehost Output').item.json.instagram_caption || '', access_token: $env.META_PAGE_TOKEN }) }}",
+        "jsonBody": "={{ JSON.stringify({ url: $('🔗 Merge Rehost Output').item.json.final_image_url, message: $('🔗 Merge Rehost Output').item.json.facebook_caption || $('🔗 Merge Rehost Output').item.json.instagram_caption || '', access_token: $env.META_PAGE_TOKEN }) }}",
         "options": {}
       },
       "id": "fb-publish-photo",
@@ -1373,7 +1373,7 @@
         5040,
         480
       ],
-      "notes": "CRITICAL: Retry DISABLED (FBPUB-01, ERR-02 equivalent). POST /{PAGE_ID}/photos is NOT idempotent — retry after timeout where Meta already processed creates a duplicate live FB post. Phase 12.1: consumes blob_urls[0].url (AFD hostname) restoring Phase 4 re-host invariant. Output: { id: <photo_id>, post_id: '<page_id>_<photo_id>' }."
+      "notes": "CRITICAL: Retry DISABLED (FBPUB-01, ERR-02 equivalent). POST /{PAGE_ID}/photos is NOT idempotent — retry after timeout where Meta already processed creates a duplicate live FB post. Phase 12-02 Option D band-aid: consumes final_image_url (raw Ideogram/Flux URL) because Meta blocks propulsarcontent.blob.core.windows.net. TECH DEBT → Phase 12.1 CDN Layer. Output: { id: <photo_id>, post_id: '<page_id>_<photo_id>' }."
     },
     {
       "parameters": {
@@ -1432,7 +1432,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ image_url: $('🔗 Merge Rehost Output').item.json.blob_urls[0].url, media_type: 'STORIES', access_token: $env.META_PAGE_TOKEN }) }}",
+        "jsonBody": "={{ JSON.stringify({ image_url: $('🔗 Merge Rehost Output').item.json.final_image_url, media_type: 'STORIES', access_token: $env.META_PAGE_TOKEN }) }}",
         "options": {}
       },
       "id": "ig-create-story-container",
@@ -1447,7 +1447,7 @@
         4060,
         560
       ],
-      "notes": "IGSTORY-02: Creates IG Story media_type=STORIES container. Host verificado LIVE (Plan 12-01 Task 1) — graph.facebook.com con Page Access Token. NO incluir caption (Meta lo ignora silenciosamente en Stories — pitfall #2 del RESEARCH). Phase 12.1: consumes blob_urls[0].url (AFD hostname) — Meta IG Story fetcher reaches AFD endpoint reliably. Ideogram URL 24h TTL concern obsolete once AFD restores reach. Phase 11 garantiza ratio: Ideogram 736×1312 delta 0.27%. onError=Option B main[1]. Idempotente — retryOnFail=true + maxTries=2 safe. Output: { id: <container_id> }."
+      "notes": "IGSTORY-02: Crea container IG Story. Host verificado LIVE (Plan 12-01 Task 1) — graph.facebook.com con Page Access Token. NO incluir caption (Meta lo ignora silenciosamente en Stories — pitfall #2 del RESEARCH). Phase 12-02 Option D band-aid: image_url cross-refs 🔗 Merge Rehost Output → final_image_url (raw Ideogram hosted URL) porque Meta bloquea propulsarcontent.blob.core.windows.net domain-wide desde 2026-04-17 (evidence: .tmp/poll/F1,F2,CONTROL, exec 9382). TTL constraint: Ideogram URL ~24h, SCHED-02 cap 22h → margen ~1-2h. TECH DEBT → Phase 12.1 CDN Layer restaurará Azure Blob via Front Door. Phase 11 garantiza ratio: Ideogram 736×1312 delta 0.27%. Idempotente — retryOnFail=true + maxTries=2 safe. Output: { id: <container_id> }."
     },
     {
       "parameters": {
@@ -1647,7 +1647,7 @@
         5580,
         480
       ],
-      "notes": "Phase 12.1 (Option B durable, preserved): multipart binary upload (source=<binary from ⬇️ FB: Fetch Image Bytes (Azure)>) INSTEAD of URL param. Three-layer fix progression: (1) Meta /photos?url=Azure failed 2026-04-17 (Meta→Azure block) → Option D swapped to Ideogram URL direct; (2) exec 10198 FB error 324 on Ideogram URL → Option B multipart fetch; (3) exec 10333 Ideogram URL 404 single-use exhausted → Option E fetches from Azure Blob (intra-cloud). Meta never touches the Azure URL — we upload bytes multipart. Keep published=false to get unpublished photo_id for the two-step Photo Story chain. retryOnFail=true still safe (idempotent unpublished upload). Phase 12.1 CDN Layer NOT reverting this to url=: FB /photo_stories URL fetcher strictness is a SEPARATE failure mode from the domain block (RESEARCH Open Q #4); multipart is the durable path. Intra-cloud fetch now pulls from AFD-backed blob_urls[0].url automatically via REHOST-06 rewrite."
+      "notes": "Phase 12-02 Option E: multipart binary upload (source=<binary from ⬇️ FB: Fetch Image Bytes (Azure)>) INSTEAD of URL param. Three-layer fix progression: (1) Meta /photos?url=Azure failed 2026-04-17 (Meta→Azure block) → Option D swapped to Ideogram URL direct; (2) exec 10198 FB error 324 on Ideogram URL → Option B multipart fetch; (3) exec 10333 Ideogram URL 404 single-use exhausted → Option E fetches from Azure Blob (intra-cloud). Meta never touches the Azure URL — we upload bytes multipart. Keep published=false to get unpublished photo_id for the two-step Photo Story chain. retryOnFail=true still safe (idempotent unpublished upload). TECH DEBT → Phase 12.1 CDN Layer may revert to URL-based upload once a CDN-fronted rehost URL is available."
     },
     {
       "parameters": {
@@ -2189,7 +2189,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Phase 12.1: restored source to Merge Rehost Output.blob_urls (AFD hostname after REHOST-06 rewrite).\n// Phase 4 re-host invariant restored — Meta fetcher reaches AFD *.azurefd.net which fronts\n// the same Azure Blob container, sidestepping the 2026-04-17 domain-wide block on\n// propulsarcontent.blob.core.windows.net.\nconst blobUrls = $('🔗 Merge Rehost Output').first().json.blob_urls || [];\nif (blobUrls.length === 0) {\n  throw new Error('IG Carousel Explode: no blob_urls found in Merge Rehost Output — check REHOST sub-workflow output');\n}\nif (blobUrls.length > 10) {\n  throw new Error('IG Carousel Explode: carousel exceeds 10-slide Meta limit (' + blobUrls.length + ' slides)');\n}\nreturn blobUrls.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n    num_images: blobUrls.length,\n  }\n}));",
+        "jsCode": "// Phase 12-02 Option D: swap source from Merge Rehost Output.blob_urls (Azure Blob, blocked by Meta)\n// to Prep Re-host Input.image_urls (raw Ideogram/Flux URLs). Same shape [{index,url}].\n// TECH DEBT → Phase 12.1 CDN Layer restores Azure Blob path via Front Door.\nconst data = $('🔧 Prep Re-host Input').first().json;\nconst imageUrls = data.image_urls || [];\nif (imageUrls.length === 0) {\n  throw new Error('IG Carousel Explode: no image_urls found in Prep Re-host Input');\n}\nif (imageUrls.length > 10) {\n  throw new Error('IG Carousel Explode: carousel exceeds 10-slide Meta limit (' + imageUrls.length + ' slides)');\n}\nreturn imageUrls.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n    num_images: imageUrls.length,\n  }\n}));",
         "mode": "runOnceForAllItems"
       },
       "id": "ig-carousel-explode",
@@ -2200,7 +2200,7 @@
         3940,
         200
       ],
-      "notes": "Phase 12.1: Explodes blob_urls (AFD hostname) from Merge Rehost Output into one item per slide. Phase 4 re-host invariant restored via Azure Front Door CDN layer. Validates: not empty, not > 10 slides (Meta limit). Connected from TRUE output of ¿Formato Carrusel?. Downstream IG Create Child Container consumes $json.blob_url — children NOT edited, inherit AFD URL transparently through fan-out."
+      "notes": "Phase 12-02 Option D: Explodes image_urls from Prep Re-host Input (raw Ideogram URLs) into one item per slide — Meta blocks Azure Blob domain. Validates: not empty, not > 10 slides (Meta limit). Connected from TRUE output of ¿Formato Carrusel?. TECH DEBT → Phase 12.1 CDN Layer will restore source to Merge Rehost Output.blob_urls."
     },
     {
       "parameters": {
@@ -2386,7 +2386,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Phase 12.1: restored source to Merge Rehost Output.blob_urls (AFD hostname).\n// Meta fetcher reaches AFD *.azurefd.net fronting same Azure Blob container.\n// Count validation not repeated — IG Explode Carousel upstream already validated.\nconst blobUrls = $('🔗 Merge Rehost Output').first().json.blob_urls || [];\nreturn blobUrls.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n  }\n}));",
+        "jsCode": "// Phase 12-02 Option D: source = Prep Re-host Input.image_urls (raw Ideogram URLs).\n// Meta blocks Azure Blob domain. TECH DEBT → Phase 12.1 CDN Layer restores Azure path.\nconst rawImages = $('🔧 Prep Re-host Input').first().json.image_urls || [];\nreturn rawImages.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n  }\n}));",
         "mode": "runOnceForAllItems"
       },
       "id": "fb-carousel-explode",
@@ -2397,7 +2397,7 @@
         5700,
         200
       ],
-      "notes": "Phase 12.1: Explodes blob_urls (AFD hostname) from Merge Rehost Output into per-slide items for FB unpublished photo upload. Phase 4 re-host invariant restored via AFD CDN layer. Mirrors IG: Explode Carousel Slides but simpler (no count validation — already done in IG chain). Downstream FB Upload Photo Unpublished consumes $json.blob_url — NOT edited, inherits AFD URL transparently."
+      "notes": "Phase 12-02 Option D: Explodes raw Ideogram URLs from Prep Re-host Input.image_urls into per-slide items for FB unpublished photo upload — Meta blocks Azure Blob. Mirrors IG: Explode Carousel Slides but simpler (no count validation — already done in IG chain). TECH DEBT → Phase 12.1 CDN Layer restores source."
     },
     {
       "parameters": {
