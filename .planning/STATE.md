@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** Generate and publish complete social media posts (single, carousel, or story) in one wizard run, with AI-generated images, WhatsApp preview, SI approval, and automatic publishing to Instagram + Facebook
-**Current focus:** v1.2 Stories Publishing — Phase 11 Plan 01 COMPLETE ✅, Plan 11-02 (deploy + E2E) next
+**Current focus:** v1.2 Stories Publishing — Phase 11 COMPLETE ✅, Phase 12 (IG Story publishing) next
 
 ## Current Position
 
 Milestone: v1.2 Stories Publishing
-Phase: 11 — Story Image Generation (n8n router)
-Plan: 11-01 complete ✅ — Plan 11-02 (deploy + E2E) next
-Status: Plan 11-01 shipped (3 tasks, 3 commits). n8n Story branch fully wired. Workflow ready for deploy to Azure.
-Last activity: 2026-04-22 — Plan 11-01 shipped (Story branch: 5 new nodes + parse-content patch + WA disclaimer + Phase-11 guard)
+Phase: 11 — Story Image Generation (n8n router) — COMPLETE ✅
+Plan: 11-02 complete ✅ — Phase 12 (IG Story publishing) next
+Status: Phase 11 verified end-to-end on n8n-azure. Ideogram delivers 9:16 (736×1312, delta 0.27%), Supabase row persists Story fields, WA preview + disclaimer arrive, NO reply triggers rejection log. Two Plan 11-01 gaps fixed in this plan (OpenAI cred swap + Preparar mensaje WA Story lookup).
+Last activity: 2026-04-23 — Plan 11-02 shipped (E2E verified, 4 executions: 5320 err / 5486 err / 5501 success / 5555 NO-reply success)
 
-Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [███░░░░░░░] ~38% (v1.2 — 3/8 plans)
+Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [█████░░░░░] ~50% (v1.2 — 4/8 plans)
 
 ## Performance Metrics
 
@@ -29,6 +29,7 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - Plan 10-01: 3 tasks | 3 commits (2972285, a663fb9, 4b6938d) | 1 file (wizard/run.js) | Completed 2026-04-19
 - Plan 10-02: 3 tasks | 3 commits (a057220, 55f0d9c, 2e71563) | 1 file (wizard/run.js) | Completed 2026-04-19 | Duration ~2min
 - Plan 11-01: 3 tasks | 3 commits (cb5333d, 419011c, 190eb26) | 1 file (n8n/workflow.json) | Completed 2026-04-22 | Duration ~25min (incl. schema migration pause)
+- Plan 11-02: 1 task (E2E verification) | 2 fix commits | 1 file (n8n/workflow.json) | Completed 2026-04-23 | Duration ~40min (4 n8n executions, 2 fix-redeploy cycles)
 
 ## Accumulated Context
 
@@ -58,6 +59,15 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - **validateStoryBrief() fail-loud assert** — synchronous throw right before sendWebhook; catches malformed Story briefs at Wizard boundary so Phase 11+ can trust the contract.
 - **Phase 10 downstream contract** — Stories guarantee ISO-UTC-Z story_expires_at, aspect_ratio="9:16", num_images=1, image_model="ideogram" (unless has_own_image with validated 9:16 URL).
 
+### v1.2 Decisions Locked (Plan 11-02)
+
+- **OpenAI credential canonical for Propulsar workflows: `wWEhRsD5ilt2xGvz` (`OpenAI-Propulsar`)** — used by 4 active production workflows (Chat Propulsar Agente IA, Agendar Cita V2, etc.); Content Engine v3 was pointing at stale `oSMopb75vo4NhdlT` ("OpenAI account 29") which had been deleted from n8n. Rule: when wiring new GPT-4o nodes, use OpenAI-Propulsar.
+- **Preparar mensaje WA upstream lookup priority: Story → Carousel → Single → $input fallback** — Plan 11-01 added the Story disclaimer template but missed updating the upstream `d` lookup, causing Story flow to fall through to YCloud's image-send response and produce malformed output. Future Code nodes that branch on `d.format` MUST include explicit lookups for every supported format upstream node.
+- **Ideogram 9:16 actual output: 736×1312 PNG, ratio 0.5610 (delta 0.27% from 9:16 ideal 0.5625)** — Phase 12 IG Story API can ingest the URL directly; no resize step needed. Image URL is 24h ephemeral signed.
+- **Supabase `num_images` column: NOT present on `content_sessions`** — Plan 11-01 ALTER TABLE only added `aspect_ratio` + `story_expires_at`. INSERT mapping silently drops `num_images` via PostgREST. Tech debt: low priority (always 1 for Story per spec).
+- **n8n PUT does not deactivate workflow** — confirmed `active=true` post-PUT, no separate `/activate` call needed. Save 1 API call vs. older docs.
+- **n8n credential listing workaround** — Public API hides credentials; enumerate all workflows + grep `node.credentials.openAiApi.id` to discover active credential IDs.
+
 ### v1.2 Decisions Locked (Plan 11-01)
 
 - **Pre-edit n8n node count: 73 | Post-edit: 78** — Plan 11-02 deploy check asserts remote node count === 78.
@@ -77,6 +87,6 @@ Progress: [██████████] 100% (v1.0) — [██████�
 
 ## Session Continuity
 
-Last session: 2026-04-22
-Stopped at: Completed 11-01-PLAN.md (3 tasks, 3 commits). n8n Story branch fully wired. Ready for Plan 11-02 (deploy workflow.json to n8n Azure + E2E test with real story brief).
-Resume file: .planning/phases/11-story-image-generation/11-01-SUMMARY.md
+Last session: 2026-04-23
+Stopped at: Phase 11 COMPLETE. E2E verified — Ideogram 9:16, Supabase row, WA preview + disclaimer, NO-reply rejection log all working. Two Plan 11-01 gaps fixed (OpenAI cred swap to OpenAI-Propulsar + Preparar mensaje WA Story lookup). Ready for Phase 12 (IG Story publishing) — first task is the IGSTORY-02 live API host conflict resolution (graph.instagram.com vs graph.facebook.com).
+Resume file: .planning/phases/11-story-image-generation/11-02-SUMMARY.md
