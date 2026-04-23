@@ -40,7 +40,7 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 - [x] **Phase 10: Wizard Historia Format** - Add "Historia" as a third format in Wizard with Story-aware scheduling and model restrictions (completed 2026-04-19)
 - [x] **Phase 11: Story Image Generation** - Route story briefs to Ideogram 9:16 in n8n with Supabase session persistence and WA preview disclaimer (completed 2026-04-23)
 - [x] **Phase 12: Instagram Story Publishing** - Create IG Story container, publish, retrieve permalink/expiry, wire error handler; SCHED-02 guard in same phase (completed 2026-04-23; Options D/B/E band-aid applied — Phase 12.1 CDN Layer required)
-- [ ] **Phase 12.1 (NEW, URGENT): CDN Layer** - Azure Front Door OR Cloudflare R2 to restore Phase 4 Azure Blob re-host invariant blocked by Meta silent policy change 2026-04-17. Obsoletes Options D/B/E from Phase 12.
+- [ ] **Phase 12.1 (NEW, URGENT): CDN Layer** - Azure Front Door Standard fronting Azure Blob restores Phase 4 re-host invariant broken by Meta 2026-04-17 domain-wide block. Obsoletes Options D (5 Meta-facing nodes reverted to blob_urls[0].url = AFD hostname); preserves Options B+E (FB Story multipart + intra-cloud fetch).
 - [ ] **Phase 13: Facebook Story + Log + Notifications** - Publish FB Story, extend Sheets log schema, send Story-specific WA success notification (depends on 12.1 for clean contract)
 
 ## Phase Details
@@ -86,6 +86,23 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 - [ ] 12-01-PLAN.md — Live verification + IG Story publish chain + FB Photo Story branch + ERR-01 onError wiring + SCHED-02 guard + Phase-11 guard removal + REQUIREMENTS/ROADMAP IGSTORY-02 text correction
 - [ ] 12-02-PLAN.md — Deploy to n8n-azure + E2E Story IG-only + E2E Story IG+FB + regression single/carousel + failure injection + cleanup + STATE.md + SUMMARY
 
+### Phase 12.1: CDN Layer - Azure Front Door obsoletes Options D-B-E (INSERTED)
+
+**Goal:** Restore Phase 4 re-host invariant broken by Meta's 2026-04-17 silent domain-wide block of `propulsarcontent.blob.core.windows.net`. Deploy Azure Front Door Standard ($35/mo) fronting the existing Azure Blob container; re-point 5 Meta-facing nodes from Options D band-aid back to `blob_urls[0].url` (now AFD hostname via REHOST-06 seam rewrite). Keep Options B+E (FB Story multipart + intra-cloud fetch — separate failure modes). 5-exec E2E verification matching Plan 12-02 pattern. Phase 13 inherits clean CDN contract.
+**Depends on:** Phase 12
+**Requirements**: infra-level (no new REQUIREMENTS entries — restores Phase 4, 5, 6, 7, 12 re-host assumptions)
+**Success Criteria** (what must be TRUE):
+  1. Azure Front Door Standard endpoint (`*.z01.azurefd.net`) serves Azure Blob bytes to external clients (curl HTTP/2 200 + image content-type) including requests with `facebookexternalhit/1.1` user-agent
+  2. Container `propulsarcontent` ACL is flipped to Blob anonymous-read (blob names are UUIDs = unguessability; eliminates SAS+cache-key complexity)
+  3. Sub-workflow `subworkflow-rehost-images.json` REHOST-06 `🗂️ Collect blob_urls` Code node rewrites hostname from `<account>.blob.core.windows.net` to `$env.AZURE_CDN_HOST` when env var set (falsy-fallback to raw Blob URL for safe degradation)
+  4. 5 Meta-facing nodes in `n8n/workflow.json` reverted from Option D `final_image_url` back to `blob_urls[0].url` — `ig-create-container` (single IG), `fb-publish-photo` (single FB), `ig-create-story-container` (IG Story), `ig-carousel-explode` + `fb-carousel-explode` (Code fan-out sources)
+  5. Options B (FB Story `/photo_stories` multipart `formBinaryData`) and E (`⬇️ FB: Fetch Image Bytes` sourcing from `blob_urls[0].url` intra-cloud) preserved — separate failure modes from the domain block
+  6. 5-exec E2E verification: Story IG-only, Story IG+FB, regression single-photo, regression carousel, failure injection — all execs prove Meta Graph API calls consume AFD hostname (request body inspection in n8n UI shows `azurefd.net` in image_url field); failure exec proves error subgraph + Delete Azure Blob cleanup (against origin, not AFD) still work
+**Plans**: 3 plans
+- [ ] 12.1-01-PLAN.md — AFD provisioning + container anonymous-read flip + smoke test (infrastructure-only, no workflow edits)
+- [ ] 12.1-02-PLAN.md — REHOST-06 seam hostname rewrite + 5 Meta-facing node reverts from Option D + n8n PUT deploy (code edits + deploy)
+- [ ] 12.1-03-PLAN.md — 5-exec E2E verification + Options D comment final sweep + STATE.md + ROADMAP.md + 12.1-SUMMARY.md
+
 ### Phase 13: Facebook Story + Log + Notifications
 **Goal**: SI-approved Stories are also published to the Facebook Page, all Sheets logs include a Formato column, and the WhatsApp success notification contains Story-specific expiry and permalink information
 **Depends on**: Phase 12
@@ -114,5 +131,5 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 | 10. Wizard Historia Format | v1.2 | 2/2 | Complete | 2026-04-19 |
 | 11. Story Image Generation | v1.2 | 2/2 | Complete | 2026-04-23 |
 | 12. Instagram Story Publishing | v1.2 | Complete    | 2026-04-23 | 2026-04-23 |
-| 12.1. CDN Layer (NEW, URGENT) | v1.2 | 0/TBD | Recommended next — obsoletes Options D/B/E | - |
+| 12.1. CDN Layer | v1.2 | 0/3 | Planned — ready to execute (Wave 1 → 2 → 3 sequential) | - |
 | 13. Facebook Story + Log + Notifications | v1.2 | 0/TBD | Blocked on 12.1 for clean contract | - |
