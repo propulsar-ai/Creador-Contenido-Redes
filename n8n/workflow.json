@@ -1398,6 +1398,330 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.format }}",
+              "value2": "story"
+            }
+          ]
+        }
+      },
+      "id": "format-story-branch",
+      "name": "🔀 ¿Formato Story?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        3840,
+        480
+      ],
+      "notes": "IGSTORY-01: Routes Story briefs (format=story) to IG Story publish chain (TRUE output 0). Single-post briefs (format!=story) continue (FALSE output 1) to existing 📤 IG: Create Container. Uses IF typeVersion 1 — v2/Switch v3 broken in n8n 2.14.2. Mirrors 🔀 ¿Formato Carrusel? pattern."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $env.INSTAGRAM_ACCOUNT_ID }}/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ image_url: $('🔗 Merge Rehost Output').item.json.blob_urls[0].url, media_type: 'STORIES', access_token: $env.META_PAGE_TOKEN }) }}",
+        "options": {}
+      },
+      "id": "ig-create-story-container",
+      "name": "📤 IG: Create Story Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput",
+      "position": [
+        4060,
+        560
+      ],
+      "notes": "IGSTORY-02: Crea container IG Story. Host verificado LIVE (Plan 12-01 Task 1) — graph.facebook.com con Page Access Token. NO incluir caption (Meta lo ignora silenciosamente en Stories — pitfall #2 del RESEARCH). image_url cross-refs 🔗 Merge Rehost Output → blob_urls[0].url (Azure Blob permalink, NO el raw Ideogram URL — SCHED-02 safety: el cap es 22h y Ideogram URLs expiran en 24h, mientras que Azure Blob no expira hasta SAS 2027; mismo principio que el FB Upload). Phase 11 garantiza ratio: Ideogram 736×1312 delta 0.27%. Idempotente — retryOnFail=true + maxTries=2 safe. Output: { id: <container_id> }."
+    },
+    {
+      "parameters": {
+        "amount": 45,
+        "unit": "seconds"
+      },
+      "id": "ig-wait-story-container",
+      "name": "⏳ IG: Wait 45s Story Container",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        4280,
+        560
+      ],
+      "notes": "IGSTORY-03: Espera fija 45s para que el Story container alcance status=FINISHED antes de media_publish. Live test (Plan 12-01 Task 1) mostró FINISHED en <5s para JPEG ~230KB — 45s es 9× margen conservador consistente con ⏳ IG: Wait 30s Carousel (que también usa amount=45 pese a su nombre). Si en producción aparece error 9007 >5% exec, escalar a polling (v2)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $env.INSTAGRAM_ACCOUNT_ID }}/media_publish",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ creation_id: $json.id, access_token: $env.META_PAGE_TOKEN }) }}",
+        "options": {}
+      },
+      "id": "ig-story-media-publish",
+      "name": "🚀 IG: Story media_publish",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": false,
+      "maxTries": 1,
+      "waitBetweenTries": 0,
+      "onError": "continueErrorOutput",
+      "position": [
+        4500,
+        560
+      ],
+      "notes": "IGSTORY-04: CRITICAL — retryOnFail=false. media_publish NO es idempotente (retry tras timeout puede crear Story duplicada). Mismo endpoint que 🚀 IG: media_publish (single) y 🚀 IG: Carousel media_publish; solo cambia creation_id origin. Si falla, Felix verifica IG profile manualmente. Error 9007 = container not ready (aumentar wait o investigar image_url unreachable)."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v22.0/{{ $json.id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "permalink,timestamp,media_product_type" },
+            { "name": "access_token", "value": "={{ $env.META_PAGE_TOKEN }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ig-get-story-permalink",
+      "name": "🔗 IG: Get Story Permalink",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput",
+      "position": [
+        4720,
+        560
+      ],
+      "notes": "IGSTORY-05: GET fields=permalink,timestamp,media_product_type on the published media_id returned by 🚀 IG: Story media_publish. NO pedir expires_at — verificado LIVE (Plan 12-01 Task 1 Test D) que no existe (code:100). El timestamp ISO-8601 se usa downstream para computar story_expires_at = timestamp + 24h. media_product_type devuelve 'STORY' para auditoría. Idempotente GET — retry safe. NOTA: pre-publish container NO expone estos 3 fields (verificado Test G) — por eso este GET corre post-media_publish, contra el media_id publicado, no contra el container_id."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// IGSTORY-05 fallback: Meta NO documenta expires_at en IG Media (verificado live).\n// Calculamos story_expires_at = timestamp + 24h.\nconst item = { ...$input.item.json };\nif (item.timestamp) {\n  item.story_expires_at = new Date(new Date(item.timestamp).getTime() + 86400000).toISOString();\n} else {\n  // Fallback de fallback: ahora + 24h (edge case donde Meta no devolvió timestamp).\n  item.story_expires_at = new Date(Date.now() + 86400000).toISOString();\n}\n// Preservamos ig_story_permalink explícito para uso downstream (WA notify + Sheets Log)\nitem.ig_story_permalink = item.permalink || '';\nitem.ig_story_media_id = item.id || '';\nreturn { json: item };"
+      },
+      "id": "ig-compute-story-expiry",
+      "name": "🔧 IG: Compute Story Expiry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4940,
+        560
+      ],
+      "notes": "IGSTORY-05: Computes story_expires_at = timestamp + 86400000ms (24h) como fallback — Meta NO expone expires_at en IG Media (verificado live en Plan 12-01 Task 1 Test D). También extrae ig_story_permalink + ig_story_media_id para consumo downstream (WA notify + Sheets Log). Sin onError — Code trivial, throw aborta la execution pero no debería fallar nunca."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ ($('🔗 Merge Rehost Output').item.json.platforms || []).includes('facebook') ? 'true' : 'false' }}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "check-platforms-facebook",
+      "name": "🔀 ¿Plataformas FB?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        5160,
+        560
+      ],
+      "notes": "Routes Story executions based on whether brief includes FB in platforms. TRUE output 0 → 🛡️ Assert FB Story URL → FB Photo Story chain. FALSE output 1 → skip FB, go directly to ✅ Notify WhatsApp Story. Cross-refs 🔗 Merge Rehost Output (structural guarantee: all Meta downstream passes through it) for platforms array."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// FBSTORY-04: Strip Azure SAS query params from blob URL before FB Story Upload.\n// Meta STORIES fetcher (graph.facebook.com/{PAGE_ID}/photos para Story) es más estricto que el FEED fetcher\n// y puede rechazar URLs con query string SAS (sig=, sv=, sp=, etc.). Defense-in-depth — las URLs actuales\n// de Phase 11 son bare permalinks pero esta assertion blinda futuras rotaciones de SAS.\nconst item = { ...$input.item.json };\nconst rehost = $('🔗 Merge Rehost Output').item.json;\nconst rawUrl = (rehost.blob_urls && rehost.blob_urls[0] && rehost.blob_urls[0].url) || '';\nif (!rawUrl) {\n  throw new Error('FBSTORY-04 Assert: blob_urls[0].url está vacío en 🔗 Merge Rehost Output. No puedo passear una URL inválida al FB Upload.');\n}\nconst qIdx = rawUrl.indexOf('?');\nconst sasParams = ['sig=','sv=','sp=','se=','st=','sr=','spr='];\nlet bareUrl = rawUrl;\nlet stripped = false;\nif (qIdx > 0) {\n  const qs = rawUrl.slice(qIdx + 1);\n  const hasSas = sasParams.some(p => qs.includes(p));\n  if (hasSas) {\n    bareUrl = rawUrl.slice(0, qIdx);\n    stripped = true;\n  }\n}\nitem.fb_story_image_url = bareUrl;\nitem.fb_story_url_stripped = stripped;\nreturn { json: item };"
+      },
+      "id": "assert-fb-story-url",
+      "name": "🛡️ Assert FB Story URL (no SAS)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5280,
+        480
+      ],
+      "notes": "FBSTORY-04: Strip SAS query params del Azure Blob URL antes del FB Story Upload (Meta STORIES fetcher es stricter que FEED fetcher). Implementación Option A (strip, no reject) — defense-in-depth contra rotaciones futuras de SAS. Output: { ...input, fb_story_image_url: <bare>, fb_story_url_stripped: <bool> }. El downstream 📤 FB: Upload Story Photo Unpublished consume $json.fb_story_image_url (NO $('🔗 Merge Rehost Output').item.json.blob_urls[0].url directo). El field fb_story_url_stripped se loguea en SUMMARY post-E2E para detectar si en algún momento Phase 11 empieza a producir URLs con SAS (señal de que la rotación arrancó)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $env.FACEBOOK_PAGE_ID }}/photos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ url: $json.fb_story_image_url, published: false, access_token: $env.META_PAGE_TOKEN }) }}",
+        "options": {}
+      },
+      "id": "fb-upload-story-photo",
+      "name": "📤 FB: Upload Story Photo Unpublished",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput",
+      "position": [
+        5380,
+        480
+      ],
+      "notes": "Primer paso two-step FB Photo Story. Sube imagen como unpublished (published=false) para obtener photo_id. Consume $json.fb_story_image_url (output de 🛡️ Assert FB Story URL upstream — Azure Blob URL ya validada bare-without-SAS para FBSTORY-04). Idempotente — retryOnFail=true safe (crea múltiples unpublished photos en caso raro, pero no publica ninguna). Pattern verificado en RESEARCH.md §Code Examples #4."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $env.FACEBOOK_PAGE_ID }}/photo_stories",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ photo_id: $json.id, access_token: $env.META_PAGE_TOKEN }) }}",
+        "options": {}
+      },
+      "id": "fb-publish-photo-story",
+      "name": "🌐 FB: Publish Photo Story",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": false,
+      "maxTries": 1,
+      "waitBetweenTries": 0,
+      "onError": "continueErrorOutput",
+      "position": [
+        5600,
+        480
+      ],
+      "notes": "Segundo paso two-step FB Photo Story. CRITICAL: retryOnFail=false — endpoint no es idempotente (retry puede crear duplicate FB Story). Endpoint verificado LIVE en Plan 12-01 Task 1 Test J (code:100 Invalid id → endpoint reachable + perms OK). Response esperado: {success:true, post_id:<id>}. Phase 13 refinará WA notify + Sheets log con FB permalink format."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ycloud.com/v2/whatsapp/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-API-Key", "value": "={{ $env.YCLOUD_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $env.YCLOUD_WHATSAPP_NUMBER, to: $('🔗 Merge Rehost Output').item.json.approval_number, type: 'text', text: { body: '📲 *Story publicada* (válido 24h)\\n\\n📸 Instagram: ' + ($('🔧 IG: Compute Story Expiry').item.json.ig_story_permalink || '(permalink pendiente de propagación)') + '\\n⏳ Expira: ' + new Date($('🔧 IG: Compute Story Expiry').item.json.story_expires_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', weekday: 'short', hour: '2-digit', minute: '2-digit' }) + '\\n\\n📝 Tema: ' + $('🔗 Merge Rehost Output').item.json.topic } }) }}",
+        "options": {}
+      },
+      "id": "notify-wa-story",
+      "name": "✅ Notify WhatsApp Story",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "stopWorkflow",
+      "position": [
+        5820,
+        560
+      ],
+      "notes": "Envía notificación WA de Story publicada. Cross-refs 🔗 Merge Rehost Output (approval_number, topic) + 🔧 IG: Compute Story Expiry (permalink IG + expires_at). FB permalink format pendiente de Phase 13 (RESEARCH §Open Q #2). onError=stopWorkflow (WA failure no debe bloquear el Sheets log de éxito). Retry seguro — YCloud dedup por message id. Mirrors ✅ Notify WhatsApp Carousel pattern (inline X-API-Key header, no credentials block)."
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.GOOGLE_SHEETS_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ new Date().toISOString() }}",
+            "Tema": "={{ $('🔗 Merge Rehost Output').item.json.topic }}",
+            "Tipo": "={{ $('🔗 Merge Rehost Output').item.json.type }}",
+            "Angulo": "={{ $('🔗 Merge Rehost Output').item.json.angle || '' }}",
+            "Plataformas": "={{ ($('🔗 Merge Rehost Output').item.json.platforms || []).join(', ') }}",
+            "Modelo_Imagen": "={{ $('🔗 Merge Rehost Output').item.json.image_model || 'ideogram' }}",
+            "Imagen_URL": "={{ ($('🔗 Merge Rehost Output').item.json.blob_urls && $('🔗 Merge Rehost Output').item.json.blob_urls[0] && $('🔗 Merge Rehost Output').item.json.blob_urls[0].url) || '' }}",
+            "Estado": "Publicado",
+            "IG_URL": "={{ $('🔧 IG: Compute Story Expiry').item.json.ig_story_permalink || '' }}",
+            "FB_URL": "",
+            "Publicado_En": "={{ new Date().toISOString() }}",
+            "Publish_Status": "success",
+            "Error_Msg": ""
+          },
+          "schema": [
+            { "id": "Fecha", "displayName": "Fecha", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Tema", "displayName": "Tema", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Tipo", "displayName": "Tipo", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Angulo", "displayName": "Angulo", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Plataformas", "displayName": "Plataformas", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Modelo_Imagen", "displayName": "Modelo_Imagen", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Imagen_URL", "displayName": "Imagen_URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Estado", "displayName": "Estado", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "IG_URL", "displayName": "IG_URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "FB_URL", "displayName": "FB_URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Publicado_En", "displayName": "Publicado_En", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Publish_Status", "displayName": "Publish_Status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Error_Msg", "displayName": "Error_Msg", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ]
+        },
+        "operation": "append",
+        "resource": "sheet"
+      },
+      "id": "sheets-log-story",
+      "name": "📊 Google Sheets Log (Story)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "XjKteoOTobs1qR55",
+          "name": "Google Sheets account"
+        }
+      },
+      "position": [
+        6040,
+        560
+      ],
+      "notes": "Logs Story publish success en Sheet Log (mismo doc + tab que single/carousel). Estado=Publicado + Publish_Status=success. IG_URL = ig_story_permalink. FB_URL queda '' por ahora (Phase 13 agregará format FB Story URL tras determinar si funciona /stories/... o similar). schema del Sheet Log sin cambios — si Phase 13 quiere agregar Formato + Expires_At columns, será LOG-01 aparte. Credential reusado de Carousel log (XjKteoOTobs1qR55)."
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/content_sessions",
         "sendHeaders": true,
@@ -3028,7 +3352,188 @@
         ],
         [
           {
+            "node": "🔀 ¿Formato Story?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Formato Story?": {
+      "main": [
+        [
+          {
+            "node": "📤 IG: Create Story Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "📤 IG: Create Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 IG: Create Story Container": {
+      "main": [
+        [
+          {
+            "node": "⏳ IG: Wait 45s Story Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🏷️ Tag IG Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ IG: Wait 45s Story Container": {
+      "main": [
+        [
+          {
+            "node": "🚀 IG: Story media_publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🚀 IG: Story media_publish": {
+      "main": [
+        [
+          {
+            "node": "🔗 IG: Get Story Permalink",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🏷️ Tag IG Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 IG: Get Story Permalink": {
+      "main": [
+        [
+          {
+            "node": "🔧 IG: Compute Story Expiry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🏷️ Tag IG Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 IG: Compute Story Expiry": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Plataformas FB?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Plataformas FB?": {
+      "main": [
+        [
+          {
+            "node": "🛡️ Assert FB Story URL (no SAS)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Notify WhatsApp Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🛡️ Assert FB Story URL (no SAS)": {
+      "main": [
+        [
+          {
+            "node": "📤 FB: Upload Story Photo Unpublished",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 FB: Upload Story Photo Unpublished": {
+      "main": [
+        [
+          {
+            "node": "🌐 FB: Publish Photo Story",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🏷️ Tag FB Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 FB: Publish Photo Story": {
+      "main": [
+        [
+          {
+            "node": "✅ Notify WhatsApp Story",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🏷️ Tag FB Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Notify WhatsApp Story": {
+      "main": [
+        [
+          {
+            "node": "📊 Google Sheets Log (Story)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Google Sheets Log (Story)": {
+      "main": [
+        [
+          {
+            "node": "🧹 Extract Blob Names",
             "type": "main",
             "index": 0
           }

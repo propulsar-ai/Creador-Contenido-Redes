@@ -160,7 +160,15 @@ Safe to proceed to Task 2 (workflow.json edits).
 
 ## Task 2 — Workflow.json edits
 
-[Task 2 completes this section]
+- **Pre-flight A — onError pattern observed:** Option B confirmed. `grep -c '"error":' n8n/workflow.json` returned 0 matches, i.e. all existing carousel/single onError wiring uses `main[]` second slot. Example verified at lines 3049-3065 (`🖼️ IG: Create Child Container` has `main: [[happy], [Tag IG Error]]`, no separate `error` key). All 5 new HTTP Story nodes wired accordingly (Option B via `main[1]`).
+- **Pre-flight B — env vars confirmed:** `$env.INSTAGRAM_ACCOUNT_ID`, `$env.META_PAGE_TOKEN`, `$env.FACEBOOK_PAGE_ID`, `$env.YCLOUD_API_KEY`, `$env.YCLOUD_WHATSAPP_NUMBER`, `$env.GOOGLE_SHEETS_ID` all used consistently with carousel/single nodes.
+- **Pre-edit node count:** 78 | **Post-edit:** 90 | **Delta:** +12 (exact match for Story publish-chain)
+- **Connection keys:** 73 → 85 (+12 new blocks)
+- **12 nodes added:** `format-story-branch`, `ig-create-story-container`, `ig-wait-story-container`, `ig-story-media-publish`, `ig-get-story-permalink`, `ig-compute-story-expiry`, `check-platforms-facebook`, `assert-fb-story-url`, `fb-upload-story-photo`, `fb-publish-photo-story`, `notify-wa-story`, `sheets-log-story`
+- **1 connection rewired:** `🔀 ¿Formato Carrusel?` FALSE output changed from `📤 IG: Create Container` → `🔀 ¿Formato Story?` (single path restored byte-for-byte via `🔀 ¿Formato Story?` FALSE → `📤 IG: Create Container`)
+- **Credentials reused:** `XjKteoOTobs1qR55` ("Google Sheets account") for `sheets-log-story`; YCloud WA uses inline `X-API-Key` header with `$env.YCLOUD_API_KEY` (matching `notify-wa-carousel` pattern — NO `credentials.httpHeaderAuth` block)
+- **Validations 1-11 all passed first run** (JSON parse, node count, router rewire, ERR-01 Option B wiring, terminal Sheets Log → Extract Blob Names, IGSTORY-06 no hashtag comment, retryOnFail=false on both media_publish, BLOCKER-1 Azure Blob URL consumption, FBSTORY-04 Assert install, FB Upload consumes Assert output, Assert wired in FB chain, caption NOT in Story body, Carousel TRUE path intact)
+- **Commit SHA (workflow.json):** `<pegar acá tras el commit de abajo>`
 
 ## Task 3 — SCHED-02 patch + Phase-11 guard removal + docs
 
