@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 ## Current Position
 
 Milestone: v1.2 Stories Publishing
-Phase: 12.1 — CDN Layer (Azure Front Door) — IN PROGRESS (Plans 01 + 02 complete, Plan 03 next: E2E exec gate)
-Plan: 12.1-02 COMPLETE — REHOST-06 (`collect-blobs`) rewrites blob hostname to AFD via `$env.AZURE_CDN_HOST` with safe fallback; 5 Meta-facing nodes reverted from Phase 12-02 Option D band-aid (3 Tier A direct jsonBody reverts: ig-create-container, fb-publish-photo, ig-create-story-container; 2 Tier B Code fan-out source swaps: ig-carousel-explode, fb-carousel-explode). Deployed to n8n-azure via PUT: main versionId `c13b5cb9` → `0e8d0a7a`, sub versionId `bf1321d2` → `ebf0b9a9`. 10/10 post-deploy spot checks PASS (node counts preserved 91+10, active=true preserved, Tier B inheritance intact, Option B multipart + Option E intra-cloud fetch preserved).
-Status: Workflow code and deployed state now in Phase 12.1 configuration. Phase 4 "approved image = published image" invariant RESTORED — Meta-facing URLs point at AFD fronting the same Blob container the user approved via WA preview. Options D/B/E no longer in active code paths (Option B multipart + Option E intra-cloud fetch retained intentionally for FB Story durable paths; separate failure modes). Workflow active=true preserved across deploy. Custom domain `cdn.propulsar.ai` deferred to v1.3 polish; current AFD default endpoint in use.
-Last activity: 2026-04-23 — Plan 12.1-02 CLOSED (3 commits: 9120db7 feat subworkflow REHOST-06, 3dcf574 feat main 5-node revert, c72c7c1 docs DEPLOY.md versionId capture). Deploy artifact committed so Plan 12.1-03 can be resumed from a clean reference point. Validation gate still open: Plan 12.1-03 Task 2 is the first real exec from n8n-azure Container App egress IP calling Meta Graph API against AFD URLs — returns 9004 → Scenario 1 rollback (~10 min), success → Phase 12.1 proven E2E.
+Phase: 12.1 — CDN Layer (Azure Front Door) — **FAILED** — Meta rejects all AFD hostnames (default + custom domain). Escalated to Phase 12.2 Cloudflare R2 migration (to be planned in next session).
+Plan: 12.1-03 E2E validation ATTEMPTED and **failed at first exec** — Meta Graph API returned code 9004/2207052 for both `*.z01.azurefd.net` (exec 14273) and custom domain `cdn.propulsar.ai` (exec 14938). Control test from same dev IP with Ideogram direct URL returned 200 — proves Meta block is hostname-specific (AFD TLS chain / IP range), not IP-specific. Custom domain was fully provisioned, DigiCert cert deployed, AFD route associated, DNS propagated, edge serving 200 — not an AFD config issue.
+Status: **Rollback completed**. Main workflow reverted to pre-12.1-02 behavior (Options D/B/E band-aid from Plan 12-02 closure, exec 10647 pattern). Main versionId: `0e8d0a7a` → `966dc454` (91 nodes, active=true). Sub versionId: `ebf0b9a9` → `67b7bb12` (10 nodes, active=true). AFD profile `propulsar-content-afd` + custom domain `cdn.propulsar.ai` + GoDaddy DNS records left provisioned (~$35/mo cost meter) as reference for 12.2 planning; can be deleted next session. `AZURE_CDN_HOST=cdn.propulsar.ai` env var still set on Container App (harmless — no node reads it currently).
+Last activity: 2026-04-23 (late night, ~01:35 CET 2026-04-24) — Plan 12.1-03 Wave 3 FAILED at Exec 1 → rollback deployed in same session. 2 revert commits applied (`3b09fd6` revert REHOST-06, `505b52f` revert 5-node Option D revert). Workflow PUT to n8n. 12.1-HANDOFF.md written for next session (2026-04-24 morning).
 
-Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [████████░░] ~82% (v1.2 — 8/11 plans: 10-01, 10-02, 11-01, 11-02, 12-01, 12-02, 12.1-01, 12.1-02)
+Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [███████░░░] ~73% (v1.2 — 8/11 plans: 10-01, 10-02, 11-01, 11-02, 12-01, 12-02, 12.1-01, 12.1-02 — with 12.1 FAILED, needs 12.2 R2 to unblock 13)
 
 ## Performance Metrics
 
@@ -41,10 +41,11 @@ Progress: [██████████] 100% (v1.0) — [██████�
 
 - Phase 12.1 inserted after Phase 12: CDN Layer — Azure Front Door obsoletes Options D/B/E band-aid from Phase 12 (URGENT, 2026-04-23)
 - Phase 12.1 Plan 01 complete 2026-04-23: AFD provisioned, env var set on Container App, smoke tests PASS, Meta dry-run deferred to Wave 3 E2E
+- Phase 12.1 **FAILED 2026-04-23 night:** Wave 3 E2E rejected by Meta (9004 on both default AFD hostname and custom domain cdn.propulsar.ai). Control test confirms hostname-specific block. Rollback deployed. Phase 12.2 Cloudflare R2 to be planned.
 
 ### Open Items
 
-- **🚨 URGENT: Phase 12.1 CDN Layer needed** — Meta blocks `propulsarcontent.blob.core.windows.net` domain-wide since 2026-04-17 (silent policy change, verified via 8 curl tests during Task 2 v1 diagnostic). Options D/B/E landed as band-aid in Plan 12-02 (exec 10647 PASS) but Phase 4 "approved image = published image" invariant is broken for Meta-facing URLs. Recommendation: Azure Front Door (~$35/mo, ~2h setup, same container) OR Cloudflare R2 (2-3 days migration, new creds, free egress). Recommended BEFORE Phase 13 so FB-specific work inherits a clean contract. Obsoletes Options D/B/E on restoration.
+- **🚨 URGENT: Phase 12.2 Cloudflare R2 Layer needed** — Phase 12.1 Azure Front Door FAILED: Meta Graph API `image_url` fetcher rejects AFD hostnames (default `*.z01.azurefd.net` AND custom domain `cdn.propulsar.ai` — both verified with code 9004/2207052 on execs 14273 and 14938 respectively). Control test with Ideogram direct URL from same dev IP succeeded (200 + container id) → confirms Meta block is AFD-specific, not IP-specific. Options D/B/E band-aid back in production (rollback deployed 2026-04-23 night, main versionId 966dc454). Next: migrate to Cloudflare R2 with custom domain `cdn.propulsar.ai` → R2 (requires re-pointing GoDaddy CNAME from AFD to R2). Plan in 12.1-HANDOFF.md. Expected ~4h next session.
 - **Ideogram URL TTL = 24h** — Limits Story scheduling to ~22h (SCHED-02 cap already in place provides ~1-1.5h margin). Will be obsolete once CDN Phase 12.1 restores Azure Blob reachability from Meta.
 - **instagram_manage_comments scope:** Must be added to Facebook App; Susana regenerates Meta token. Until then, hashtag comments fail with code 10 (single-photo, exec 10786) or code 100 (carousel, exec 10959). HC `onError` short-circuits downstream FB feed branch (see next open item).
 - **Meta token lifetime:** Depends on Susana maintaining admin role on Propulsar AI Facebook page.
@@ -94,6 +95,20 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - **SCHED-02 22h Story cap enforced at `🕐 Compute wait_seconds`** — `throw new Error('SCHED-02: Story scheduling rechazado. ...')` when `data.format === 'story' && wait_seconds > 79200`. Single + carousel flows unchanged (`format !== 'story'` bypasses). Guard added BEFORE the return, after the standard 65s-24h scheduling logic.
 - **Phase-11 guard removal completed** — 4-line block deleted from `🔧 Prep Re-host Input` (comment + if-throw). Story now flows naturally through the existing `else if (data.final_image_url)` branch which builds `imageUrls = [{ index: 1, url: <azure_blob> }]`. No new logic needed.
 - **Plan 12-01 node count delta: 78 → 90 (+12)** — Plan 12-02 deploy check asserts remote node count === 90 after PUT.
+
+### v1.2 Decisions Locked (Plan 12.1-03 + rollback)
+
+- **Meta Graph API `image_url` fetcher rejects Azure Front Door hostnames** — confirmed 2026-04-23 via 3 controlled tests:
+  - Test A: `cdn.propulsar.ai` (AFD custom domain, DigiCert cert) → 9004/2207052 (exec 14938)
+  - Test B: `propulsarcontent-cybdebd3gkanevba.z01.azurefd.net` (AFD default) → 9004/2207052 (exec 14273)
+  - Test C: `ideogram.ai/api/images/ephemeral/....png` (known-working Ideogram URL) from same dev IP → 200 `{"id":"17869171803666804"}`
+  - All 3 URLs served 930KB PNG + HEAD 200 + valid magic bytes externally. Only hostname differs. **Rejection is hostname/TLS-chain specific, not IP or content.**
+- **Rollback Wave 2 deployed same session (2026-04-23 night)** — `git revert 3dcf574 9120db7` + PUT main + PUT sub. Main versionId `0e8d0a7a` → `966dc454` (91 nodes preserved, active=true). Sub versionId `ebf0b9a9` → `67b7bb12` (10 nodes preserved, active=true). Production back to Plan 12-02 closure behavior (Options D/B/E active).
+- **AFD infrastructure LEFT provisioned post-rollback** — ~$35/mo cost meter active. Reasons: reference for 12.2 R2 planning + fallback if Meta policy changes + 10x faster to reactivate than re-provision (~5min vs ~1h). Decision point in 12.1-HANDOFF.md checklist.
+- **`AZURE_CDN_HOST=cdn.propulsar.ai`** env var remains on Container App `propulsar-n8n` — harmless (no active node reads it); reusable for R2 with new value.
+- **GoDaddy DNS records `cdn.propulsar.ai` CNAME + `_dnsauth.cdn` TXT** remain in place — reusable for R2 (just re-point CNAME target from AFD to R2 public endpoint).
+- **Meta accepted Ideogram URL from dev IP** — contradicts earlier hypothesis that dev IP was rate-limited/blocked. Original Wikipedia control test failure from dev IP (during Plan 12.1-01 Task 2) was likely unrelated (thumbnail URL redirect or dimensions). **Lesson:** for future Meta diagnostic work, always test with a KNOWN-WORKING URL pattern (Ideogram ephemeral, Facebook CDN image) as control, not arbitrary third-party URLs.
+- **Phase 13 remains blocked** — depends on clean Meta-facing URL contract. Options D band-aid works but Ideogram 24h TTL caps scheduling at 22h (SCHED-02). Phase 12.2 R2 unblocks Phase 13 with durable cleanup and full 24h scheduling window.
 
 ### v1.2 Decisions Locked (Plan 12.1-01)
 
@@ -155,7 +170,7 @@ Progress: [██████████] 100% (v1.0) — [██████�
 
 ## Session Continuity
 
-Last session: 2026-04-23
-Stopped at: Completed 12.1-02-PLAN.md. Phase 12.1 IN PROGRESS (Plans 01+02 done, Plan 03 next). Plan 12.1-02 executed cleanly in 2 tasks: REHOST-06 seam + 5 Meta-facing node reverts + PUT deploy to n8n-azure. Main workflow versionId c13b5cb9 → 0e8d0a7a (91 nodes, active=true preserved); Sub workflow versionId bf1321d2 → ebf0b9a9 (10 nodes, active=true preserved). 10/10 post-deploy spot checks PASS. Options B (FB Story multipart) and E (FB fetch bytes intra-cloud) preserved as durable fixes for separate failure modes (per RESEARCH Open Q #4). Tier B fan-out inheritance verified: children (`ig-create-child-container`, `fb-upload-photo-unpublished`) still read `$json.blob_url` and inherit AFD URL transparently through `$json.blob_url` propagation from explode Code nodes. Deploy artifact (12.1-02-DEPLOY.md) committed so Plan 12.1-03 can be resumed from a clean reference point.
-Resume file: .planning/phases/12.1-cdn-layer-azure-front-door-obsoletes-options-d-b-e/12.1-02-SUMMARY.md
-Next recommended: `/gsd:execute-plan 12.1-03` for E2E validation — IG Story smoke exec from n8n-azure Container App egress IP against AFD URLs. This is the real validation gate for Phase 12.1 (Meta dry-run from dev IP was blocked in Plan 12.1-01). If exec succeeds: Phase 12.1 proven, Phase 13 unblocked. If exec returns 9004: Scenario 1 rollback (`git revert 3dcf574` + re-PUT, ~10 min).
+Last session: 2026-04-23 (evening, ~5h total; closed ~01:35 CET 2026-04-24)
+Stopped at: **Phase 12.1 FAILED + rollback deployed.** Wave 3 Exec 1 returned Meta 9004 first with default AFD hostname (exec 14273), pivoted to AFD custom domain `cdn.propulsar.ai` via GoDaddy API (DNS + AFD cert + route association all succeeded in ~60min), re-tested Exec 1 — still 9004 (exec 14938). Control test with Ideogram direct URL from same dev IP returned 200 → confirms Meta's block is AFD-hostname-specific (tested both default z01.azurefd.net cert and custom domain cdn.propulsar.ai DigiCert cert — both rejected). Rolled back Wave 2 (2 revert commits + PUT main+sub to n8n) to restore Plan 12-02 closure state (Options D/B/E band-aid). Main `0e8d0a7a` → `966dc454` (active=true preserved, 91 nodes). Sub `ebf0b9a9` → `67b7bb12` (active=true, 10 nodes). AFD infrastructure + custom domain left provisioned ($35/mo) as reference for 12.2 R2 planning. 12.1-HANDOFF.md committed with full tomorrow-session plan (R2 migration).
+Resume file: .planning/phases/12.1-cdn-layer-azure-front-door-obsoletes-options-d-b-e/12.1-HANDOFF.md (full context + tomorrow's R2 migration plan in ~4h 4-wave structure)
+Next recommended: Start fresh session with `/gsd:insert-phase 12.2` for Cloudflare R2 migration — plan will reference exec-captures evidence + HANDOFF plan to unblock Phase 13. Prerequisite: Cloudflare R2 enabled in Felix's Cloudflare account + API token with R2 Edit + DNS Edit perms.
