@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** Generate and publish complete social media posts (single, carousel, or story) in one wizard run, with AI-generated images, WhatsApp preview, SI approval, and automatic publishing to Instagram + Facebook
-**Current focus:** v1.2 Stories Publishing — Phase 12 Plan 01 COMPLETE ✅, Plan 12-02 IN PROGRESS (Task 5 carousel regression verified IG, Task 6 cleanup + SCHED-02 next)
+**Current focus:** v1.2 Stories Publishing — Phase 12 COMPLETE ✅ (both plans). Phase 12.1 CDN Layer recommended urgent BEFORE Phase 13 (Meta blocks Azure Blob host; Options D/B/E band-aid active).
 
 ## Current Position
 
 Milestone: v1.2 Stories Publishing
-Phase: 12 — IG Story Publishing — Plan 01 COMPLETE ✅ / Plan 02 IN PROGRESS
-Plan: 12-02 in progress — Task 1 deploy ✓, Task 2 IG-only ✓, Task 3 IG+FB ✓, Task 4 single-photo regression ✓ (IG pass, FB pre-existing HC short-circuit), Task 5 carousel regression ✓ (IG pass, FB same short-circuit), Task 6 cleanup + SCHED-02 ✓, Task 7 next (finalize Phase 12 SUMMARY)
-Status: Plan 12-02 halfway. Three tactical fixes landed on top of 12-01 build: Option D (band-aid: Ideogram URL direct for IG — Meta blocks Azure Blob domain), Option B (multipart form upload for FB Story — url= param rejected with 324), Option E (fetch Azure Blob bytes then multipart — Ideogram URL rejected by FB Story with 404/324). Combined stack VERIFIED E2E: exec 10647 published Story to IG (media_id 17932325328235789) + FB Story (post_id 1290303516541171) in 62.9s, user visual-confirmed both live. Critical watch for Task 4: FB feed single-photo uses `/photos?url=` with Ideogram URL direct (Option D pattern); FB endpoints have shown strictness on image URL sources, so this may need Option E pattern extended. Observed Phase 13 scope item: WA Story notification template only mentions IG permalink — will extend in NOTIF-01.
-Last activity: 2026-04-23 — Plan 12-02 Task 3 PASS via exec 10647. Option D (1e686a9) + Option B (1b9365a) + Option E (5e09970) combined, 25-node Story chain with 18 critical nodes OK. FB post 1290303516541171 flagged for Task 6 cleanup. Supabase session 893df3d6-3764-4e01-b36d-eb615c2bf10a. Two pre-fix failures documented for Task 5 failure-injection reference (exec 9382 Meta 400 Azure Blob rejected, exec 10198 FB 324 Ideogram URL rejected, exec 10333 FB Fetch Ideogram 404).
+Phase: 12 — IG Story Publishing — COMPLETE ✅ (Plan 01 + Plan 02)
+Plan: 12-02 COMPLETE — All 7 tasks verified. Task 1 deploy ✓, Task 2 IG-only ✓ (exec 10085), Task 3 IG+FB ✓ (exec 10647 after Options D/B/E), Task 4 single-photo regression ✓ (exec 10786 IG live), Task 5 carousel regression ✓ (exec 10959 IG live), Task 6 cleanup + SCHED-02 ✓ (3 unit tests + FB cleanup), Task 7 SUMMARY ✓.
+Status: Phase 12 E2E verified against n8n-azure production. Three tactical fixes landed responding to Meta silent policy change (2026-04-17 domain-wide block of propulsarcontent.blob.core.windows.net): Option D (1e686a9 — Ideogram URL direct for Meta calls), Option B (1b9365a — FB Story multipart binary upload), Option E (5e09970 — FB fetch Azure Blob intra-cloud). Combined stack VERIFIED E2E: exec 10647 IG+FB Story (62.9s), exec 10786 single-photo, exec 10959 carousel. Phase 4 re-host invariant broken for Meta-facing URLs; Phase 12.1 CDN Layer required to restore (Azure Front Door or Cloudflare R2). Phase 13 readiness: recommended after 12.1. NOTIF-01 scope confirmed for Phase 13 (WA Story notification needs FB reference).
+Last activity: 2026-04-23 — Plan 12-02 CLOSED. 10 commits across Plan 12-02: deploy (versionId 37cb9c68) + 3 option commits + 4 task commits + 1 STATE pointer + 1 SUMMARY/close. Nodes 90 → 91 (Option B added FB Fetch Image Bytes). Workflow versionId c13b5cb9.
 
-Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [██████░░░░] ~63% (v1.2 — 5/8 plans)
+Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [███████░░░] ~75% (v1.2 — 6/8 plans: 10-01, 10-02, 11-01, 11-02, 12-01, 12-02)
 
 ## Performance Metrics
 
@@ -31,17 +31,20 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - Plan 11-01: 3 tasks | 3 commits (cb5333d, 419011c, 190eb26) | 1 file (n8n/workflow.json) | Completed 2026-04-22 | Duration ~25min (incl. schema migration pause)
 - Plan 11-02: 1 task (E2E verification) | 2 fix commits | 1 file (n8n/workflow.json) | Completed 2026-04-23 | Duration ~40min (4 n8n executions, 2 fix-redeploy cycles)
 - Plan 12-01: 3 tasks | 4 commits (fafe72e, 6f1c703, c7e45b1, c38e50d) | 3 files (n8n/workflow.json, .planning/REQUIREMENTS.md, .planning/ROADMAP.md) | Nodes 78 → 90 (+12) | Completed 2026-04-23 | Duration ~35min (live Meta API verification + 12-node atomic insert + SCHED-02 patch + Phase-11 guard removal + IGSTORY-02 + FBSTORY-04 APPEND corrections)
+- Plan 12-02: 7 tasks | 10 commits (1e686a9 Option D, 940f04d Task 2, 1b9365a Option B, 5e09970 Option E, 01e8ba3 Task 3, 2b96266 Task 4, cbc033d STATE pointer, d1ecaa3 Task 5, fc90a74 Task 6, <final> Task 7) | 3 files (n8n/workflow.json, .planning/STATE.md, .planning/ROADMAP.md) + SUMMARY | Nodes 90 → 91 (+1 FB Fetch Image Bytes) | Completed 2026-04-23 | Duration ~3h 10min (5 execs pre-fix + 5 execs post-fix; Options D/B/E applied to unblock Meta Azure Blob domain block)
 
 ## Accumulated Context
 
 ### Open Items
 
-- **instagram_manage_comments scope:** Must be added to Facebook App; Susana regenerates Meta token. Until then, hashtag comments fail with code 10 (post still publishes, error handler fires WA alert).
+- **🚨 URGENT: Phase 12.1 CDN Layer needed** — Meta blocks `propulsarcontent.blob.core.windows.net` domain-wide since 2026-04-17 (silent policy change, verified via 8 curl tests during Task 2 v1 diagnostic). Options D/B/E landed as band-aid in Plan 12-02 (exec 10647 PASS) but Phase 4 "approved image = published image" invariant is broken for Meta-facing URLs. Recommendation: Azure Front Door (~$35/mo, ~2h setup, same container) OR Cloudflare R2 (2-3 days migration, new creds, free egress). Recommended BEFORE Phase 13 so FB-specific work inherits a clean contract. Obsoletes Options D/B/E on restoration.
+- **Ideogram URL TTL = 24h** — Limits Story scheduling to ~22h (SCHED-02 cap already in place provides ~1-1.5h margin). Will be obsolete once CDN Phase 12.1 restores Azure Blob reachability from Meta.
+- **instagram_manage_comments scope:** Must be added to Facebook App; Susana regenerates Meta token. Until then, hashtag comments fail with code 10 (single-photo, exec 10786) or code 100 (carousel, exec 10959). HC `onError` short-circuits downstream FB feed branch (see next open item).
 - **Meta token lifetime:** Depends on Susana maintaining admin role on Propulsar AI Facebook page.
 - **Azure SAS expiry:** 2027-04-10 — renew before that date.
 - **Supabase session status:** Never set to "consumed" after publish — accepted as low-risk tech debt.
-- **WA Story notification only mentions IG permalink** (observed during Plan 12-02 Task 3 exec 10647) — FB Story published successfully but WA preview template does not reference FB. This is Phase 13 NOTIF-01 scope, NOT a Phase 12 gap. Phase 13 will extend the template to include FB Story reference when `platforms` includes `facebook`.
-- **FB feed branch broken since 2026-04-17 (exec 147)** — Hashtag Comment node wired at that point, fails with code 10 (missing `instagram_manage_comments` scope per above blocker). HC `onError` short-circuits downstream FB feed nodes. Observed during Plan 12-02 Task 4 exec 10786 (single-photo regression): IG chain 100% OK, FB feed never reached. Pre-existing, NOT a Phase 12 regression. Resolves when Susana regenerates Meta token with added scope (see `instagram_manage_comments scope` blocker above), or dedicated follow-up to reroute HC onError to skip FB instead of halt.
+- **WA Story notification only mentions IG permalink** (observed during Plan 12-02 Task 3 exec 10647) — FB Story published successfully but WA preview template does not reference FB. Phase 13 NOTIF-01 scope, NOT a Phase 12 gap. Phase 13 will extend the template to include FB Story reference when `platforms` includes `facebook`.
+- **FB feed branch broken since 2026-04-17 (exec 147)** — Hashtag Comment node wired at that point, fails with code 10/100 (missing `instagram_manage_comments` scope). HC `onError` short-circuits downstream FB feed nodes. Observed during Plan 12-02 Task 4 exec 10786 (single-photo) AND Task 5 exec 10959 (carousel): IG chain 100% OK both times, FB feed never reached. Pre-existing, NOT a Phase 12 regression. Resolves when Susana regenerates Meta token with added scope, or dedicated follow-up reroutes HC onError to skip FB instead of halt. Now EXTENDED scope: also blocks FB carousel publishing (same root cause, different error code signature).
 
 ### v1.2 Decisions Locked (Plan 10-01)
 
@@ -85,6 +88,21 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - **Phase-11 guard removal completed** — 4-line block deleted from `🔧 Prep Re-host Input` (comment + if-throw). Story now flows naturally through the existing `else if (data.final_image_url)` branch which builds `imageUrls = [{ index: 1, url: <azure_blob> }]`. No new logic needed.
 - **Plan 12-01 node count delta: 78 → 90 (+12)** — Plan 12-02 deploy check asserts remote node count === 90 after PUT.
 
+### v1.2 Decisions Locked (Plan 12-02)
+
+- **Option D (band-aid) for Meta Azure Blob block:** All Meta Graph API calls use `$('🎨 Ideogram image').item.json.image_url` (Ideogram direct) instead of `$('🔗 Merge Rehost Output').item.json.blob_urls[0].url` (Azure Blob). Applied to IG Story Container, IG single-photo, IG carousel, FB endpoints. Chosen over Option A/B/C for P0 speed — CDN (Phase 12.1) is the proper fix.
+- **Option B (durable) for FB Story URL fetcher strictness:** FB `/photo_stories` switched from `url=` param to multipart/form-data with `source=<binary>`. Bypasses Meta URL fetcher rejection (error 324). New node `📥 FB: Fetch Image Bytes` added; `📤 FB: Upload Story Photo Unpublished` upgraded to formBinaryData.
+- **Option E (durable) for Ideogram single-fetch consumption:** FB Fetch Image Bytes sources from Azure Blob (intra-cloud Propulsar→Azure works even while Meta→Azure blocked) instead of Ideogram URL (single-use, consumed by IG Container first). Azure Blob remains the canonical storage, just not Meta-reachable.
+- **IG Story keeps Ideogram URL direct** — Meta's IG fetcher accepts Ideogram reliably; no multipart refactor needed until CDN restoration.
+- **IG single-photo + carousel keep Ideogram direct pending CDN** — no multipart refactor needed now; obsoleted by Phase 12.1.
+- **Hashtag Comment short-circuit is PRE-EXISTING (2026-04-17), NOT a Phase 12 regression** — documented as open item; Task 4/5 FB feed regression deferred to HC scope fix or dedicated follow-up. Phase 12 must-have scope (carousel/single chain integrity + no Story nodes fired on non-Story formats) PASSED.
+- **Failure injection via 5 real execs** — more reliable than synthetic injection: exec 9382 (Meta 400 Azure Blob), exec 10198 (FB 324 Ideogram URL), exec 10333 (FB Fetch Ideogram 404), exec 10786 (HC code 10), exec 10959 (HC code 100). Every ERR-01 path covered end-to-end.
+- **Re-host sub-workflow (Phase 4) KEPT** — still runs for audit + Azure Blob cleanup via `🗑️ Delete Azure Blob` ERR-01 node. Not consumed by Meta calls while Options D/B/E active. No deletion of Phase 4 logic.
+- **SCHED-02 22h cap stays in place** — Ideogram 24h TTL provides ~1-1.5h margin. Wizard-layer enforcement verified via 3 unit tests with exact castellano error: "Las Stories expiran en 24h. No podemos programar a más de 22h vista..."
+- **FB Story cleanup: Stories auto-expire via 24h lifecycle** — Graph API DELETE returns code 100 subcode 33 for expired Stories; acceptable. IG posts cleaned manually by user per memory reference.
+- **Multipart upload pattern documented for Phase 12.1:** `formBinaryData=true` / `contentType=multipart-form-data` / fields `source` (binary) + `access_token` + `published=false` in body. Reference for future Meta multipart integrations.
+- **Plan 12-02 node count delta: 90 → 91 (+1: FB Fetch Image Bytes via Option B)** — versionId c13b5cb9 final.
+
 ### v1.2 Decisions Locked (Plan 11-01)
 
 - **Pre-edit n8n node count: 73 | Post-edit: 78** — Plan 11-02 deploy check asserts remote node count === 78.
@@ -105,5 +123,6 @@ Progress: [██████████] 100% (v1.0) — [██████�
 ## Session Continuity
 
 Last session: 2026-04-23
-Stopped at: Completed 12-01-PLAN.md. Phase 12 Plan 01 (build) complete — 4 atomic commits, 12 new nodes, 3 files changed (n8n/workflow.json + REQUIREMENTS.md + ROADMAP.md). IG Story publish chain + FB Photo Story branch + Assert FB SAS + ERR-01 onError wiring + SCHED-02 guard + Phase-11 guard removal all landed locally. Live Meta Graph API verification re-run 2026-04-23 (container 17869082274666804 against graph.facebook.com = 200, against graph.instagram.com = 400 code:190). Not yet deployed to n8n-azure — Plan 12-02 handles deploy + E2E IG Story-only + E2E IG+FB + regression carousel/single + failure injection + test post cleanup.
-Resume file: .planning/phases/12-ig-story-publishing/12-01-SUMMARY.md
+Stopped at: Completed 12-02-PLAN.md. Phase 12 COMPLETE ✅ (both plans). Plan 12-02 executed with 3 tactical band-aid fixes (Options D/B/E) responding to Meta's silent 2026-04-17 domain-wide block of propulsarcontent.blob.core.windows.net discovered during Task 2. E2E verified: Story IG-only (exec 10085), Story IG+FB (exec 10647, 62.9s), regression single-photo (exec 10786, IG live), regression carousel (exec 10959, IG live). SCHED-02 Wizard-layer 22h cap verified via 3 unit tests. FB Story 1290303516541171 auto-expired (24h lifecycle). Tasks 4/5 FB feed not reached due to pre-existing HC scope short-circuit (not a Phase 12 regression). Failure injection covered by 5 real execs demonstrating full ERR-01 subgraph. Workflow n8n-azure @ versionId c13b5cb9, 91 nodes.
+Resume file: .planning/phases/12-ig-story-publishing/12-02-SUMMARY.md
+Next recommended: `/gsd:insert-phase 12.1` for CDN Layer (Azure Front Door OR Cloudflare R2) — obsoletes Options D/B/E, restores Phase 4 invariant, before Phase 13 FB Story + Log + Notifications.
