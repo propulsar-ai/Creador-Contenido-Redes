@@ -113,6 +113,6 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 | 9. Error Hardening + Hashtags + Token Alerts | v1.1 | 3/3 | Complete | 2026-04-17 |
 | 10. Wizard Historia Format | v1.2 | 2/2 | Complete | 2026-04-19 |
 | 11. Story Image Generation | v1.2 | 2/2 | Complete | 2026-04-23 |
-| 12. Instagram Story Publishing | v1.2 | 2/2 | Complete (Options D/B/E band-aid; 12.1 required) | 2026-04-23 |
+| 12. Instagram Story Publishing | v1.2 | Complete    | 2026-04-23 | 2026-04-23 |
 | 12.1. CDN Layer (NEW, URGENT) | v1.2 | 0/TBD | Recommended next — obsoletes Options D/B/E | - |
 | 13. Facebook Story + Log + Notifications | v1.2 | 0/TBD | Blocked on 12.1 for clean contract | - |
