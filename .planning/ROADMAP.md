@@ -81,7 +81,9 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
   4. Hashtag comment nodes are never reached during a Story execution — the Story branch terminates independently
   5. n8n Code node rejects Story executions where `wait_seconds > 79200` (22h) before attempting container creation
   6. All IG Story publish nodes (`Create Story Container`, `Story media_publish`) have `onError` wired to the existing error handler subgraph
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 12-01-PLAN.md — Live verification + IG Story publish chain + FB Photo Story branch + ERR-01 onError wiring + SCHED-02 guard + Phase-11 guard removal + REQUIREMENTS/ROADMAP IGSTORY-02 text correction
+- [ ] 12-02-PLAN.md — Deploy to n8n-azure + E2E Story IG-only + E2E Story IG+FB + regression single/carousel + failure injection + cleanup + STATE.md + SUMMARY
 
 ### Phase 13: Facebook Story + Log + Notifications
 **Goal**: SI-approved Stories are also published to the Facebook Page, all Sheets logs include a Formato column, and the WhatsApp success notification contains Story-specific expiry and permalink information
@@ -110,5 +112,5 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 | 9. Error Hardening + Hashtags + Token Alerts | v1.1 | 3/3 | Complete | 2026-04-17 |
 | 10. Wizard Historia Format | v1.2 | Complete    | 2026-04-19 | - |
 | 11. Story Image Generation | v1.2 | 0/TBD | Not started | - |
-| 12. Instagram Story Publishing | v1.2 | 0/TBD | Not started | - |
+| 12. Instagram Story Publishing | v1.2 | 0/2 | Planned | - |
 | 13. Facebook Story + Log + Notifications | v1.2 | 0/TBD | Not started | - |
