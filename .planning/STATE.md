@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 ## Current Position
 
 Milestone: v1.2 Stories Publishing
-Phase: 12 — IG Story Publishing — COMPLETE ✅ (Plan 01 + Plan 02)
-Plan: 12-02 COMPLETE — All 7 tasks verified. Task 1 deploy ✓, Task 2 IG-only ✓ (exec 10085), Task 3 IG+FB ✓ (exec 10647 after Options D/B/E), Task 4 single-photo regression ✓ (exec 10786 IG live), Task 5 carousel regression ✓ (exec 10959 IG live), Task 6 cleanup + SCHED-02 ✓ (3 unit tests + FB cleanup), Task 7 SUMMARY ✓.
-Status: Phase 12 E2E verified against n8n-azure production. Three tactical fixes landed responding to Meta silent policy change (2026-04-17 domain-wide block of propulsarcontent.blob.core.windows.net): Option D (1e686a9 — Ideogram URL direct for Meta calls), Option B (1b9365a — FB Story multipart binary upload), Option E (5e09970 — FB fetch Azure Blob intra-cloud). Combined stack VERIFIED E2E: exec 10647 IG+FB Story (62.9s), exec 10786 single-photo, exec 10959 carousel. Phase 4 re-host invariant broken for Meta-facing URLs; Phase 12.1 CDN Layer required to restore (Azure Front Door or Cloudflare R2). Phase 13 readiness: recommended after 12.1. NOTIF-01 scope confirmed for Phase 13 (WA Story notification needs FB reference).
-Last activity: 2026-04-23 — Plan 12-02 CLOSED. 10 commits across Plan 12-02: deploy (versionId 37cb9c68) + 3 option commits + 4 task commits + 1 STATE pointer + 1 SUMMARY/close. Nodes 90 → 91 (Option B added FB Fetch Image Bytes). Workflow versionId c13b5cb9.
+Phase: 12.1 — CDN Layer (Azure Front Door) — IN PROGRESS (Plan 01 complete, Plan 02 next)
+Plan: 12.1-01 COMPLETE — Azure Front Door Standard provisioned; 4/4 AFD smoke tests PASS; Meta dry-run (Task 2) blocked from dev IP (token/scopes valid, Wikipedia control URL also returns 9004 → inferred Meta IP restriction), Felix decision A = proceed to Wave 2 with Wave 3 E2E as real validation gate.
+Status: AFD endpoint `propulsarcontent-cybdebd3gkanevba.z01.azurefd.net` serving 200 responses (verified with default + facebookexternalhit UA, GET + HEAD, content-integrity). `AZURE_CDN_HOST` env var set on Container App `propulsar-n8n` (readable from Code nodes; `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`). Container `posts` publicAccess=Blob confirmed pre-existing from Phase 4. Workflow versionId still `c13b5cb9` (no changes yet, Plan 12.1-02 deploys the REHOST-06 seam + 5-node reverts).
+Last activity: 2026-04-23 — Plan 12.1-01 CLOSED. AFD provisioned via az CLI (provision-afd.ps1 script); smoke test evidence archived in `12.1-01-SMOKE.md`; ~58min AFD edge cold-start propagation (Azure SLA extended window). Decision gate cleared by Felix: proceed to Wave 2.
 
-Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [███████░░░] ~75% (v1.2 — 6/8 plans: 10-01, 10-02, 11-01, 11-02, 12-01, 12-02)
+Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [████████░░] ~78% (v1.2 — 7/11 plans: 10-01, 10-02, 11-01, 11-02, 12-01, 12-02, 12.1-01)
 
 ## Performance Metrics
 
@@ -34,6 +34,11 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - Plan 12-02: 7 tasks | 10 commits (1e686a9 Option D, 940f04d Task 2, 1b9365a Option B, 5e09970 Option E, 01e8ba3 Task 3, 2b96266 Task 4, cbc033d STATE pointer, d1ecaa3 Task 5, fc90a74 Task 6, <final> Task 7) | 3 files (n8n/workflow.json, .planning/STATE.md, .planning/ROADMAP.md) + SUMMARY | Nodes 90 → 91 (+1 FB Fetch Image Bytes) | Completed 2026-04-23 | Duration ~3h 10min (5 execs pre-fix + 5 execs post-fix; Options D/B/E applied to unblock Meta Azure Blob domain block)
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 12.1 inserted after Phase 12: CDN Layer — Azure Front Door obsoletes Options D/B/E band-aid from Phase 12 (URGENT, 2026-04-23)
+- Phase 12.1 Plan 01 complete 2026-04-23: AFD provisioned, env var set on Container App, smoke tests PASS, Meta dry-run deferred to Wave 3 E2E
 
 ### Open Items
 
@@ -87,6 +92,20 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - **SCHED-02 22h Story cap enforced at `🕐 Compute wait_seconds`** — `throw new Error('SCHED-02: Story scheduling rechazado. ...')` when `data.format === 'story' && wait_seconds > 79200`. Single + carousel flows unchanged (`format !== 'story'` bypasses). Guard added BEFORE the return, after the standard 65s-24h scheduling logic.
 - **Phase-11 guard removal completed** — 4-line block deleted from `🔧 Prep Re-host Input` (comment + if-throw). Story now flows naturally through the existing `else if (data.final_image_url)` branch which builds `imageUrls = [{ index: 1, url: <azure_blob> }]`. No new logic needed.
 - **Plan 12-01 node count delta: 78 → 90 (+12)** — Plan 12-02 deploy check asserts remote node count === 90 after PUT.
+
+### v1.2 Decisions Locked (Plan 12.1-01)
+
+- **AFD Standard SKU ($35/mo)** over Premium ($330/mo) — RESEARCH-aligned, adequate for v1.2 single-domain fronting of blob container.
+- **Default hostname `propulsarcontent-cybdebd3gkanevba.z01.azurefd.net`** — custom domain `cdn.propulsar.ai` deferred to v1.3 polish PR.
+- **Host header override = origin hostname** — AFD origin config sends `propulsarcontent.blob.core.windows.net` as Host header to Blob, preserving SNI and anon-read semantics.
+- **WAF explicitly OFF** (no policy attached to endpoint) — prevents Meta fetcher being silently bot-blocked (Pitfall 1 RESEARCH).
+- **Route accepts HTTP+HTTPS** — initial HTTPS-only + https-redirect Enabled config caused internal conflict; dropping redirect + allowing HTTP cleared edge propagation.
+- **Health probe: HEAD https /posts/12.1-smoke/smoke-test.png every 240s** — probes a known-present blob (plain `/` returns 400 on Blob Storage, marked origin unhealthy).
+- **Container ACL = Blob anon-read already in place from Phase 4** — no flip needed in 12.1.
+- **n8n runs on Azure Container Apps** `propulsar-n8n` in `propulsar-production` (NOT EasyPanel) — discovered via MCP; AZURE_CDN_HOST set via `az containerapp update --set-env-vars`. Sibling verification: `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`, `AZURE_STORAGE_ACCOUNT=propulsarcontent`, `AZURE_CONTAINER=posts`.
+- **AFD Standard cold-start edge propagation took ~58 min** (vs plan assumption 5-15 min) — within Azure extended SLA window but longer than typical; noted for future profile-create timing.
+- **Task 2 Meta dry-run NOT executable from Felix's dev IP** — token/scopes valid (verified via `/debug_token`), IG account reads 200, but ALL POST `/{IG_ACCOUNT}/media` calls (6 tested with 4 URLs + 2 content-types) return `code 9004 / 2207052` identically, **including a Wikipedia control URL** known to be a valid image. Inferred: Meta IP-restricts POST /media to app-registered source IPs. Real validation gate moved to Wave 3 (Plan 12.1-03 Task 2 IG-only exec from n8n Container App egress IP).
+- **Plan 12.1-01 Task 2 gate cleared by user decision (A) 2026-04-23 ~21:55 UTC** — proceed to Wave 2 with Wave 3 E2E as real validation. Revert path if Wave 3 first exec returns 9004 from production IP: revert workflow PUT to versionId `c13b5cb9`.
 
 ### v1.2 Decisions Locked (Plan 12-02)
 
