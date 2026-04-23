@@ -13,7 +13,7 @@ Milestone: v1.2 Stories Publishing
 Phase: 12 — IG Story Publishing — Plan 01 COMPLETE ✅ (build)
 Plan: 12-02 next (E2E + deploy + regression + cleanup)
 Status: Phase 12 Plan 01 built locally. n8n/workflow.json: 78 → 90 nodes (+12 Story publish-chain). Live API verification re-run 2026-04-23: graph.facebook.com confirmed as Story host, expires_at field does not exist, FB /photo_stories reachable with current Page Token perms. IG Story chain wired (Create Container → Wait 45s → media_publish → Get Permalink → Compute Expiry → ¿Platforms FB? router → Assert SAS → FB Upload + Publish → WA notify → Sheets Log → Extract Blob Names). ERR-01 Option B onError wiring verified (3 IG → Tag IG Error, 2 FB → Tag FB Error via main[1]). SCHED-02 22h cap installed, Phase-11 guard removed. REQUIREMENTS.md IGSTORY-02 + FBSTORY-04 APPENDED with audit trail. FBSTORY-04 scope-shifted to close in Phase 12. Not deployed to n8n-azure yet — Plan 12-02 handles deploy + E2E.
-Last activity: 2026-04-23 — Plan 12-01 shipped (4 commits: fafe72e live-verify / 6f1c703 build / c7e45b1 SCHED-02+guard-removal / c38e50d REQUIREMENTS+ROADMAP)
+Last activity: 2026-04-23 — Plan 12-01 shipped (4 commits: fafe72e live-verify / 6f1c703 build / c7e45b1 SCHED-02+guard-removal / c38e50d REQUIREMENTS+ROADMAP). Plan 12-02 Task 2 verified: exec 10085, Story IG-only live on @propulsar_ai (media_id 18207353818332680, permalink https://www.instagram.com/stories/propulsar_ai/3881767155259153987, expires 2026-04-24T16:46:15Z). Option D band-aid (commit 1e686a9) verified E2E — exec 9382 Meta 400 on Azure Blob → exec 10085 Meta 200 on Ideogram URL direct.
 
 Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [██████░░░░] ~63% (v1.2 — 5/8 plans)
 
