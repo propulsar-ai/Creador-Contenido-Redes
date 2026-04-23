@@ -160,7 +160,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Aggregate all per-item blob URLs into a single output item, sorted by slide_index.\n// Phase 12.1: rewrite blob hostname to Azure Front Door CDN endpoint when\n// AZURE_CDN_HOST env var is set (AFD serves blobs on *.azurefd.net which\n// sidesteps Meta's domain-wide block of propulsarcontent.blob.core.windows.net\n// discovered 2026-04-17). Falls back to raw blob URL when env var missing\n// (degrades to Phase 12-02 Options D/B/E behavior, not to a broken state).\n// Source: blob URL from the Build blob URL node upstream.\nconst cdnHost = $env.AZURE_CDN_HOST;\nconst rawBlobHost = $env.AZURE_STORAGE_ACCOUNT + '.blob.core.windows.net';\n\nconst items = $('🔧 Build blob URL').all();\nconst postId = items[0]?.json?.post_id || null;\n\nconst blobUrls = items\n  .map(it => ({\n    index: it.json.slide_index,\n    url: cdnHost\n      ? it.json.blob_url.replace(rawBlobHost, cdnHost)\n      : it.json.blob_url,\n  }))\n  .filter(b => b.url)\n  .sort((a, b) => a.index - b.index);\n\nreturn [{\n  json: {\n    blob_urls: blobUrls,\n    post_id: postId,\n  }\n}];",
+        "jsCode": "// Aggregate all per-item blob URLs into a single output item, sorted by slide_index.\n// Source the data from the Build blob URL node (not $input, because the HEAD\n// verify node replaces $json with response headers).\nconst items = $('🔧 Build blob URL').all();\nconst postId = items[0]?.json?.post_id || null;\n\nconst blobUrls = items\n  .map(it => ({\n    index: it.json.slide_index,\n    url: it.json.blob_url,\n  }))\n  .filter(b => b.url)\n  .sort((a, b) => a.index - b.index);\n\nreturn [{\n  json: {\n    blob_urls: blobUrls,\n    post_id: postId,\n  }\n}];",
         "mode": "runOnceForAllItems"
       },
       "id": "collect-blobs",
@@ -171,7 +171,7 @@
         1780,
         300
       ],
-      "notes": "REHOST-06 — aggregate per-slide results into a single output item with blob_urls array sorted by slide_index. Phase 12.1: hostname rewrite from <account>.blob.core.windows.net → $env.AZURE_CDN_HOST when set (AFD Standard endpoint *.z01.azurefd.net fronting same container). Fallback: raw blob URL when AZURE_CDN_HOST empty — degrades to pre-12.1 behavior (Options D/B/E), not broken. This is the return value that the parent workflow (Plan 02) consumes."
+      "notes": "REHOST-06 — aggregate per-slide results into a single output item with blob_urls array sorted by slide_index. This is the return value that the parent workflow (Plan 02) consumes."
     },
     {
       "parameters": {
