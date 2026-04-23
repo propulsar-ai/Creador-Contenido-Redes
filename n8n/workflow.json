@@ -1424,7 +1424,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
@@ -1468,7 +1471,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
@@ -1497,8 +1503,14 @@
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "fields", "value": "permalink,timestamp,media_product_type" },
-            { "name": "access_token", "value": "={{ $env.META_PAGE_TOKEN }}" }
+            {
+              "name": "fields",
+              "value": "permalink,timestamp,media_product_type"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.META_PAGE_TOKEN }}"
+            }
           ]
         },
         "options": {}
@@ -1570,17 +1582,57 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "={{ $json.fb_story_image_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          },
+          "retry": {
+            "enabled": true,
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
+      },
+      "id": "fb-fetch-ideogram-bytes",
+      "name": "⬇️ FB: Fetch Ideogram Bytes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        5380,
+        480
+      ],
+      "notes": "Phase 12-02 Option B fix: download Ideogram bytes locally so we can POST multipart binary to FB /photos. Meta's /photos?url= fetcher rejected Ideogram ephemeral URLs with error 324 (exec 10198 evidence). responseFormat=file + outputPropertyName=data follows the REHOST-01 subworkflow pattern. Retry safe — Ideogram URL is idempotent GET. onError=continueErrorOutput → 🏷️ Tag FB Error (consistent with rest of FB Story chain)."
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "=https://graph.facebook.com/v22.0/{{ $env.FACEBOOK_PAGE_ID }}/photos",
-        "sendHeaders": true,
-        "headerParameters": {
+        "sendHeaders": false,
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "parameterType": "formBinaryData",
+              "name": "source",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "published",
+              "value": "false"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.META_PAGE_TOKEN }}"
+            }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ url: $json.fb_story_image_url, published: false, access_token: $env.META_PAGE_TOKEN }) }}",
         "options": {}
       },
       "id": "fb-upload-story-photo",
@@ -1592,10 +1644,10 @@
       "waitBetweenTries": 3000,
       "onError": "continueErrorOutput",
       "position": [
-        5380,
+        5580,
         480
       ],
-      "notes": "Primer paso two-step FB Photo Story. Sube imagen como unpublished (published=false) para obtener photo_id. Consume $json.fb_story_image_url (output de 🛡️ Assert FB Story URL upstream). Phase 12-02 Option D band-aid: fb_story_image_url is now derived from final_image_url (raw Ideogram URL) because Meta blocks Azure Blob. Idempotente — retryOnFail=true safe. TECH DEBT → Phase 12.1 CDN Layer restores Azure permalink. Pattern verificado en RESEARCH.md §Code Examples #4."
+      "notes": "Phase 12-02 Option B fix: multipart binary upload (source=<binary from ⬇️ FB: Fetch Ideogram Bytes>) INSTEAD of URL param. Meta /photos?url= rejected Ideogram ephemeral URL with error 324 (exec 10198), even though the same URL works for IG /media?media_type=STORIES. Multipart bypasses Meta's URL fetcher entirely. Keep published=false to get unpublished photo_id for the two-step Photo Story chain. retryOnFail=true still safe (idempotent unpublished upload). TECH DEBT → Phase 12.1 CDN Layer may revert to URL-based upload once a CDN-fronted rehost URL is available."
     },
     {
       "parameters": {
@@ -1604,7 +1656,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
@@ -1633,8 +1688,14 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "X-API-Key", "value": "={{ $env.YCLOUD_API_KEY }}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.YCLOUD_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
@@ -1686,19 +1747,123 @@
             "Error_Msg": ""
           },
           "schema": [
-            { "id": "Fecha", "displayName": "Fecha", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Tema", "displayName": "Tema", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Tipo", "displayName": "Tipo", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Angulo", "displayName": "Angulo", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Plataformas", "displayName": "Plataformas", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Modelo_Imagen", "displayName": "Modelo_Imagen", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Imagen_URL", "displayName": "Imagen_URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Estado", "displayName": "Estado", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "IG_URL", "displayName": "IG_URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "FB_URL", "displayName": "FB_URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Publicado_En", "displayName": "Publicado_En", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Publish_Status", "displayName": "Publish_Status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Error_Msg", "displayName": "Error_Msg", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tema",
+              "displayName": "Tema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tipo",
+              "displayName": "Tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Angulo",
+              "displayName": "Angulo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Plataformas",
+              "displayName": "Plataformas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Modelo_Imagen",
+              "displayName": "Modelo_Imagen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Imagen_URL",
+              "displayName": "Imagen_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "IG_URL",
+              "displayName": "IG_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "FB_URL",
+              "displayName": "FB_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Publicado_En",
+              "displayName": "Publicado_En",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Publish_Status",
+              "displayName": "Publish_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error_Msg",
+              "displayName": "Error_Msg",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
           ]
         },
         "operation": "append",
@@ -3475,7 +3640,7 @@
       "main": [
         [
           {
-            "node": "📤 FB: Upload Story Photo Unpublished",
+            "node": "⬇️ FB: Fetch Ideogram Bytes",
             "type": "main",
             "index": 0
           }
@@ -4082,6 +4247,24 @@
         [
           {
             "node": "📤 Enviar preview imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⬇️ FB: Fetch Ideogram Bytes": {
+      "main": [
+        [
+          {
+            "node": "📤 FB: Upload Story Photo Unpublished",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🏷️ Tag FB Error",
             "type": "main",
             "index": 0
           }
