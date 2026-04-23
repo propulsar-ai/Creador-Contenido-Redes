@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** Generate and publish complete social media posts (single, carousel, or story) in one wizard run, with AI-generated images, WhatsApp preview, SI approval, and automatic publishing to Instagram + Facebook
-**Current focus:** v1.2 Stories Publishing — Phase 11 COMPLETE ✅, Phase 12 (IG Story publishing) next
+**Current focus:** v1.2 Stories Publishing — Phase 12 Plan 01 COMPLETE ✅ (build), Plan 12-02 (E2E) next
 
 ## Current Position
 
 Milestone: v1.2 Stories Publishing
-Phase: 11 — Story Image Generation (n8n router) — COMPLETE ✅
-Plan: 11-02 complete ✅ — Phase 12 (IG Story publishing) next
-Status: Phase 11 verified end-to-end on n8n-azure. Ideogram delivers 9:16 (736×1312, delta 0.27%), Supabase row persists Story fields, WA preview + disclaimer arrive, NO reply triggers rejection log. Two Plan 11-01 gaps fixed in this plan (OpenAI cred swap + Preparar mensaje WA Story lookup).
-Last activity: 2026-04-23 — Plan 11-02 shipped (E2E verified, 4 executions: 5320 err / 5486 err / 5501 success / 5555 NO-reply success)
+Phase: 12 — IG Story Publishing — Plan 01 COMPLETE ✅ (build)
+Plan: 12-02 next (E2E + deploy + regression + cleanup)
+Status: Phase 12 Plan 01 built locally. n8n/workflow.json: 78 → 90 nodes (+12 Story publish-chain). Live API verification re-run 2026-04-23: graph.facebook.com confirmed as Story host, expires_at field does not exist, FB /photo_stories reachable with current Page Token perms. IG Story chain wired (Create Container → Wait 45s → media_publish → Get Permalink → Compute Expiry → ¿Platforms FB? router → Assert SAS → FB Upload + Publish → WA notify → Sheets Log → Extract Blob Names). ERR-01 Option B onError wiring verified (3 IG → Tag IG Error, 2 FB → Tag FB Error via main[1]). SCHED-02 22h cap installed, Phase-11 guard removed. REQUIREMENTS.md IGSTORY-02 + FBSTORY-04 APPENDED with audit trail. FBSTORY-04 scope-shifted to close in Phase 12. Not deployed to n8n-azure yet — Plan 12-02 handles deploy + E2E.
+Last activity: 2026-04-23 — Plan 12-01 shipped (4 commits: fafe72e live-verify / 6f1c703 build / c7e45b1 SCHED-02+guard-removal / c38e50d REQUIREMENTS+ROADMAP)
 
-Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [█████░░░░░] ~50% (v1.2 — 4/8 plans)
+Progress: [██████████] 100% (v1.0) — [██████████] 100% (v1.1) — [██████░░░░] ~63% (v1.2 — 5/8 plans)
 
 ## Performance Metrics
 
@@ -30,6 +30,7 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - Plan 10-02: 3 tasks | 3 commits (a057220, 55f0d9c, 2e71563) | 1 file (wizard/run.js) | Completed 2026-04-19 | Duration ~2min
 - Plan 11-01: 3 tasks | 3 commits (cb5333d, 419011c, 190eb26) | 1 file (n8n/workflow.json) | Completed 2026-04-22 | Duration ~25min (incl. schema migration pause)
 - Plan 11-02: 1 task (E2E verification) | 2 fix commits | 1 file (n8n/workflow.json) | Completed 2026-04-23 | Duration ~40min (4 n8n executions, 2 fix-redeploy cycles)
+- Plan 12-01: 3 tasks | 4 commits (fafe72e, 6f1c703, c7e45b1, c38e50d) | 3 files (n8n/workflow.json, .planning/REQUIREMENTS.md, .planning/ROADMAP.md) | Nodes 78 → 90 (+12) | Completed 2026-04-23 | Duration ~35min (live Meta API verification + 12-node atomic insert + SCHED-02 patch + Phase-11 guard removal + IGSTORY-02 + FBSTORY-04 APPEND corrections)
 
 ## Accumulated Context
 
@@ -68,6 +69,20 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - **n8n PUT does not deactivate workflow** — confirmed `active=true` post-PUT, no separate `/activate` call needed. Save 1 API call vs. older docs.
 - **n8n credential listing workaround** — Public API hides credentials; enumerate all workflows + grep `node.credentials.openAiApi.id` to discover active credential IDs.
 
+### v1.2 Decisions Locked (Plan 12-01)
+
+- **graph.facebook.com is the verified IG Story host (NOT graph.instagram.com)** — live test confirmed POST to graph.facebook.com with Page Access Token returns 200 + container id; graph.instagram.com returns 400 code:190 OAuthException. The workflow IG Story Container node uses `=https://graph.facebook.com/v22.0/{{ $env.INSTAGRAM_ACCOUNT_ID }}/media` with `media_type=STORIES` and NO caption. REQUIREMENTS.md IGSTORY-02 updated with APPEND bracket (audit trail preserved).
+- **expires_at does NOT exist as IG Media field** — GET with `?fields=expires_at` returns code:100 "Tried accessing nonexisting field". Downstream `🔧 IG: Compute Story Expiry` Code v2 node computes `story_expires_at = timestamp + 86400000ms` from the GET response on the published media_id.
+- **Pre-publish container does NOT expose permalink/timestamp/media_product_type** — these fields exist ONLY on the published media_id returned by `media_publish`. `🔗 IG: Get Story Permalink` runs GET against `$json.id` (the media_publish response id), not the container id.
+- **FB /photo_stories reachable with current Page Token perms** — live test confirmed bogus photo_id returns code:100 "Invalid id" (semantically correct endpoint reachable), NOT code:200 OAuthException. No escalation to Susana required.
+- **n8n 2.14.2 onError pattern: Option B (main[] second slot, NOT a separate error key)** — verified by `grep -c '"error":' = 0`. All 5 new HTTP Story nodes wired accordingly. This is the canonical pattern for this n8n version — future phase planning should assume Option B unless grep evidence proves otherwise.
+- **Azure Blob URL for both IG Story Container AND FB Upload** (BLOCKER-1 resolution) — both consume `$('🔗 Merge Rehost Output').item.json.blob_urls[0].url` (Azure Blob permalink, valid until SAS 2027) rather than raw Ideogram URL (24h ephemeral). Preserves "what user approved = what gets published" invariant across both platforms, and survives SCHED-02's 22h scheduling cap safely.
+- **FBSTORY-04 scope-shifted to close in Phase 12** — `🛡️ Assert FB Story URL (no SAS)` Code v2 node inserted between `🔀 ¿Plataformas FB?` TRUE and `📤 FB: Upload Story Photo Unpublished`. Option A "strip" semantics (not reject) — defense-in-depth against future SAS rotations, no-op today because Phase 11 produces bare URLs. REQUIREMENTS.md FBSTORY-04 APPENDED with scope-shift note.
+- **YCloud WA Notify uses inline X-API-Key header (no credentials block)** — matching existing `✅ Notify WhatsApp Carousel` pattern. The plan's template referenced a `credentials.httpHeaderAuth.id` block but the real existing node uses `$env.YCLOUD_API_KEY` inline. Aligned with existing pattern.
+- **SCHED-02 22h Story cap enforced at `🕐 Compute wait_seconds`** — `throw new Error('SCHED-02: Story scheduling rechazado. ...')` when `data.format === 'story' && wait_seconds > 79200`. Single + carousel flows unchanged (`format !== 'story'` bypasses). Guard added BEFORE the return, after the standard 65s-24h scheduling logic.
+- **Phase-11 guard removal completed** — 4-line block deleted from `🔧 Prep Re-host Input` (comment + if-throw). Story now flows naturally through the existing `else if (data.final_image_url)` branch which builds `imageUrls = [{ index: 1, url: <azure_blob> }]`. No new logic needed.
+- **Plan 12-01 node count delta: 78 → 90 (+12)** — Plan 12-02 deploy check asserts remote node count === 90 after PUT.
+
 ### v1.2 Decisions Locked (Plan 11-01)
 
 - **Pre-edit n8n node count: 73 | Post-edit: 78** — Plan 11-02 deploy check asserts remote node count === 78.
@@ -88,5 +103,5 @@ Progress: [██████████] 100% (v1.0) — [██████�
 ## Session Continuity
 
 Last session: 2026-04-23
-Stopped at: Phase 11 COMPLETE. E2E verified — Ideogram 9:16, Supabase row, WA preview + disclaimer, NO-reply rejection log all working. Two Plan 11-01 gaps fixed (OpenAI cred swap to OpenAI-Propulsar + Preparar mensaje WA Story lookup). Ready for Phase 12 (IG Story publishing) — first task is the IGSTORY-02 live API host conflict resolution (graph.instagram.com vs graph.facebook.com).
-Resume file: .planning/phases/11-story-image-generation/11-02-SUMMARY.md
+Stopped at: Completed 12-01-PLAN.md. Phase 12 Plan 01 (build) complete — 4 atomic commits, 12 new nodes, 3 files changed (n8n/workflow.json + REQUIREMENTS.md + ROADMAP.md). IG Story publish chain + FB Photo Story branch + Assert FB SAS + ERR-01 onError wiring + SCHED-02 guard + Phase-11 guard removal all landed locally. Live Meta Graph API verification re-run 2026-04-23 (container 17869082274666804 against graph.facebook.com = 200, against graph.instagram.com = 400 code:190). Not yet deployed to n8n-azure — Plan 12-02 handles deploy + E2E IG Story-only + E2E IG+FB + regression carousel/single + failure injection + test post cleanup.
+Resume file: .planning/phases/12-ig-story-publishing/12-01-SUMMARY.md

@@ -46,8 +46,12 @@ decisions:
   - "Pre-publish container does NOT expose permalink/timestamp/media_product_type — these fields only exist on the published media_id returned by media_publish (production GET runs there, as designed)"
 
 metrics:
-  duration: TBD
-  completed: TBD
+  duration: ~35min
+  completed: 2026-04-23
+  commits: 4
+  nodes_delta: +12 (78 → 90)
+  files_modified: 3 (n8n/workflow.json, .planning/REQUIREMENTS.md, .planning/ROADMAP.md)
+  tasks_completed: 3 / 3
 
 ---
 
@@ -168,8 +172,68 @@ Safe to proceed to Task 2 (workflow.json edits).
 - **1 connection rewired:** `🔀 ¿Formato Carrusel?` FALSE output changed from `📤 IG: Create Container` → `🔀 ¿Formato Story?` (single path restored byte-for-byte via `🔀 ¿Formato Story?` FALSE → `📤 IG: Create Container`)
 - **Credentials reused:** `XjKteoOTobs1qR55` ("Google Sheets account") for `sheets-log-story`; YCloud WA uses inline `X-API-Key` header with `$env.YCLOUD_API_KEY` (matching `notify-wa-carousel` pattern — NO `credentials.httpHeaderAuth` block)
 - **Validations 1-11 all passed first run** (JSON parse, node count, router rewire, ERR-01 Option B wiring, terminal Sheets Log → Extract Blob Names, IGSTORY-06 no hashtag comment, retryOnFail=false on both media_publish, BLOCKER-1 Azure Blob URL consumption, FBSTORY-04 Assert install, FB Upload consumes Assert output, Assert wired in FB chain, caption NOT in Story body, Carousel TRUE path intact)
-- **Commit SHA (workflow.json):** `<pegar acá tras el commit de abajo>`
+- **Commit SHA (workflow.json):** `6f1c703`
 
 ## Task 3 — SCHED-02 patch + Phase-11 guard removal + docs
 
-[Task 3 completes this section]
+- **Edit 1/4:** `🕐 Compute wait_seconds` (id `compute-wait-seconds`) — SCHED-02 guard added before `return` statement. Rejects `data.format === 'story' && wait_seconds > 79200` (22h) with a descriptive castellano error explaining the Story 24h expiry window and suggesting either earlier scheduling or replying NO. Single + carousel flows unchanged (`format !== 'story'` bypasses).
+- **Edit 2/4:** `🔧 Prep Re-host Input` (id `prep-rehost-input`) — Phase-11 guard block removed (4 lines: comment + `if (data.format === 'story') { throw ... }`). Story now flows through the existing `else if (data.final_image_url)` branch, building `imageUrls = [{ index: 1, url: <azure_blob_url> }]` with no additional logic required.
+- **Edit 3/4:** `.planning/REQUIREMENTS.md` — IGSTORY-02 APPENDED with `[CORRECTED 2026-04-23 in Phase 12 Plan 01 Task 1: actual host is graph.facebook.com ... verified live with container ID 17869082274666804]`. Original text with `graph.instagram.com` preserved (1 occurrence remains, as intended — audit trail). FBSTORY-04 APPENDED with `[SCOPE SHIFTED 2026-04-23 in Phase 12 Plan 01 Task 2: implemented in Phase 12 via 🛡️ Assert FB Story URL Code v2 node — Option A strip semantics]`. Traceability table updated: IGSTORY-01..06 + SCHED-02 + ERR-01 + FBSTORY-02..04 all marked `Phase 12 Plan 01 | Done (build)`.
+- **Edit 4/4:** `.planning/ROADMAP.md` — Phase 12 Success Criterion 1 rewritten to affirm `graph.facebook.com` as the verified host (replacing the ambiguous "host vs" wording from pre-research).
+- **Node count stable at 90** (no new nodes — these are Code node jsCode patches + doc edits).
+- **Commit 1 SHA (workflow.json):** `c7e45b1`
+- **Commit 2 SHA (docs):** `c38e50d`
+
+## Commits Summary
+
+| # | SHA | Type | Scope |
+|---|---|---|---|
+| 1 | `fafe72e` | chore | Task 1 — live Meta Graph API verification |
+| 2 | `6f1c703` | feat | Task 2 — IG Story chain + FB Photo Story + Assert FB SAS + ERR-01 wiring |
+| 3 | `c7e45b1` | feat | Task 3 — SCHED-02 guard + Phase-11 guard removal |
+| 4 | `c38e50d` | docs | Task 3 — REQUIREMENTS.md + ROADMAP.md corrections |
+
+## Open Items for Plan 12-02 (E2E)
+
+- **Deploy to n8n-azure:** PUT the workflow to the live n8n instance and verify `active=true` post-PUT (settings whitelist pattern established in Phase 11-02).
+- **E2E Story-only test** (`platforms: ['instagram']`): generate Story → WA SI → verify Story in IG profile + Sheets row `Estado=Publicado` + Supabase `story_expires_at` populated + blob cleanup.
+- **E2E Story IG+FB test** (`platforms: ['instagram', 'facebook']`): verify Story appears on both IG profile AND FB Page Story (not feed). Inspect FB WA notification for permalink format (Open Q #2 from RESEARCH: does `https://www.facebook.com/<post_id>` work for Stories, or does FB surface a `/stories/...` URL?).
+- **Regression:** 1× carousel + 1× single to prove new branches did not disturb carousel TRUE path nor the `🔀 ¿Formato Story?` FALSE → Create Container restoration.
+- **Failure injection:** revoke token momentarily or use bogus `creation_id` to prove onError → `🏷️ Tag IG Error` → error subgraph → `📊 Sheets Fail Log` → blob cleanup all fire as designed.
+- **Test post cleanup:** delete FB test Story via Graph API (MEMORY reference `feedback_delete_test_posts.md`).
+
+## Gotchas & Learnings
+
+1. **Option B onError confirmed empirically.** `grep -c '"error":' n8n/workflow.json` returned 0 — all existing onError wiring is via `main[]` second slot. Applied Option B to all 5 new HTTP Story nodes. No adaptation needed from the plan's snippets.
+2. **YCloud WA notify pattern: inline X-API-Key header, NOT credentials block.** The plan's Edit 11 template suggested a `credentials.httpHeaderAuth.id` block with a `<REUSE_YCLOUD_CRED_ID>` placeholder, but the existing `✅ Notify WhatsApp Carousel` node uses inline `X-API-Key` header via `$env.YCLOUD_API_KEY`. I aligned the new `✅ Notify WhatsApp Story` node with the existing pattern — no credential block.
+3. **Pre-publish container does NOT expose permalink/timestamp/media_product_type.** Test G returned code:100 "Tried accessing nonexisting field (permalink)" for all three fields against a fresh container. This is expected — those fields only exist on the *published* media_id returned by `media_publish`. `🔗 IG: Get Story Permalink` correctly GETs against `$json.id` which at that point in the flow is the media_publish response id (not the container id). Added an explanatory note to the node's `notes` field so future maintainers don't confuse the two.
+4. **FBSTORY-04 scope shift was a good call.** The Assert node was trivial to add (<1ms Code v2), adds defense-in-depth at zero ongoing cost, and closes the requirement in Phase 12 instead of Phase 13. Current Azure Blob URLs from Phase 11 are bare permalinks (no SAS query), so the strip is a no-op in practice — but the guardrail is in place for future SAS rotations.
+5. **Azure Blob URL canonicalization via `🔗 Merge Rehost Output`.** Both IG Story Container AND FB Upload consume `$('🔗 Merge Rehost Output').item.json.blob_urls[0].url` (BLOCKER-1 closed). This preserves the "what the user approved is what gets published" invariant across both platforms, and aligns with SCHED-02 safety (Azure Blob SAS valid until 2027; Ideogram URLs expire in 24h — risky when wait approaches the 22h cap).
+6. **Meta Graph API test account "Unsplash photo": safe for container creation, unsafe for media_publish.** Test A created a real container with an Unsplash image — totally benign because we stopped there. Running `media_publish` on that container would have published a real Story of an Unsplash landscape on Propulsar's IG profile. The plan correctly warned against this.
+
+## Self-Check: PASSED
+
+### Files verified on disk
+- FOUND: `n8n/workflow.json` (90 nodes, 85 connection keys, JSON parse valid)
+- FOUND: `.planning/REQUIREMENTS.md` (IGSTORY-02 + FBSTORY-04 APPEND corrections, traceability table updated)
+- FOUND: `.planning/ROADMAP.md` (Phase 12 SC1 rewritten)
+- FOUND: `.planning/phases/12-ig-story-publishing/12-01-SUMMARY.md` (this file)
+
+### Commits verified in git log
+- FOUND: `fafe72e` (Task 1 — live API verification)
+- FOUND: `6f1c703` (Task 2 — 12 nodes + connections + ERR-01)
+- FOUND: `c7e45b1` (Task 3 — SCHED-02 + Phase-11 guard removal)
+- FOUND: `c38e50d` (Task 3 — REQUIREMENTS + ROADMAP docs)
+
+### Workflow invariants verified
+- Final node count: 90 (exact delta +12 from baseline 78)
+- All 12 Story publish-chain node IDs present
+- Router graph preserves single + carousel paths byte-for-byte
+- ERR-01 Option B wiring intact for all 5 new Meta HTTP nodes (3 IG → Tag IG Error, 2 FB → Tag FB Error)
+- SCHED-02 guard installed in `🕐 Compute wait_seconds`
+- Phase-11 guard removed from `🔧 Prep Re-host Input`
+- FBSTORY-04 closed via `🛡️ Assert FB Story URL` Code v2 node
+- BLOCKER-1 closed: IG + FB Story both consume Azure Blob URL (no raw Ideogram refs)
+- `retryOnFail=false` on both media_publish endpoints (IGSTORY-04 + FBSTORY-03)
+- No `caption` field in IG Story container body (pitfall #2 avoided)
+- No Story chain node connects to any hashtag comment node (IGSTORY-06)
