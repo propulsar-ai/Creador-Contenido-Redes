@@ -1568,7 +1568,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// FBSTORY-04: Strip Azure SAS query params from image URL before FB Story Upload.\n// Phase 12-02 Option D band-aid: source is now 🔗 Merge Rehost Output.final_image_url\n// (raw Ideogram/Flux URL) — Azure Blob domain blocked by Meta fetcher since 2026-04-17.\n// Ideogram URLs are content-addressed without SAS params, so strip is a no-op today —\n// kept as defense-in-depth for Phase 12.1 CDN Layer restore (when source returns to Azure Blob).\nconst item = { ...$input.item.json };\nconst rehost = $('🔗 Merge Rehost Output').item.json;\nconst rawUrl = rehost.final_image_url || '';\nif (!rawUrl) {\n  throw new Error('FBSTORY-04 Assert: final_image_url está vacío en 🔗 Merge Rehost Output. No puedo passear una URL inválida al FB Upload.');\n}\nconst qIdx = rawUrl.indexOf('?');\nconst sasParams = ['sig=','sv=','sp=','se=','st=','sr=','spr='];\nlet bareUrl = rawUrl;\nlet stripped = false;\nif (qIdx > 0) {\n  const qs = rawUrl.slice(qIdx + 1);\n  const hasSas = sasParams.some(p => qs.includes(p));\n  if (hasSas) {\n    bareUrl = rawUrl.slice(0, qIdx);\n    stripped = true;\n  }\n}\nitem.fb_story_image_url = bareUrl;\nitem.fb_story_url_stripped = stripped;\nreturn { json: item };"
+        "jsCode": "// FBSTORY-04: Strip Azure SAS query params from image URL before FB Story multipart fetch.\n// Phase 12-02 Option E: source is now 🔗 Merge Rehost Output.blob_urls[0].url\n// (Azure Blob permalink). Exec 10333 evidence: Ideogram ephemeral URLs are single-fetch —\n// after IG Container creation consumed the URL, n8n-azure GET returned 404 ('Image not found').\n// Azure Blob is OUR storage, intra-cloud fetch from n8n-azure → Azure Blob is reachable.\n// Meta → Azure Blob block (2026-04-17) is IRRELEVANT here: we fetch bytes ourselves then POST\n// multipart binary to FB /photos (Option B path). Meta never touches the Azure URL.\n// IG Story branch unchanged (uses final_image_url direct — Meta fetches once for IG Container).\n// Azure Blob URLs include SAS query params (sv, se, sig, sp, sr) → strip now actually runs.\nconst item = { ...$input.item.json };\nconst rehost = $('🔗 Merge Rehost Output').item.json;\nconst blobUrl = rehost.blob_urls && rehost.blob_urls[0] && rehost.blob_urls[0].url;\nif (!blobUrl) {\n  throw new Error('FBSTORY-04 Assert (Option E): blob_urls[0].url está vacío en 🔗 Merge Rehost Output. Phase 4 re-host subflow debería haber populated esto antes del FB Story branch. Revisar upstream.');\n}\nconst qIdx = blobUrl.indexOf('?');\nconst sasParams = ['sig=','sv=','sp=','se=','st=','sr=','spr='];\nlet bareUrl = blobUrl;\nlet stripped = false;\nif (qIdx > 0) {\n  const qs = blobUrl.slice(qIdx + 1);\n  const hasSas = sasParams.some(p => qs.includes(p));\n  if (hasSas) {\n    bareUrl = blobUrl.slice(0, qIdx);\n    stripped = true;\n  }\n}\nitem.fb_story_image_url = bareUrl;\nitem.fb_story_url_stripped = stripped;\nitem.fb_story_source = 'azure-blob';\nreturn { json: item };"
       },
       "id": "assert-fb-story-url",
       "name": "🛡️ Assert FB Story URL (no SAS)",
@@ -1578,7 +1578,7 @@
         5280,
         480
       ],
-      "notes": "FBSTORY-04: Strip SAS query params del image URL antes del FB Story Upload (Meta STORIES fetcher es stricter que FEED fetcher). Phase 12-02 Option D: source swapped to final_image_url (raw Ideogram URL) — Azure Blob domain blocked by Meta. Ideogram URLs have no SAS params so strip is a no-op; kept as defense-in-depth for Phase 12.1 CDN restore. Output: { ...input, fb_story_image_url: <bare>, fb_story_url_stripped: <bool> }."
+      "notes": "FBSTORY-04: Strip SAS query params del image URL antes del FB Story multipart fetch. Phase 12-02 Option E: source swapped from final_image_url (Ideogram ephemeral — exec 10333 404 after IG Container consumed it) → blob_urls[0].url (Azure Blob — intra-cloud reachable from n8n-azure). Meta → Azure block IRRELEVANT: n8n-azure fetches bytes then POSTs multipart to FB. IG Story branch unchanged (uses Ideogram URL direct — Meta fetches once during IG Container creation). Output: { ...input, fb_story_image_url: <Azure blob bare>, fb_story_url_stripped: <bool>, fb_story_source: 'azure-blob' }."
     },
     {
       "parameters": {
@@ -1599,7 +1599,7 @@
         }
       },
       "id": "fb-fetch-ideogram-bytes",
-      "name": "⬇️ FB: Fetch Ideogram Bytes",
+      "name": "⬇️ FB: Fetch Image Bytes (Azure)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "onError": "continueErrorOutput",
@@ -1607,7 +1607,7 @@
         5380,
         480
       ],
-      "notes": "Phase 12-02 Option B fix: download Ideogram bytes locally so we can POST multipart binary to FB /photos. Meta's /photos?url= fetcher rejected Ideogram ephemeral URLs with error 324 (exec 10198 evidence). responseFormat=file + outputPropertyName=data follows the REHOST-01 subworkflow pattern. Retry safe — Ideogram URL is idempotent GET. onError=continueErrorOutput → 🏷️ Tag FB Error (consistent with rest of FB Story chain)."
+      "notes": "Phase 12-02 Option E: download image bytes from AZURE BLOB locally, then POST multipart binary to FB /photos. Prior Option B fetched from Ideogram ephemeral URL but exec 10333 showed 404 (Ideogram URL single-use — consumed by IG Container creation upstream). Azure Blob is intra-cloud from n8n-azure: reachable even though Meta→Azure block applies (Meta never touches this URL — we upload bytes multipart to FB /photos). responseFormat=file + outputPropertyName=data follows the REHOST-01 subworkflow pattern. Retry safe — Azure Blob GET is idempotent. onError=continueErrorOutput → 🏷️ Tag FB Error (consistent with rest of FB Story chain)."
     },
     {
       "parameters": {
@@ -1647,7 +1647,7 @@
         5580,
         480
       ],
-      "notes": "Phase 12-02 Option B fix: multipart binary upload (source=<binary from ⬇️ FB: Fetch Ideogram Bytes>) INSTEAD of URL param. Meta /photos?url= rejected Ideogram ephemeral URL with error 324 (exec 10198), even though the same URL works for IG /media?media_type=STORIES. Multipart bypasses Meta's URL fetcher entirely. Keep published=false to get unpublished photo_id for the two-step Photo Story chain. retryOnFail=true still safe (idempotent unpublished upload). TECH DEBT → Phase 12.1 CDN Layer may revert to URL-based upload once a CDN-fronted rehost URL is available."
+      "notes": "Phase 12-02 Option E: multipart binary upload (source=<binary from ⬇️ FB: Fetch Image Bytes (Azure)>) INSTEAD of URL param. Three-layer fix progression: (1) Meta /photos?url=Azure failed 2026-04-17 (Meta→Azure block) → Option D swapped to Ideogram URL direct; (2) exec 10198 FB error 324 on Ideogram URL → Option B multipart fetch; (3) exec 10333 Ideogram URL 404 single-use exhausted → Option E fetches from Azure Blob (intra-cloud). Meta never touches the Azure URL — we upload bytes multipart. Keep published=false to get unpublished photo_id for the two-step Photo Story chain. retryOnFail=true still safe (idempotent unpublished upload). TECH DEBT → Phase 12.1 CDN Layer may revert to URL-based upload once a CDN-fronted rehost URL is available."
     },
     {
       "parameters": {
@@ -3640,7 +3640,7 @@
       "main": [
         [
           {
-            "node": "⬇️ FB: Fetch Ideogram Bytes",
+            "node": "⬇️ FB: Fetch Image Bytes (Azure)",
             "type": "main",
             "index": 0
           }
@@ -4253,7 +4253,7 @@
         ]
       ]
     },
-    "⬇️ FB: Fetch Ideogram Bytes": {
+    "⬇️ FB: Fetch Image Bytes (Azure)": {
       "main": [
         [
           {
