@@ -5,13 +5,13 @@
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** Generate and publish complete social media posts (single, carousel, or story) in one wizard run, with AI-generated images, WhatsApp preview, SI approval, and automatic publishing to Instagram + Facebook
-**Current focus:** v1.2 Stories Publishing — Phase 12 Plan 01 COMPLETE ✅, Plan 12-02 IN PROGRESS (Task 3 IG+FB E2E verified, Task 4 next)
+**Current focus:** v1.2 Stories Publishing — Phase 12 Plan 01 COMPLETE ✅, Plan 12-02 IN PROGRESS (Task 4 single-photo regression verified IG, Task 5 carousel regression next)
 
 ## Current Position
 
 Milestone: v1.2 Stories Publishing
 Phase: 12 — IG Story Publishing — Plan 01 COMPLETE ✅ / Plan 02 IN PROGRESS
-Plan: 12-02 in progress — Task 1 deploy ✓, Task 2 IG-only ✓, Task 3 IG+FB ✓, Task 4 next (regression single-photo)
+Plan: 12-02 in progress — Task 1 deploy ✓, Task 2 IG-only ✓, Task 3 IG+FB ✓, Task 4 single-photo regression ✓ (IG pass, FB pre-existing HC short-circuit), Task 5 next (carousel regression)
 Status: Plan 12-02 halfway. Three tactical fixes landed on top of 12-01 build: Option D (band-aid: Ideogram URL direct for IG — Meta blocks Azure Blob domain), Option B (multipart form upload for FB Story — url= param rejected with 324), Option E (fetch Azure Blob bytes then multipart — Ideogram URL rejected by FB Story with 404/324). Combined stack VERIFIED E2E: exec 10647 published Story to IG (media_id 17932325328235789) + FB Story (post_id 1290303516541171) in 62.9s, user visual-confirmed both live. Critical watch for Task 4: FB feed single-photo uses `/photos?url=` with Ideogram URL direct (Option D pattern); FB endpoints have shown strictness on image URL sources, so this may need Option E pattern extended. Observed Phase 13 scope item: WA Story notification template only mentions IG permalink — will extend in NOTIF-01.
 Last activity: 2026-04-23 — Plan 12-02 Task 3 PASS via exec 10647. Option D (1e686a9) + Option B (1b9365a) + Option E (5e09970) combined, 25-node Story chain with 18 critical nodes OK. FB post 1290303516541171 flagged for Task 6 cleanup. Supabase session 893df3d6-3764-4e01-b36d-eb615c2bf10a. Two pre-fix failures documented for Task 5 failure-injection reference (exec 9382 Meta 400 Azure Blob rejected, exec 10198 FB 324 Ideogram URL rejected, exec 10333 FB Fetch Ideogram 404).
 
@@ -41,6 +41,7 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - **Azure SAS expiry:** 2027-04-10 — renew before that date.
 - **Supabase session status:** Never set to "consumed" after publish — accepted as low-risk tech debt.
 - **WA Story notification only mentions IG permalink** (observed during Plan 12-02 Task 3 exec 10647) — FB Story published successfully but WA preview template does not reference FB. This is Phase 13 NOTIF-01 scope, NOT a Phase 12 gap. Phase 13 will extend the template to include FB Story reference when `platforms` includes `facebook`.
+- **FB feed branch broken since 2026-04-17 (exec 147)** — Hashtag Comment node wired at that point, fails with code 10 (missing `instagram_manage_comments` scope per above blocker). HC `onError` short-circuits downstream FB feed nodes. Observed during Plan 12-02 Task 4 exec 10786 (single-photo regression): IG chain 100% OK, FB feed never reached. Pre-existing, NOT a Phase 12 regression. Resolves when Susana regenerates Meta token with added scope (see `instagram_manage_comments scope` blocker above), or dedicated follow-up to reroute HC onError to skip FB instead of halt.
 
 ### v1.2 Decisions Locked (Plan 10-01)
 
