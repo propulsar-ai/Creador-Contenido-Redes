@@ -75,7 +75,7 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 **Depends on**: Phase 11
 **Requirements**: IGSTORY-01, IGSTORY-02, IGSTORY-03, IGSTORY-04, IGSTORY-05, IGSTORY-06, SCHED-02, ERR-01
 **Success Criteria** (what must be TRUE):
-  1. Live API test at phase start confirms the correct host (`graph.instagram.com` vs `graph.facebook.com`) for IG Story container creation and the result is documented before any production node is built
+  1. Live API test at phase start confirms `graph.facebook.com` is the correct host for IG Story container creation (not `graph.instagram.com` — the latter requires Instagram User Access Token OAuth flow not available to the current Page Access Token) and the result is documented in 12-01-SUMMARY.md before any production node is built
   2. A Story approved via WhatsApp SI appears on the Instagram profile as a 9:16 Story (not in the feed) within the expected wait window
   3. After publish, the workflow retrieves the Story permalink and `expires_at` (or computes `publish_time + 24h` as fallback) and both values flow to downstream nodes
   4. Hashtag comment nodes are never reached during a Story execution — the Story branch terminates independently

@@ -29,7 +29,7 @@ New n8n image generation branch for 9:16 vertical Stories.
 Publish approved Stories to Instagram via Meta Graph API.
 
 - [ ] **IGSTORY-01**: n8n routes SI-approved Stories via a new `🔀 ¿Formato Story?` IF v1 node inserted on FALSE output of `🔀 ¿Formato Carrusel?` (after Azure Blob re-hosting)
-- [ ] **IGSTORY-02**: IG Story container is created via `POST graph.instagram.com/v22.0/{IG_USER_ID}/media` with `media_type=STORIES` and no caption (verified host via live API test as first task of IG Story phase)
+- [ ] **IGSTORY-02**: IG Story container is created via `POST graph.instagram.com/v22.0/{IG_USER_ID}/media` [CORRECTED 2026-04-23 in Phase 12 Plan 01 Task 1: actual host is `graph.facebook.com` — `graph.instagram.com` requires Instagram User Access Token OAuth flow not available to current Page Access Token; verified live with container ID 17869082274666804 returning 200 from graph.facebook.com and 400 code:190 from graph.instagram.com] with `media_type=STORIES` and no caption (verified host via live API test as first task of IG Story phase)
 - [ ] **IGSTORY-03**: n8n waits 45 seconds for the Story container to become ready before calling `media_publish`
 - [ ] **IGSTORY-04**: IG Story `media_publish` node has `retryOnFail=false` (endpoint not idempotent — retry creates duplicate Story)
 - [ ] **IGSTORY-05**: After publish, Story permalink and `expires_at` are retrieved via `GET /{media-id}?fields=permalink,expires_at` (fallback to `publish_time + 86400000` if `expires_at` not populated)
@@ -42,7 +42,7 @@ Publish approved Stories to Facebook Page via Meta Graph API.
 - [ ] **FBSTORY-01**: Before building production node, a live API test determines whether FB Story flow is single-step (`POST /{PAGE_ID}/photo_stories?url=X`) or 2-step (`POST /photos?published=false` → `POST /photo_stories?photo_id=X`) and the result documented
 - [ ] **FBSTORY-02**: FB Page Story publishes successfully via `/{PAGE_ID}/photo_stories` endpoint (exact flow from FBSTORY-01) using existing Meta Page Token
 - [ ] **FBSTORY-03**: FB Story publish step has `retryOnFail=false` (not idempotent)
-- [ ] **FBSTORY-04**: Before FB Story container creation, an assertion rejects Azure Blob URLs containing SAS query params (Meta Story fetcher is stricter than FEED fetcher)
+- [ ] **FBSTORY-04**: Before FB Story container creation, an assertion rejects Azure Blob URLs containing SAS query params (Meta Story fetcher is stricter than FEED fetcher) [SCOPE SHIFTED 2026-04-23 in Phase 12 Plan 01 Task 2: implemented in Phase 12 via 🛡️ Assert FB Story URL (no SAS) Code v2 node — Option A "strip" semantics, NOT reject; Phase 13 may add additional re-exercise of the assertion in its E2E if needed]
 
 ### Scheduling (SCHED)
 
@@ -129,18 +129,18 @@ Reuse v1.1 error subgraph for Story publishing failures.
 | IMGEN-03 | Phase 11 | Pending |
 | IMGEN-04 | Phase 11 | Pending |
 | NOTIF-02 | Phase 11 | Pending |
-| IGSTORY-01 | Phase 12 | Pending |
-| IGSTORY-02 | Phase 12 | Pending |
-| IGSTORY-03 | Phase 12 | Pending |
-| IGSTORY-04 | Phase 12 | Pending |
-| IGSTORY-05 | Phase 12 | Pending |
-| IGSTORY-06 | Phase 12 | Pending |
-| SCHED-02 | Phase 12 | Pending |
-| ERR-01 | Phase 12 | Pending |
+| IGSTORY-01 | Phase 12 Plan 01 | Done (build) |
+| IGSTORY-02 | Phase 12 Plan 01 | Done (build, host corrected to graph.facebook.com) |
+| IGSTORY-03 | Phase 12 Plan 01 | Done (build) |
+| IGSTORY-04 | Phase 12 Plan 01 | Done (build) |
+| IGSTORY-05 | Phase 12 Plan 01 | Done (build, expires_at fallback computed from timestamp) |
+| IGSTORY-06 | Phase 12 Plan 01 | Done (build) |
+| SCHED-02 | Phase 12 Plan 01 | Done (build) |
+| ERR-01 | Phase 12 Plan 01 | Done (build, Option B wiring via main[1]) |
 | FBSTORY-01 | Phase 13 | Pending |
-| FBSTORY-02 | Phase 13 | Pending |
-| FBSTORY-03 | Phase 13 | Pending |
-| FBSTORY-04 | Phase 13 | Pending |
+| FBSTORY-02 | Phase 12 Plan 01 | Done (build, 2-step flow) |
+| FBSTORY-03 | Phase 12 Plan 01 | Done (build, retryOnFail=false) |
+| FBSTORY-04 | Phase 12 Plan 01 | Done (build, Option A strip semantics) |
 | NOTIF-01 | Phase 13 | Pending |
 | LOG-01 | Phase 13 | Pending |
 | LOG-02 | Phase 13 | Pending |
