@@ -1,0 +1,36 @@
+{
+  "timestamp_utc": "2026-04-23T21:46:15.266Z",
+  "AFD_HOST": "propulsarcontent-cybdebd3gkanevba.z01.azurefd.net",
+  "BLOB_PATH": "2026/04/16/18e541ae-7d0d-41e8-a2f2-4c7e37545ba4.jpg",
+  "tests": {
+    "origin_no_sas": {
+      "status": 200,
+      "content_type": "image/jpeg",
+      "content_length": "330459"
+    },
+    "afd_default_ua": {
+      "status": 200,
+      "content_type": "image/jpeg",
+      "content_length": "330459",
+      "x_cache": "CONFIG_NOCACHE",
+      "x_azure_ref": "20260423T214614Z-r1f599f6cbf4wq7jhC1MADevb400000003xg000000000mxx"
+    },
+    "afd_fb_ua": {
+      "status": 200,
+      "content_type": "image/jpeg",
+      "content_length": "330459"
+    },
+    "afd_get_full": {
+      "status": 200,
+      "content_type": "image/jpeg",
+      "size": 330459,
+      "png_magic_ok": false
+    },
+    "meta_dry_run": {
+      "create_status": 400,
+      "create_body": "{\"error\":{\"message\":\"Only photo or video can be accepted as media type.\",\"type\":\"OAuthException\",\"code\":9004,\"error_subcode\":2207052,\"is_transient\":false,\"error_user_title\":\"Error al descargar el contenido multimedia. El URI del contenido multimedia no cumple nuestros requisitos.\",\"error_user_msg\":\"No se pudo recuperar el contenido multimedia de este URI: https:\\/\\/propulsarcontent-cybdebd3gkanevba.z01.azurefd.net\\/posts\\/2026\\/04\\/16\\/18e541ae-7d0d-41e8-a2f2-4c7e37545ba4.jpg.Consulta la secci\\u00f3n de limitaciones de nuestra documentaci\\u00f3n de desarrollo para obtener m\\u00e1s informaci\\u00f3n: https:\\/\\/developers.facebook.com\\/docs\\/instagram-platform\\/instagram-graph-api\\/reference\\/ig-user\\/media#creating\",\"fbtrace_id\":\"AFvgpRhAeOD0i9AKo7ljaFd\"}}",
+      "container_id": null,
+      "afd_url_used": "https://propulsarcontent-cybdebd3gkanevba.z01.azurefd.net/posts/2026/04/16/18e541ae-7d0d-41e8-a2f2-4c7e37545ba4.jpg"
+    }
+  }
+}

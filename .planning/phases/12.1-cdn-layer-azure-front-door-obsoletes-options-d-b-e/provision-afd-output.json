@@ -1,0 +1,21 @@
+﻿{
+    "timestamp_utc":  "2026-04-23T20:49:54.7611681Z",
+    "subscription":  "26656554-4a6e-496b-a94d-0f7ef8b9b990",
+    "resource_group":  "propulsar-production",
+    "profile_name":  "propulsar-content-afd",
+    "profile_sku":  "Standard_AzureFrontDoor",
+    "profile_state":  "Succeeded",
+    "endpoint_name":  "propulsarcontent",
+    "endpoint_host":  "propulsarcontent-cybdebd3gkanevba.z01.azurefd.net",
+    "endpoint_state":  "Succeeded",
+    "origin_group":  "propulsarcontent-origin-group",
+    "origin_group_state":  "Succeeded",
+    "origin_name":  "propulsarcontent-origin",
+    "origin_host":  "propulsarcontent.blob.core.windows.net",
+    "origin_state":  "Succeeded",
+    "route_name":  "propulsarcontent-route",
+    "route_state":  "Succeeded",
+    "route_protocols":  "Https",
+    "route_patterns":  "/*",
+    "route_origin_group_id":  "/subscriptions/26656554-4a6e-496b-a94d-0f7ef8b9b990/resourceGroups/propulsar-production/providers/Microsoft.Cdn/profiles/propulsar-content-afd/originGroups/propulsarcontent-origin-group"
+}
