@@ -1187,7 +1187,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ image_url: $json.blob_urls[0].url, caption: $json.instagram_caption, access_token: $env.META_PAGE_TOKEN }) }}",
+        "jsonBody": "={{ JSON.stringify({ image_url: $json.final_image_url, caption: $json.instagram_caption, access_token: $env.META_PAGE_TOKEN }) }}",
         "options": {}
       },
       "id": "ig-create-container",
@@ -1202,7 +1202,7 @@
       "maxTries": 2,
       "waitBetweenTries": 3000,
       "onError": "continueErrorOutput",
-      "notes": "Creates IG media container. Idempotent — retry is safe. Reads blob_urls[0].url (permanent Azure URL from Phase 4) and instagram.caption (from GPT-4o). Output: { id: <container_id> }. Common errors: 9004/2207052 (image_url unreachable), 190 (token expired)."
+      "notes": "Creates IG media container. Idempotent — retry is safe. Phase 12-02 Option D band-aid: reads $json.final_image_url (raw Ideogram/Flux hosted URL) because Meta fetcher blocks propulsarcontent.blob.core.windows.net domain-wide since 2026-04-17 (evidence: .tmp/poll/F1,F2,CONTROL). TECH DEBT → Phase 12.1 CDN Layer: restore blob_urls[0].url via Azure Front Door. Output: { id: <container_id> }. Common errors: 9004/2207052 (image_url unreachable), 190 (token expired)."
     },
     {
       "parameters": {
@@ -1358,7 +1358,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ url: $('🔗 Merge Rehost Output').item.json.blob_urls[0].url, message: $('🔗 Merge Rehost Output').item.json.facebook_caption || $('🔗 Merge Rehost Output').item.json.instagram_caption || '', access_token: $env.META_PAGE_TOKEN }) }}",
+        "jsonBody": "={{ JSON.stringify({ url: $('🔗 Merge Rehost Output').item.json.final_image_url, message: $('🔗 Merge Rehost Output').item.json.facebook_caption || $('🔗 Merge Rehost Output').item.json.instagram_caption || '', access_token: $env.META_PAGE_TOKEN }) }}",
         "options": {}
       },
       "id": "fb-publish-photo",
@@ -1373,7 +1373,7 @@
         5040,
         480
       ],
-      "notes": "CRITICAL: Retry DISABLED (FBPUB-01, ERR-02 equivalent). POST /{PAGE_ID}/photos is NOT idempotent — retry after timeout where Meta already processed creates a duplicate live FB post. Input: blob_urls[0].url from Merge Rehost Output. Output: { id: <photo_id>, post_id: '<page_id>_<photo_id>' }. Post_id used to construct FB_URL as 'https://www.facebook.com/' + post_id."
+      "notes": "CRITICAL: Retry DISABLED (FBPUB-01, ERR-02 equivalent). POST /{PAGE_ID}/photos is NOT idempotent — retry after timeout where Meta already processed creates a duplicate live FB post. Phase 12-02 Option D band-aid: consumes final_image_url (raw Ideogram/Flux URL) because Meta blocks propulsarcontent.blob.core.windows.net. TECH DEBT → Phase 12.1 CDN Layer. Output: { id: <photo_id>, post_id: '<page_id>_<photo_id>' }."
     },
     {
       "parameters": {
@@ -1429,7 +1429,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ image_url: $('🔗 Merge Rehost Output').item.json.blob_urls[0].url, media_type: 'STORIES', access_token: $env.META_PAGE_TOKEN }) }}",
+        "jsonBody": "={{ JSON.stringify({ image_url: $('🔗 Merge Rehost Output').item.json.final_image_url, media_type: 'STORIES', access_token: $env.META_PAGE_TOKEN }) }}",
         "options": {}
       },
       "id": "ig-create-story-container",
@@ -1444,7 +1444,7 @@
         4060,
         560
       ],
-      "notes": "IGSTORY-02: Crea container IG Story. Host verificado LIVE (Plan 12-01 Task 1) — graph.facebook.com con Page Access Token. NO incluir caption (Meta lo ignora silenciosamente en Stories — pitfall #2 del RESEARCH). image_url cross-refs 🔗 Merge Rehost Output → blob_urls[0].url (Azure Blob permalink, NO el raw Ideogram URL — SCHED-02 safety: el cap es 22h y Ideogram URLs expiran en 24h, mientras que Azure Blob no expira hasta SAS 2027; mismo principio que el FB Upload). Phase 11 garantiza ratio: Ideogram 736×1312 delta 0.27%. Idempotente — retryOnFail=true + maxTries=2 safe. Output: { id: <container_id> }."
+      "notes": "IGSTORY-02: Crea container IG Story. Host verificado LIVE (Plan 12-01 Task 1) — graph.facebook.com con Page Access Token. NO incluir caption (Meta lo ignora silenciosamente en Stories — pitfall #2 del RESEARCH). Phase 12-02 Option D band-aid: image_url cross-refs 🔗 Merge Rehost Output → final_image_url (raw Ideogram hosted URL) porque Meta bloquea propulsarcontent.blob.core.windows.net domain-wide desde 2026-04-17 (evidence: .tmp/poll/F1,F2,CONTROL, exec 9382). TTL constraint: Ideogram URL ~24h, SCHED-02 cap 22h → margen ~1-2h. TECH DEBT → Phase 12.1 CDN Layer restaurará Azure Blob via Front Door. Phase 11 garantiza ratio: Ideogram 736×1312 delta 0.27%. Idempotente — retryOnFail=true + maxTries=2 safe. Output: { id: <container_id> }."
     },
     {
       "parameters": {
@@ -1556,7 +1556,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// FBSTORY-04: Strip Azure SAS query params from blob URL before FB Story Upload.\n// Meta STORIES fetcher (graph.facebook.com/{PAGE_ID}/photos para Story) es más estricto que el FEED fetcher\n// y puede rechazar URLs con query string SAS (sig=, sv=, sp=, etc.). Defense-in-depth — las URLs actuales\n// de Phase 11 son bare permalinks pero esta assertion blinda futuras rotaciones de SAS.\nconst item = { ...$input.item.json };\nconst rehost = $('🔗 Merge Rehost Output').item.json;\nconst rawUrl = (rehost.blob_urls && rehost.blob_urls[0] && rehost.blob_urls[0].url) || '';\nif (!rawUrl) {\n  throw new Error('FBSTORY-04 Assert: blob_urls[0].url está vacío en 🔗 Merge Rehost Output. No puedo passear una URL inválida al FB Upload.');\n}\nconst qIdx = rawUrl.indexOf('?');\nconst sasParams = ['sig=','sv=','sp=','se=','st=','sr=','spr='];\nlet bareUrl = rawUrl;\nlet stripped = false;\nif (qIdx > 0) {\n  const qs = rawUrl.slice(qIdx + 1);\n  const hasSas = sasParams.some(p => qs.includes(p));\n  if (hasSas) {\n    bareUrl = rawUrl.slice(0, qIdx);\n    stripped = true;\n  }\n}\nitem.fb_story_image_url = bareUrl;\nitem.fb_story_url_stripped = stripped;\nreturn { json: item };"
+        "jsCode": "// FBSTORY-04: Strip Azure SAS query params from image URL before FB Story Upload.\n// Phase 12-02 Option D band-aid: source is now 🔗 Merge Rehost Output.final_image_url\n// (raw Ideogram/Flux URL) — Azure Blob domain blocked by Meta fetcher since 2026-04-17.\n// Ideogram URLs are content-addressed without SAS params, so strip is a no-op today —\n// kept as defense-in-depth for Phase 12.1 CDN Layer restore (when source returns to Azure Blob).\nconst item = { ...$input.item.json };\nconst rehost = $('🔗 Merge Rehost Output').item.json;\nconst rawUrl = rehost.final_image_url || '';\nif (!rawUrl) {\n  throw new Error('FBSTORY-04 Assert: final_image_url está vacío en 🔗 Merge Rehost Output. No puedo passear una URL inválida al FB Upload.');\n}\nconst qIdx = rawUrl.indexOf('?');\nconst sasParams = ['sig=','sv=','sp=','se=','st=','sr=','spr='];\nlet bareUrl = rawUrl;\nlet stripped = false;\nif (qIdx > 0) {\n  const qs = rawUrl.slice(qIdx + 1);\n  const hasSas = sasParams.some(p => qs.includes(p));\n  if (hasSas) {\n    bareUrl = rawUrl.slice(0, qIdx);\n    stripped = true;\n  }\n}\nitem.fb_story_image_url = bareUrl;\nitem.fb_story_url_stripped = stripped;\nreturn { json: item };"
       },
       "id": "assert-fb-story-url",
       "name": "🛡️ Assert FB Story URL (no SAS)",
@@ -1566,7 +1566,7 @@
         5280,
         480
       ],
-      "notes": "FBSTORY-04: Strip SAS query params del Azure Blob URL antes del FB Story Upload (Meta STORIES fetcher es stricter que FEED fetcher). Implementación Option A (strip, no reject) — defense-in-depth contra rotaciones futuras de SAS. Output: { ...input, fb_story_image_url: <bare>, fb_story_url_stripped: <bool> }. El downstream 📤 FB: Upload Story Photo Unpublished consume $json.fb_story_image_url (NO $('🔗 Merge Rehost Output').item.json.blob_urls[0].url directo). El field fb_story_url_stripped se loguea en SUMMARY post-E2E para detectar si en algún momento Phase 11 empieza a producir URLs con SAS (señal de que la rotación arrancó)."
+      "notes": "FBSTORY-04: Strip SAS query params del image URL antes del FB Story Upload (Meta STORIES fetcher es stricter que FEED fetcher). Phase 12-02 Option D: source swapped to final_image_url (raw Ideogram URL) — Azure Blob domain blocked by Meta. Ideogram URLs have no SAS params so strip is a no-op; kept as defense-in-depth for Phase 12.1 CDN restore. Output: { ...input, fb_story_image_url: <bare>, fb_story_url_stripped: <bool> }."
     },
     {
       "parameters": {
@@ -1595,7 +1595,7 @@
         5380,
         480
       ],
-      "notes": "Primer paso two-step FB Photo Story. Sube imagen como unpublished (published=false) para obtener photo_id. Consume $json.fb_story_image_url (output de 🛡️ Assert FB Story URL upstream — Azure Blob URL ya validada bare-without-SAS para FBSTORY-04). Idempotente — retryOnFail=true safe (crea múltiples unpublished photos en caso raro, pero no publica ninguna). Pattern verificado en RESEARCH.md §Code Examples #4."
+      "notes": "Primer paso two-step FB Photo Story. Sube imagen como unpublished (published=false) para obtener photo_id. Consume $json.fb_story_image_url (output de 🛡️ Assert FB Story URL upstream). Phase 12-02 Option D band-aid: fb_story_image_url is now derived from final_image_url (raw Ideogram URL) because Meta blocks Azure Blob. Idempotente — retryOnFail=true safe. TECH DEBT → Phase 12.1 CDN Layer restores Azure permalink. Pattern verificado en RESEARCH.md §Code Examples #4."
     },
     {
       "parameters": {
@@ -2024,7 +2024,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $('🔗 Merge Rehost Output').first().json;\nconst blobUrls = data.blob_urls || [];\nif (blobUrls.length === 0) {\n  throw new Error('IG Carousel Explode: no blob_urls found in Merge Rehost Output');\n}\nif (blobUrls.length > 10) {\n  throw new Error('IG Carousel Explode: carousel exceeds 10-slide Meta limit (' + blobUrls.length + ' slides)');\n}\nreturn blobUrls.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n    num_images: blobUrls.length,\n  }\n}));",
+        "jsCode": "// Phase 12-02 Option D: swap source from Merge Rehost Output.blob_urls (Azure Blob, blocked by Meta)\n// to Prep Re-host Input.image_urls (raw Ideogram/Flux URLs). Same shape [{index,url}].\n// TECH DEBT → Phase 12.1 CDN Layer restores Azure Blob path via Front Door.\nconst data = $('🔧 Prep Re-host Input').first().json;\nconst imageUrls = data.image_urls || [];\nif (imageUrls.length === 0) {\n  throw new Error('IG Carousel Explode: no image_urls found in Prep Re-host Input');\n}\nif (imageUrls.length > 10) {\n  throw new Error('IG Carousel Explode: carousel exceeds 10-slide Meta limit (' + imageUrls.length + ' slides)');\n}\nreturn imageUrls.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n    num_images: imageUrls.length,\n  }\n}));",
         "mode": "runOnceForAllItems"
       },
       "id": "ig-carousel-explode",
@@ -2035,7 +2035,7 @@
         3940,
         200
       ],
-      "notes": "Explodes blob_urls array from Merge Rehost Output into one item per slide. Validates: not empty, not > 10 slides (Meta limit). Connected from TRUE output of ¿Formato Carrusel?."
+      "notes": "Phase 12-02 Option D: Explodes image_urls from Prep Re-host Input (raw Ideogram URLs) into one item per slide — Meta blocks Azure Blob domain. Validates: not empty, not > 10 slides (Meta limit). Connected from TRUE output of ¿Formato Carrusel?. TECH DEBT → Phase 12.1 CDN Layer will restore source to Merge Rehost Output.blob_urls."
     },
     {
       "parameters": {
@@ -2071,7 +2071,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst session = $('🔗 Merge Rehost Output').first().json;\nconst childIds = items.map(it => it.json.id).filter(Boolean);\nif (childIds.length !== session.blob_urls.length) {\n  throw new Error('IG Carousel: expected ' + session.blob_urls.length + ' child containers, got ' + childIds.length);\n}\nreturn [{\n  json: {\n    topic: session.topic,\n    type: session.type,\n    angle: session.angle || null,\n    platforms: session.platforms,\n    image_model: session.image_model,\n    instagram_caption: session.instagram_caption,\n    facebook_caption: session.facebook_caption,\n    blob_urls: session.blob_urls,\n    approval_number: session.approval_number,\n    format: session.format,\n    num_images: session.blob_urls.length,\n    child_ids: childIds,\n    children_csv: childIds.join(','),\n  }\n}];",
+        "jsCode": "// Phase 12-02 Option D: expected count derived from Prep Re-host Input.image_urls (raw Ideogram URLs,\n// source of truth for slide count). blob_urls still carried through for cleanup subgraph + Sheets log.\nconst items = $input.all();\nconst session = $('🔗 Merge Rehost Output').first().json;\nconst rawImages = $('🔧 Prep Re-host Input').first().json.image_urls || [];\nconst expectedCount = rawImages.length;\nconst childIds = items.map(it => it.json.id).filter(Boolean);\nif (childIds.length !== expectedCount) {\n  throw new Error('IG Carousel: expected ' + expectedCount + ' child containers, got ' + childIds.length);\n}\nreturn [{\n  json: {\n    topic: session.topic,\n    type: session.type,\n    angle: session.angle || null,\n    platforms: session.platforms,\n    image_model: session.image_model,\n    instagram_caption: session.instagram_caption,\n    facebook_caption: session.facebook_caption,\n    blob_urls: session.blob_urls,\n    approval_number: session.approval_number,\n    format: session.format,\n    num_images: expectedCount,\n    child_ids: childIds,\n    children_csv: childIds.join(','),\n  }\n}];",
         "mode": "runOnceForAllItems"
       },
       "id": "ig-collect-child-ids",
@@ -2221,7 +2221,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const session = $('🔗 Merge Rehost Output').first().json;\nconst blobUrls = session.blob_urls || [];\nreturn blobUrls.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n  }\n}));",
+        "jsCode": "// Phase 12-02 Option D: source = Prep Re-host Input.image_urls (raw Ideogram URLs).\n// Meta blocks Azure Blob domain. TECH DEBT → Phase 12.1 CDN Layer restores Azure path.\nconst rawImages = $('🔧 Prep Re-host Input').first().json.image_urls || [];\nreturn rawImages.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n  }\n}));",
         "mode": "runOnceForAllItems"
       },
       "id": "fb-carousel-explode",
@@ -2232,7 +2232,7 @@
         5700,
         200
       ],
-      "notes": "Explodes blob_urls from Merge Rehost Output into per-slide items for FB unpublished photo upload. Mirrors IG: Explode Carousel Slides but simpler (no count validation — already done in IG chain)."
+      "notes": "Phase 12-02 Option D: Explodes raw Ideogram URLs from Prep Re-host Input.image_urls into per-slide items for FB unpublished photo upload — Meta blocks Azure Blob. Mirrors IG: Explode Carousel Slides but simpler (no count validation — already done in IG chain). TECH DEBT → Phase 12.1 CDN Layer restores source."
     },
     {
       "parameters": {
@@ -2268,7 +2268,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst session = $('🔗 Merge Rehost Output').first().json;\nconst photoIds = items.map(it => it.json.id).filter(Boolean);\nif (photoIds.length !== session.blob_urls.length) {\n  throw new Error('FB Carousel: expected ' + session.blob_urls.length + ' unpublished photos, got ' + photoIds.length);\n}\nreturn [{\n  json: {\n    photo_ids: photoIds,\n    facebook_caption: session.facebook_caption || session.instagram_caption || '',\n    instagram_permalink: $('🔗 IG: Get Carousel Permalink').first().json.permalink,\n    approval_number: session.approval_number,\n    topic: session.topic,\n    type: session.type,\n    angle: session.angle || null,\n    image_model: session.image_model,\n    num_images: session.blob_urls.length,\n    format: 'carousel',\n    blob_urls: session.blob_urls,\n    instagram_caption: session.instagram_caption,\n  }\n}];",
+        "jsCode": "// Phase 12-02 Option D: expected count from Prep Re-host Input.image_urls.\n// blob_urls still carried for cleanup subgraph + Sheets log (non-Meta use).\nconst items = $input.all();\nconst session = $('🔗 Merge Rehost Output').first().json;\nconst rawImages = $('🔧 Prep Re-host Input').first().json.image_urls || [];\nconst expectedCount = rawImages.length;\nconst photoIds = items.map(it => it.json.id).filter(Boolean);\nif (photoIds.length !== expectedCount) {\n  throw new Error('FB Carousel: expected ' + expectedCount + ' unpublished photos, got ' + photoIds.length);\n}\nreturn [{\n  json: {\n    photo_ids: photoIds,\n    facebook_caption: session.facebook_caption || session.instagram_caption || '',\n    instagram_permalink: $('🔗 IG: Get Carousel Permalink').first().json.permalink,\n    approval_number: session.approval_number,\n    topic: session.topic,\n    type: session.type,\n    angle: session.angle || null,\n    image_model: session.image_model,\n    num_images: expectedCount,\n    format: 'carousel',\n    blob_urls: session.blob_urls,\n    instagram_caption: session.instagram_caption,\n  }\n}];",
         "mode": "runOnceForAllItems"
       },
       "id": "fb-collect-photo-ids",
