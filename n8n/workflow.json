@@ -1187,7 +1187,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ image_url: $json.final_image_url, caption: $json.instagram_caption, access_token: $env.META_PAGE_TOKEN }) }}",
+        "jsonBody": "={{ JSON.stringify({ image_url: $('🔗 Merge Rehost Output').item.json.blob_urls[0].url, caption: $json.instagram_caption, access_token: $env.META_PAGE_TOKEN }) }}",
         "options": {}
       },
       "id": "ig-create-container",
@@ -1202,7 +1202,7 @@
       "maxTries": 2,
       "waitBetweenTries": 3000,
       "onError": "continueErrorOutput",
-      "notes": "Creates IG media container. Idempotent — retry is safe. Phase 12-02 Option D band-aid: reads $json.final_image_url (raw Ideogram/Flux hosted URL) because Meta fetcher blocks propulsarcontent.blob.core.windows.net domain-wide since 2026-04-17 (evidence: .tmp/poll/F1,F2,CONTROL). TECH DEBT → Phase 12.1 CDN Layer: restore blob_urls[0].url via Azure Front Door. Output: { id: <container_id> }. Common errors: 9004/2207052 (image_url unreachable), 190 (token expired)."
+      "notes": "Creates IG media container. Idempotent — retry is safe. Phase 12.2 restored the durable re-host contract: reads blob_urls[0].url (Hostinger rehost-service public URL), replacing the Phase 12-02 Option D band-aid (raw Ideogram/Flux URL). Output: { id: <container_id> }. Common errors: 9004/2207052 (image_url unreachable), 190 (token expired)."
     },
     {
       "parameters": {
@@ -1358,7 +1358,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ url: $('🔗 Merge Rehost Output').item.json.final_image_url, message: $('🔗 Merge Rehost Output').item.json.facebook_caption || $('🔗 Merge Rehost Output').item.json.instagram_caption || '', access_token: $env.META_PAGE_TOKEN }) }}",
+        "jsonBody": "={{ JSON.stringify({ url: $('🔗 Merge Rehost Output').item.json.blob_urls[0].url, message: $('🔗 Merge Rehost Output').item.json.facebook_caption || $('🔗 Merge Rehost Output').item.json.instagram_caption || '', access_token: $env.META_PAGE_TOKEN }) }}",
         "options": {}
       },
       "id": "fb-publish-photo",
@@ -1373,7 +1373,7 @@
         5040,
         480
       ],
-      "notes": "CRITICAL: Retry DISABLED (FBPUB-01, ERR-02 equivalent). POST /{PAGE_ID}/photos is NOT idempotent — retry after timeout where Meta already processed creates a duplicate live FB post. Phase 12-02 Option D band-aid: consumes final_image_url (raw Ideogram/Flux URL) because Meta blocks propulsarcontent.blob.core.windows.net. TECH DEBT → Phase 12.1 CDN Layer. Output: { id: <photo_id>, post_id: '<page_id>_<photo_id>' }."
+      "notes": "CRITICAL: Retry DISABLED (FBPUB-01, ERR-02 equivalent). POST /{PAGE_ID}/photos is NOT idempotent — retry after timeout where Meta already processed creates a duplicate live FB post. Phase 12.2 restored the durable re-host contract: consumes blob_urls[0].url (Hostinger rehost-service public URL), replacing the Phase 12-02 Option D band-aid (raw Ideogram/Flux URL). Output: { id: <photo_id>, post_id: '<page_id>_<photo_id>' }."
     },
     {
       "parameters": {
@@ -1432,7 +1432,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ image_url: $('🔗 Merge Rehost Output').item.json.final_image_url, media_type: 'STORIES', access_token: $env.META_PAGE_TOKEN }) }}",
+        "jsonBody": "={{ JSON.stringify({ image_url: $('🔗 Merge Rehost Output').item.json.blob_urls[0].url, media_type: 'STORIES', access_token: $env.META_PAGE_TOKEN }) }}",
         "options": {}
       },
       "id": "ig-create-story-container",
@@ -1447,7 +1447,7 @@
         4060,
         560
       ],
-      "notes": "IGSTORY-02: Crea container IG Story. Host verificado LIVE (Plan 12-01 Task 1) — graph.facebook.com con Page Access Token. NO incluir caption (Meta lo ignora silenciosamente en Stories — pitfall #2 del RESEARCH). Phase 12-02 Option D band-aid: image_url cross-refs 🔗 Merge Rehost Output → final_image_url (raw Ideogram hosted URL) porque Meta bloquea propulsarcontent.blob.core.windows.net domain-wide desde 2026-04-17 (evidence: .tmp/poll/F1,F2,CONTROL, exec 9382). TTL constraint: Ideogram URL ~24h, SCHED-02 cap 22h → margen ~1-2h. TECH DEBT → Phase 12.1 CDN Layer restaurará Azure Blob via Front Door. Phase 11 garantiza ratio: Ideogram 736×1312 delta 0.27%. Idempotente — retryOnFail=true + maxTries=2 safe. Output: { id: <container_id> }."
+      "notes": "IGSTORY-02: Crea container IG Story. Host verificado LIVE (Plan 12-01 Task 1) — graph.facebook.com con Page Access Token. NO incluir caption (Meta lo ignora silenciosamente en Stories — pitfall #2 del RESEARCH). Phase 12.2 restauró el contrato de re-host durable: image_url cross-refs 🔗 Merge Rehost Output → blob_urls[0].url (URL pública de rehost-service en Hostinger), reemplazando el band-aid Option D de Phase 12-02 (URL directa de Ideogram). Sin límite de TTL de 24h — habilita ventana completa de scheduling (SCHED-02 relajación queda fuera de scope de esta fase). Phase 11 garantiza ratio: Ideogram 736×1312 delta 0.27%. Idempotente — retryOnFail=true + maxTries=2 safe. Output: { id: <container_id> }."
     },
     {
       "parameters": {
@@ -1578,7 +1578,7 @@
         5280,
         480
       ],
-      "notes": "FBSTORY-04: Strip SAS query params del image URL antes del FB Story multipart fetch. Phase 12-02 Option E: source swapped from final_image_url (Ideogram ephemeral — exec 10333 404 after IG Container consumed it) → blob_urls[0].url (Azure Blob — intra-cloud reachable from n8n-azure). Meta → Azure block IRRELEVANT: n8n-azure fetches bytes then POSTs multipart to FB. IG Story branch unchanged (uses Ideogram URL direct — Meta fetches once during IG Container creation). Output: { ...input, fb_story_image_url: <Azure blob bare>, fb_story_url_stripped: <bool>, fb_story_source: 'azure-blob' }."
+      "notes": "FBSTORY-04: Strip SAS query params del image URL antes del FB Story multipart fetch. Phase 12-02 Option E: source swapped from final_image_url (Ideogram ephemeral — exec 10333 404 after IG Container consumed it) → blob_urls[0].url (Azure Blob — intra-cloud reachable from n8n-azure). Meta → Azure block IRRELEVANT: n8n-azure fetches bytes then POSTs multipart to FB. IG Story branch unchanged (uses Ideogram URL direct — Meta fetches once during IG Container creation). Output: { ...input, fb_story_image_url: <Azure blob bare>, fb_story_url_stripped: <bool>, fb_story_source: 'azure-blob' }. Phase 12.2 note: blob_urls[0].url now resolves to a Hostinger rehost-service URL, which never carries SAS query params — this strip logic is now a dormant no-op (stripped will always be false). Left in place intentionally (fail-open, zero functional risk) per RESEARCH Pitfall 5."
     },
     {
       "parameters": {
@@ -2189,7 +2189,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Phase 12-02 Option D: swap source from Merge Rehost Output.blob_urls (Azure Blob, blocked by Meta)\n// to Prep Re-host Input.image_urls (raw Ideogram/Flux URLs). Same shape [{index,url}].\n// TECH DEBT → Phase 12.1 CDN Layer restores Azure Blob path via Front Door.\nconst data = $('🔧 Prep Re-host Input').first().json;\nconst imageUrls = data.image_urls || [];\nif (imageUrls.length === 0) {\n  throw new Error('IG Carousel Explode: no image_urls found in Prep Re-host Input');\n}\nif (imageUrls.length > 10) {\n  throw new Error('IG Carousel Explode: carousel exceeds 10-slide Meta limit (' + imageUrls.length + ' slides)');\n}\nreturn imageUrls.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n    num_images: imageUrls.length,\n  }\n}));",
+        "jsCode": "// Phase 12.2: restored durable re-host contract — source is Merge Rehost Output.blob_urls\n// (Hostinger rehost-service public URL), replacing the Phase 12-02 Option D band-aid\n// (raw Ideogram/Flux URLs from Prep Re-host Input). Same shape [{index,url}].\nconst data = $('🔗 Merge Rehost Output').first().json;\nconst imageUrls = data.blob_urls || [];\nif (imageUrls.length === 0) {\n  throw new Error('IG Carousel Explode: no blob_urls found in Merge Rehost Output');\n}\nif (imageUrls.length > 10) {\n  throw new Error('IG Carousel Explode: carousel exceeds 10-slide Meta limit (' + imageUrls.length + ' slides)');\n}\nreturn imageUrls.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n    num_images: imageUrls.length,\n  }\n}));",
         "mode": "runOnceForAllItems"
       },
       "id": "ig-carousel-explode",
@@ -2200,7 +2200,7 @@
         3940,
         200
       ],
-      "notes": "Phase 12-02 Option D: Explodes image_urls from Prep Re-host Input (raw Ideogram URLs) into one item per slide — Meta blocks Azure Blob domain. Validates: not empty, not > 10 slides (Meta limit). Connected from TRUE output of ¿Formato Carrusel?. TECH DEBT → Phase 12.1 CDN Layer will restore source to Merge Rehost Output.blob_urls."
+      "notes": "Phase 12.2 restored the durable re-host contract: Explodes blob_urls from Merge Rehost Output (Hostinger rehost-service public URLs) into one item per slide, replacing the Phase 12-02 Option D band-aid (raw Ideogram URLs). Validates: not empty, not > 10 slides (Meta limit). Connected from TRUE output of ¿Formato Carrusel?."
     },
     {
       "parameters": {
@@ -2386,7 +2386,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Phase 12-02 Option D: source = Prep Re-host Input.image_urls (raw Ideogram URLs).\n// Meta blocks Azure Blob domain. TECH DEBT → Phase 12.1 CDN Layer restores Azure path.\nconst rawImages = $('🔧 Prep Re-host Input').first().json.image_urls || [];\nreturn rawImages.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n  }\n}));",
+        "jsCode": "// Phase 12.2: restored durable re-host contract — source = Merge Rehost Output.blob_urls\n// (Hostinger rehost-service public URLs), replacing the Phase 12-02 Option D band-aid.\nconst rawImages = $('🔗 Merge Rehost Output').first().json.blob_urls || [];\nreturn rawImages.map((entry, i) => ({\n  json: {\n    slide_index: entry.index || (i + 1),\n    blob_url: entry.url,\n  }\n}));",
         "mode": "runOnceForAllItems"
       },
       "id": "fb-carousel-explode",
@@ -2397,7 +2397,7 @@
         5700,
         200
       ],
-      "notes": "Phase 12-02 Option D: Explodes raw Ideogram URLs from Prep Re-host Input.image_urls into per-slide items for FB unpublished photo upload — Meta blocks Azure Blob. Mirrors IG: Explode Carousel Slides but simpler (no count validation — already done in IG chain). TECH DEBT → Phase 12.1 CDN Layer restores source."
+      "notes": "Phase 12.2 restored the durable re-host contract: Explodes blob_urls from Merge Rehost Output (Hostinger rehost-service public URLs) into per-slide items for FB unpublished photo upload, replacing the Phase 12-02 Option D band-aid (raw Ideogram URLs). Mirrors IG: Explode Carousel Slides but simpler (no count validation — already done in IG chain)."
     },
     {
       "parameters": {
@@ -3050,7 +3050,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nlet blobUrls = data.blob_urls || [];\nif (blobUrls.length === 0) {\n  try { blobUrls = $('🔗 Merge Rehost Output').first().json.blob_urls || []; } catch(e) {}\n}\nif (blobUrls.length === 0) return [{ json: { ...data, has_blobs: 'false' } }];\nconst prefix = 'https://propulsarcontent.blob.core.windows.net/posts/';\nreturn blobUrls.map(entry => ({\n  json: {\n    current_blob_name: (entry.url || entry).replace(prefix, '').split('?')[0],\n    approval_number: data.approval_number || '',\n  }\n}));",
+        "jsCode": "const data = $input.first().json;\nlet blobUrls = data.blob_urls || [];\nif (blobUrls.length === 0) {\n  try { blobUrls = $('🔗 Merge Rehost Output').first().json.blob_urls || []; } catch(e) {}\n}\nif (blobUrls.length === 0) return [{ json: { ...data, has_blobs: 'false' } }];\n// Phase 12.2: prefix derived from HOSTINGER_REHOST_BASE_URL (Hostinger rehost-service),\n// replacing the hardcoded Azure Blob container prefix. Env access allowed in this Code\n// node (N8N_BLOCK_ENV_ACCESS_IN_NODE=false on this Container App revision).\nconst prefix = $env.HOSTINGER_REHOST_BASE_URL + '/files/';\nreturn blobUrls.map(entry => ({\n  json: {\n    current_blob_name: (entry.url || entry).replace(prefix, '').split('?')[0],\n    approval_number: data.approval_number || '',\n  }\n}));",
         "mode": "runOnceForAllItems"
       },
       "id": "extract-blob-names",
@@ -3061,29 +3061,25 @@
         5000,
         1900
       ],
-      "notes": "Extracts blob names from blob_urls for DELETE. Receives from success Sheets logs AND Sheets Fail Log. Falls back to Merge Rehost Output cross-ref if blob_urls not in item."
+      "notes": "Extracts blob names from blob_urls for DELETE. Receives from success Sheets logs AND Sheets Fail Log. Falls back to Merge Rehost Output cross-ref if blob_urls not in item. Phase 12.2: prefix now derives from HOSTINGER_REHOST_BASE_URL instead of the hardcoded Azure Blob container hostname string."
     },
     {
       "parameters": {
         "method": "DELETE",
-        "url": "=https://{{ $env.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net/{{ $env.AZURE_CONTAINER }}/{{ $json.current_blob_name }}?{{ $env.AZURE_SAS_PARAMS }}",
+        "url": "={{ $env.HOSTINGER_REHOST_BASE_URL }}/files/{{ $json.current_blob_name }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "x-ms-version",
-              "value": "2020-10-02"
-            },
-            {
-              "name": "x-ms-date",
-              "value": "={{ new Date().toUTCString() }}"
+              "name": "X-Api-Key",
+              "value": "={{ $env.HOSTINGER_REHOST_API_KEY }}"
             }
           ]
         },
         "options": {}
       },
       "id": "delete-azure-blob",
-      "name": "🗑️ Delete Azure Blob",
+      "name": "🗑️ Delete Rehosted Image",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -3094,7 +3090,7 @@
       "maxTries": 2,
       "waitBetweenTries": 2000,
       "onError": "continueErrorOutput",
-      "notes": "Deletes Azure Blob file. DELETE is idempotent (404 = already deleted, acceptable). retryOnFail=true. onError=continueErrorOutput so 404 does not block execution."
+      "notes": "Deletes the rehosted file from the Hostinger rehost-service (Phase 12.2, replaces Azure Blob DELETE). DELETE is idempotent (404 = already deleted, acceptable). retryOnFail=true. onError=continueErrorOutput so 404 does not block execution."
     }
   ],
   "connections": {
