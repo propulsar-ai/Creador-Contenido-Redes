@@ -42,7 +42,7 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 - [x] **Phase 12: Instagram Story Publishing** - Create IG Story container, publish, retrieve permalink/expiry, wire error handler; SCHED-02 guard in same phase (completed 2026-04-23; Options D/B/E band-aid applied — Phase 12.1 CDN Layer required)
 - [x] **Phase 12.1 (NEW, URGENT): CDN Layer** - Azure Front Door Standard fronting Azure Blob restores Phase 4 re-host invariant broken by Meta 2026-04-17 domain-wide block. **FAILED 2026-04-23** — Meta rejects all AFD hostnames (default + custom domain), rolled back. Superseded by Phase 12.2.
 - [x] **Phase 12.2 (NEW, URGENT): Hostinger VPS Re-host Layer** - Self-hosted upload/serve/delete microservice on the existing Hostinger VPS (EasyPanel wildcard domain, proven accepted by Meta via 2026-07-31 smoke test) replaces Azure Blob as the re-host backend. Same Options D revert pattern as 12.1, new backend. **COMPLETE 2026-07-31** — live E2E verification: real sub-workflow success + injected-failure execs, 5/5 Meta container-creation calls PASS.
-- [ ] **Phase 13: Facebook Story + Log + Notifications** - Publish FB Story, extend Sheets log schema, send Story-specific WA success notification (depends on 12.2 for clean contract)
+- [ ] **Phase 13: Facebook Story + Log + Notifications** - Live-fire re-confirm the already-built FB Story chain (Phase 12) against the Hostinger backend, extend Sheets log schema (Formato/Expires_At), send Story-specific WA success notification (depends on 12.2 for clean contract)
 
 ## Phase Details
 
@@ -122,16 +122,19 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 - [ ] 12.1-03-PLAN.md — 5-exec E2E verification + Options D comment final sweep + STATE.md + ROADMAP.md + 12.1-SUMMARY.md
 
 ### Phase 13: Facebook Story + Log + Notifications
-**Goal**: SI-approved Stories are also published to the Facebook Page, all Sheets logs include a Formato column, and the WhatsApp success notification contains Story-specific expiry and permalink information
+**Goal**: [CORRECTED 2026-07-31 during planning — see RESEARCH.md] The FB Story publish chain (2-step upload+publish, `retryOnFail=false`, SAS-strip assertion, `onError` wiring into the shared error subgraph) was already fully built and wired during **Phase 12 Plan 01** — FBSTORY-02/03/04 and ERR-01 are Done, confirmed by direct inspection of `n8n/workflow.json`. This phase does NOT rebuild that chain. Real scope: (1) a live-fire CONFIRMATION that the already-built chain still works against the Phase 12.2 Hostinger-backed re-host contract (it has never actually been fired end-to-end — Phase 12's own "live test" only proved the endpoint was reachable with a bogus id) and that a Story genuinely appears on the Facebook Page; (2) extend the Story WhatsApp success notification to mention Facebook; (3) add a `Formato` column to all 4 Sheets log nodes and an `Expires_At` column to the Story log node.
 **Depends on**: Phase 12.2 (clean re-host contract — Phase 12.1 FAILED and was superseded)
-**Requirements**: FBSTORY-01, FBSTORY-02, FBSTORY-03, FBSTORY-04, NOTIF-01, LOG-01, LOG-02
+**Requirements**: FBSTORY-01, FBSTORY-02 (Done, Phase 12), FBSTORY-03 (Done, Phase 12), FBSTORY-04 (Done, Phase 12), NOTIF-01, LOG-01, LOG-02
 **Success Criteria** (what must be TRUE):
-  1. Live API test at phase start determines the correct FB Story flow (single-step vs 2-step) and the result is documented before any production node is built
-  2. A Story approved via WhatsApp SI appears on the Facebook Page as a Story (not in the feed)
-  3. FB Story publish node has `retryOnFail=false` and an assertion rejects Azure Blob URLs containing SAS query params before the FB Story container creation
-  4. All existing Sheets log nodes (single, carousel, fail) write a `Formato` column without breaking historical rows; a new Story-specific log node writes `Formato=story` and `Expires_At`
+  1. A live API test **re-confirms** (the single-step vs 2-step decision was already made and built in Phase 12 as 2-step — this is a re-verification against the new Hostinger backend, not a design-discovery task) that the FB Story flow works end-to-end for real, and the result is documented before this phase closes
+  2. A Story approved via WhatsApp SI appears on the Facebook Page as a Story (not in the feed) — verified with a real, human-observed execution, not a synthetic harness
+  3. FB Story publish node **already has** `retryOnFail=false` and **already has** an assertion that strips Azure/Hostinger URL query params before FB Story container creation (built in Phase 12, Option A "strip" semantics — not "reject"; this phase only re-verifies it still behaves correctly live, does not change its semantics)
+  4. All 4 existing Sheets log nodes (single, carousel, story, fail) write a `Formato` column without breaking historical rows; the Story-specific log node additionally writes `Expires_At`
   5. WhatsApp success notification for Stories includes IG Story permalink labeled "válido 24h", expiry timestamp in CET, and a note that FB Story has no permanent URL
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 13-01-PLAN.md — Live-fire re-verification of the already-built FB Story chain against the Hostinger backend (real Wizard→WhatsApp→SI Story fire, execution evidence capture, human-confirmed Story on the FB Page)
+- [ ] 13-02-PLAN.md — NOTIF-01 (Facebook line in Story WA notification) + LOG-01/LOG-02 (Formato + Expires_At Sheets columns) code edits, plus the manual Google Sheet header-column checkpoint
+- [ ] 13-03-PLAN.md — Deploy to n8n-azure + post-deploy real Story fire + human-confirmed WhatsApp message + Sheet row evidence, closing the phase
 
 ## Progress
 
@@ -151,4 +154,4 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 | 12. Instagram Story Publishing | v1.2 | Complete    | 2026-04-23 | 2026-04-23 |
 | 12.1. CDN Layer | v1.2 | 3/3 | FAILED — Meta rejects AFD hostnames, rolled back (superseded by 12.2) | 2026-04-24 |
 | 12.2. Hostinger VPS Re-host Layer | v1.2 | 3/3 | Complete | 2026-07-31 |
-| 13. Facebook Story + Log + Notifications | v1.2 | 0/TBD | Unblocked — ready to plan | - |
+| 13. Facebook Story + Log + Notifications | v1.2 | 0/3 | Planned — ready to execute | - |
