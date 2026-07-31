@@ -1,0 +1,16 @@
+{
+  "name": "rehost-service",
+  "version": "1.0.0",
+  "description": "Minimal upload/serve/delete HTTP microservice — Meta-reachable re-host backend for Propulsar Content Engine (replaces Azure Blob, Phase 12.2)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "UNLICENSED"
+}
