@@ -41,7 +41,7 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 - [x] **Phase 11: Story Image Generation** - Route story briefs to Ideogram 9:16 in n8n with Supabase session persistence and WA preview disclaimer (completed 2026-04-23)
 - [x] **Phase 12: Instagram Story Publishing** - Create IG Story container, publish, retrieve permalink/expiry, wire error handler; SCHED-02 guard in same phase (completed 2026-04-23; Options D/B/E band-aid applied — Phase 12.1 CDN Layer required)
 - [x] **Phase 12.1 (NEW, URGENT): CDN Layer** - Azure Front Door Standard fronting Azure Blob restores Phase 4 re-host invariant broken by Meta 2026-04-17 domain-wide block. **FAILED 2026-04-23** — Meta rejects all AFD hostnames (default + custom domain), rolled back. Superseded by Phase 12.2.
-- [ ] **Phase 12.2 (NEW, URGENT): Hostinger VPS Re-host Layer** - Self-hosted upload/serve/delete microservice on the existing Hostinger VPS (EasyPanel wildcard domain, proven accepted by Meta via 2026-07-31 smoke test) replaces Azure Blob as the re-host backend. Same Options D revert pattern as 12.1, new backend.
+- [x] **Phase 12.2 (NEW, URGENT): Hostinger VPS Re-host Layer** - Self-hosted upload/serve/delete microservice on the existing Hostinger VPS (EasyPanel wildcard domain, proven accepted by Meta via 2026-07-31 smoke test) replaces Azure Blob as the re-host backend. Same Options D revert pattern as 12.1, new backend. **COMPLETE 2026-07-31** — live E2E verification: real sub-workflow success + injected-failure execs, 5/5 Meta container-creation calls PASS.
 - [ ] **Phase 13: Facebook Story + Log + Notifications** - Publish FB Story, extend Sheets log schema, send Story-specific WA success notification (depends on 12.2 for clean contract)
 
 ## Phase Details
@@ -100,9 +100,9 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
   5. Options B (FB Story `/photo_stories` multipart `formBinaryData`) and E (`⬇️ FB: Fetch Image Bytes` sourcing from `blob_urls[0].url` intra-cloud) preserved unchanged — separate failure modes from the domain block, not touched by this phase
   6. Live verification proves the change works end-to-end via container-creation-only Meta Graph API calls (never `media_publish` — same discipline as the 2026-07-31 smoke test and all prior 12.1 control tests) for every restored URL shape (IG single, IG Story, IG carousel child, FB single, FB carousel unpublished), plus a real (edited) sub-workflow execution proving both the success path and the injected-failure/abort path work against the new backend
 **Plans**: 3 plans
-- [ ] 12.2-01-PLAN.md — Build rehost-service (Node/Express) + deploy to EasyPanel `propulsar-atiende-demo` + expose on wildcard domain + live smoke test (upload/serve/delete/Meta container-creation) — infrastructure only, no workflow edits
-- [ ] 12.2-02-PLAN.md — Rewire sub-workflow REHOST-03/04/05 to Hostinger + revert 5 Meta-facing nodes from Option D + update ERR-01 cleanup + deploy both workflows to n8n-azure
-- [ ] 12.2-03-PLAN.md — Real sub-workflow executions (success + injected-failure) + Meta container-creation verification for all 5 restored URL shapes + cleanup + STATE.md/ROADMAP.md close-out
+- [x] 12.2-01-PLAN.md — Build rehost-service (Node/Express) + deploy to EasyPanel `propulsar-atiende-demo` + expose on wildcard domain + live smoke test (upload/serve/delete/Meta container-creation) — infrastructure only, no workflow edits
+- [x] 12.2-02-PLAN.md — Rewire sub-workflow REHOST-03/04/05 to Hostinger + revert 5 Meta-facing nodes from Option D + update ERR-01 cleanup + deploy both workflows to n8n-azure
+- [x] 12.2-03-PLAN.md — Real sub-workflow executions (success + injected-failure) + Meta container-creation verification for all 5 restored URL shapes + cleanup + STATE.md/ROADMAP.md close-out
 
 ### Phase 12.1: CDN Layer - Azure Front Door obsoletes Options D-B-E (INSERTED)
 
@@ -150,5 +150,5 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 | 11. Story Image Generation | v1.2 | 2/2 | Complete | 2026-04-23 |
 | 12. Instagram Story Publishing | v1.2 | Complete    | 2026-04-23 | 2026-04-23 |
 | 12.1. CDN Layer | v1.2 | 3/3 | FAILED — Meta rejects AFD hostnames, rolled back (superseded by 12.2) | 2026-04-24 |
-| 12.2. Hostinger VPS Re-host Layer | v1.2 | 0/3 | Planned — ready to execute (Wave 1 → 2 → 3 sequential) | - |
-| 13. Facebook Story + Log + Notifications | v1.2 | 0/TBD | Blocked on 12.2 for clean contract | - |
+| 12.2. Hostinger VPS Re-host Layer | v1.2 | 3/3 | Complete | 2026-07-31 |
+| 13. Facebook Story + Log + Notifications | v1.2 | 0/TBD | Unblocked — ready to plan | - |
