@@ -1,0 +1,34 @@
+{
+  "timestamp_utc": "2026-07-31T18:38:51.656Z",
+  "base_host": "rehost-service-propulsar-atiende-demo.bacu5y.easypanel.host",
+  "tests": {
+    "put_with_auth": {
+      "status": 200,
+      "body": "{\"path\":\"2026/07/31/smoke-test.png\",\"bytes\":4978}"
+    },
+    "get_no_auth": {
+      "status": 200,
+      "content_type": "image/png",
+      "size": 4978,
+      "png_magic_ok": true,
+      "bytes_match_upload": true
+    },
+    "meta_container": {
+      "status": 200,
+      "body": "{\"id\":\"17889754311666804\"}",
+      "container_id": "17889754311666804",
+      "image_url_used": "https://rehost-service-propulsar-atiende-demo.bacu5y.easypanel.host/files/2026/07/31/smoke-test.png",
+      "note": "container created only — media_publish was NEVER called, no real post exists from this test.",
+      "container_delete_status": 400
+    },
+    "delete_then_404": {
+      "delete_status": 200,
+      "delete_body": "{\"deleted\":true}",
+      "get_after_delete_status": 404
+    },
+    "negative_auth": {
+      "put_wrong_key_status": 401,
+      "delete_no_key_status": 401
+    }
+  }
+}
