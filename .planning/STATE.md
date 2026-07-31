@@ -42,6 +42,7 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - Phase 12.1 inserted after Phase 12: CDN Layer — Azure Front Door obsoletes Options D/B/E band-aid from Phase 12 (URGENT, 2026-04-23)
 - Phase 12.1 Plan 01 complete 2026-04-23: AFD provisioned, env var set on Container App, smoke tests PASS, Meta dry-run deferred to Wave 3 E2E
 - Phase 12.1 **FAILED 2026-04-23 night:** Wave 3 E2E rejected by Meta (9004 on both default AFD hostname and custom domain cdn.propulsar.ai). Control test confirms hostname-specific block. Rollback deployed. Phase 12.2 Cloudflare R2 to be planned.
+- Phase 12.2 inserted after Phase 12: Hostinger VPS Re-host Layer (URGENT, 2026-07-31) — replaces the originally-planned Cloudflare R2 migration after a smoke test proved Meta accepts the existing Hostinger VPS/EasyPanel hostname (`*.bacu5y.easypanel.host`), avoiding a new vendor account. See `12.2-HOSTINGER-SMOKE-TEST.md`.
 
 ### Open Items
 
