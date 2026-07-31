@@ -255,14 +255,14 @@
       "main": [
         [
           {
-            "node": "📤 HTTP PUT — Upload to Azure Blob",
+            "node": "📤 HTTP PUT — Upload to Hostinger",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "📤 HTTP PUT — Upload to Azure Blob": {
+    "📤 HTTP PUT — Upload to Hostinger": {
       "main": [
         [
           {
