@@ -1,0 +1,113 @@
+{
+  "uploaded_files": [
+    "/files/2026-verify/12-2-03/source-2026-07-31T19-33-38-603Z.png",
+    "/files/2026/07/31/0776e081-5a3f-4c36-8749-155a077b7a5d.png"
+  ],
+  "harness_id": "8OqVdJWJyUQObKME",
+  "webhook_path": "verify-12-2-03-1785526416247",
+  "webhook_url": "https://n8n-azure.propulsar.ai/webhook/verify-12-2-03-1785526416247",
+  "source_image_url": "https://rehost-service-propulsar-atiende-demo.bacu5y.easypanel.host/files/2026-verify/12-2-03/source-2026-07-31T19-33-38-603Z.png",
+  "exec_a": {
+    "harness_response_status": 200,
+    "harness_response_body": {
+      "blob_urls": [
+        {
+          "index": 1,
+          "url": "https://rehost-service-propulsar-atiende-demo.bacu5y.easypanel.host/files/2026/07/31/0776e081-5a3f-4c36-8749-155a077b7a5d.png"
+        }
+      ],
+      "post_id": "verify-12-2-exec-a-1785526427810"
+    },
+    "brief": {
+      "image_urls": [
+        {
+          "index": 1,
+          "url": "https://rehost-service-propulsar-atiende-demo.bacu5y.easypanel.host/files/2026-verify/12-2-03/source-2026-07-31T19-33-38-603Z.png"
+        }
+      ],
+      "post_id": "verify-12-2-exec-a-1785526427810",
+      "approval_number": "5493517575244"
+    },
+    "subworkflow_execution_id": "1775328",
+    "subworkflow_execution_status": "success",
+    "subworkflow_execution_finished": true
+  },
+  "exec_a_blob_url": "https://rehost-service-propulsar-atiende-demo.bacu5y.easypanel.host/files/2026/07/31/0776e081-5a3f-4c36-8749-155a077b7a5d.png",
+  "exec_a_independent_get": {
+    "status": 200,
+    "size": 4978
+  },
+  "pre_patch_versionId": "a3305606-12d1-4126-8521-046d49a77cbd",
+  "patched_versionId": "e884309f-37a5-4f13-9bc5-0bdf32451e5b",
+  "exec_b": {
+    "harness_response_status": 500,
+    "harness_response_body": {
+      "message": "Error in workflow"
+    },
+    "brief": {
+      "image_urls": [
+        {
+          "index": 1,
+          "url": "https://rehost-service-propulsar-atiende-demo.bacu5y.easypanel.host/files/2026-verify/12-2-03/source-2026-07-31T19-33-38-603Z.png"
+        }
+      ],
+      "post_id": "verify-12-2-exec-b-1785526463135",
+      "approval_number": "5493517575244"
+    },
+    "subworkflow_execution_id": "1775338",
+    "subworkflow_execution_status": "error"
+  },
+  "exec_b_run_data_nodes": [
+    "▶️ Execute Sub-workflow Trigger",
+    "🔧 Explode image_urls",
+    "📥 HTTP GET — Download source image",
+    "🔧 Build blob name",
+    "📤 HTTP PUT — Upload to Hostinger",
+    "📱 Notify Abort WA",
+    "🛑 Stop And Error"
+  ],
+  "restored_versionId": "6fdf85c3-9a1c-49e9-9b0d-d2df2ae6c518",
+  "restore_confirmed_expression": "={{ $env.HOSTINGER_REHOST_API_KEY }}",
+  "meta_tests": {
+    "url_used": "https://rehost-service-propulsar-atiende-demo.bacu5y.easypanel.host/files/2026/07/31/0776e081-5a3f-4c36-8749-155a077b7a5d.png",
+    "results": {
+      "ig_single": {
+        "status": 200,
+        "body": "{\"id\":\"17889761415666804\"}"
+      },
+      "ig_story": {
+        "status": 200,
+        "body": "{\"id\":\"17889761454666804\"}"
+      },
+      "ig_carousel_child": {
+        "status": 200,
+        "body": "{\"id\":\"17889761472666804\"}"
+      },
+      "fb_publish_photo_unpublished": {
+        "status": 200,
+        "body": "{\"id\":\"122133640215238849\"}"
+      },
+      "fb_carousel_unpublished": {
+        "status": 200,
+        "body": "{\"id\":\"122133640263238849\"}"
+      }
+    }
+  },
+  "cleanup_harness": {
+    "deactivate_status": 200,
+    "delete_status": 200,
+    "get_after_delete_status": 404
+  },
+  "cleanup_files": [
+    {
+      "path": "/files/2026-verify/12-2-03/source-2026-07-31T19-33-38-603Z.png",
+      "delete_status": 200,
+      "get_after_status": 404
+    },
+    {
+      "path": "/files/2026/07/31/0776e081-5a3f-4c36-8749-155a077b7a5d.png",
+      "delete_status": 200,
+      "get_after_status": 404
+    }
+  ]
+}
