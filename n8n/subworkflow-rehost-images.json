@@ -76,17 +76,13 @@
     {
       "parameters": {
         "method": "PUT",
-        "url": "=https://{{ $env.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net/{{ $env.AZURE_CONTAINER }}/{{ $json.blob_name }}?{{ $env.AZURE_SAS_PARAMS }}",
+        "url": "={{ $env.HOSTINGER_REHOST_BASE_URL }}/files/{{ $json.blob_name }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "x-ms-blob-type",
-              "value": "BlockBlob"
-            },
-            {
-              "name": "x-ms-version",
-              "value": "2020-10-02"
+              "name": "X-Api-Key",
+              "value": "={{ $env.HOSTINGER_REHOST_API_KEY }}"
             },
             {
               "name": "Content-Type",
@@ -111,7 +107,7 @@
         }
       },
       "id": "http-put-blob",
-      "name": "📤 HTTP PUT — Upload to Azure Blob",
+      "name": "📤 HTTP PUT — Upload to Hostinger",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "onError": "continueErrorOutput",
@@ -119,12 +115,12 @@
         1120,
         300
       ],
-      "notes": "REHOST-03 — PUT to Azure Blob with SAS. BlockBlob header is REQUIRED (set above in headerParameters). Retry is safe because PUT to a blob is idempotent (unlike Meta media_publish). Env vars are read only via {{ $env.* }} expression in this URL field (allowed), never inside a Code node (forbidden by CLAUDE.md)."
+      "notes": "REHOST-03 — PUT to rehost-service (Hostinger VPS/EasyPanel) with X-Api-Key auth. Retry is safe because PUT is idempotent (unlike Meta media_publish). Env vars are read only via {{ $env.* }} expression in this URL field (allowed), never inside a Code node (forbidden by CLAUDE.md)."
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Construct the public blob URL from env vars + blob_name.\n// Pull fields from the Build blob name node upstream because the HTTP PUT\n// response replaces $json with only {headers, statusCode, statusMessage}.\n// Env access is allowed here because N8N_BLOCK_ENV_ACCESS_IN_NODE=false\n// on this Container App revision (verified 2026-04-16).\nconst ctx = $('🔧 Build blob name').item.json;\nconst account = $env.AZURE_STORAGE_ACCOUNT;\nconst container = $env.AZURE_CONTAINER;\n\nreturn {\n  json: {\n    blob_url: 'https://' + account + '.blob.core.windows.net/' + container + '/' + ctx.blob_name,\n    blob_name: ctx.blob_name,\n    slide_index: ctx.slide_index,\n    post_id: ctx.post_id,\n    approval_number: ctx.approval_number,\n    source_url: ctx.source_url,\n    content_type: ctx.content_type,\n    put_status: $json.statusCode,\n  },\n};"
+        "jsCode": "// Construct the public Hostinger rehost-service URL from env vars + blob_name.\n// Pull fields from the Build blob name node upstream because the HTTP PUT\n// response replaces $json with only {headers, statusCode, statusMessage}.\n// Env access is allowed here because N8N_BLOCK_ENV_ACCESS_IN_NODE=false\n// on this Container App revision (verified 2026-04-16).\n// This is the FINAL public URL directly (RESEARCH Pattern 2) — no separate\n// CDN-rewrite hop needed like the AFD attempt's REHOST-06, since rehost-service\n// serves its own public URL with no fronting layer to reject it.\nconst ctx = $('🔧 Build blob name').item.json;\n\nreturn {\n  json: {\n    blob_url: $env.HOSTINGER_REHOST_BASE_URL + '/files/' + ctx.blob_name,\n    blob_name: ctx.blob_name,\n    slide_index: ctx.slide_index,\n    post_id: ctx.post_id,\n    approval_number: ctx.approval_number,\n    source_url: ctx.source_url,\n    content_type: ctx.content_type,\n    put_status: $json.statusCode,\n  },\n};"
       },
       "id": "build-blob-url",
       "name": "🔧 Build blob URL",
@@ -134,7 +130,7 @@
         1340,
         300
       ],
-      "notes": "REHOST-04 — permanent public URL. Env vars read via {{ $env.* }} expression (allowed), NOT via $env inside a Code node (forbidden per CLAUDE.md). Uses a Set node so env references stay in expression fields only."
+      "notes": "REHOST-04 — permanent public URL served directly by rehost-service (Hostinger VPS/EasyPanel). Env vars read via $env inside this Code node (allowed — N8N_BLOCK_ENV_ACCESS_IN_NODE=false on this Container App revision). No separate CDN-rewrite seam needed (unlike the reverted AFD attempt)."
     },
     {
       "parameters": {
@@ -156,7 +152,7 @@
         1560,
         300
       ],
-      "notes": "REHOST-05 — catches 'AllowBlobPublicAccess disabled' or wrong container access level. Returns 200 if the blob is publicly reachable. 403 = Azure Portal setup was not completed. No retry: fail fast, because a 403 here is configuration, not transient."
+      "notes": "REHOST-05 — verifies the Hostinger rehost-service GET route is publicly reachable. Returns 200 if the file is publicly reachable. 403 here would mean the Hostinger GET route unexpectedly requires auth (RESEARCH Pitfall 6), not an Azure ACL misconfiguration. No retry: fail fast, because a 403 here is configuration, not transient."
     },
     {
       "parameters": {
