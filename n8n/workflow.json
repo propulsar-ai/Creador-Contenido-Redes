@@ -35,45 +35,44 @@
     },
     {
       "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4o",
-          "mode": "list",
-          "cachedResultName": "GPT-4O"
-        },
-        "messages": {
-          "values": [
+        "method": "POST",
+        "url": "https://propulsar-prod-aoai.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "content": "Eres el director creativo de Propulsar.ai, agencia de automatizaciones IA para PYMEs.\n\nTu tarea es generar prompts de imagen para cada slide de un carrusel de Instagram/Facebook, más los captions para ambas plataformas.\n\nPRIMERO elige la estructura de carrusel más adecuada para el tema y tipo:\n- narrativo: cuenta una historia con arco (inicio → desarrollo → resolución)\n- listicle: lista de tips, herramientas o beneficios numerados\n- paso-a-paso: instrucciones secuenciales para lograr algo\n- antes-después: contraste entre una situación actual y la transformación\n- pregunta-respuesta: hook con pregunta, slides respondiendo, CTA final\n\nIDENTIDAD VISUAL PROPULSAR (aplicar en CADA prompt sin excepción):\n- Fondo oscuro profundo: #1a1a2e\n- Gradiente principal: púrpura #6B46C1 → magenta #EC4899\n- Tipografía bold sans-serif en español, legible, prominente\n- Formato cuadrado 1:1\n- Estética profesional tech/AI, alto contraste, ultra-detailed, 4K quality\n\nREGLAS DE TEXTO EN IMAGEN (CRÍTICO):\n1. El texto_overlay es el texto EXACTO que aparecerá visible en la imagen. Máximo 6-8 palabras. Si necesitás más, dividí en más slides.\n2. En el campo prompt, el texto en español va PRIMERO entre comillas dobles, usando el patrón: Text says: \"[texto_overlay exacto]\". Después describí el visual.\n3. NUNCA incluir texto en inglés visible en la imagen. Todo texto visible debe ser en español castellano.\n4. Prohibido usar texto lorem ipsum, texto decorativo ilegible, o texto de relleno.\n\nREGLAS GENERALES:\n1. Cada campo prompt debe ser COMPLETAMENTE autocontenido con TODAS las restricciones de estilo. Prohibido usar \"same as above\", \"idem\" o referencias a otros slides.\n2. El array slides debe tener EXACTAMENTE el número de slides solicitados.\n3. Los prompt van en inglés (excepto el texto visible que va en español entre comillas).\n4. Los texto_overlay van en español.\n5. Respondé con JSON puro sin markdown, sin bloques ```json.\n\nFORMATO DE RESPUESTA:\n{\n  \"estructura\": \"narrativo|listicle|paso-a-paso|antes-después|pregunta-respuesta\",\n  \"instagram_caption\": \"caption completo con hook <125 chars, 150-300 palabras, párrafos cortos, 8-12 hashtags, máx 3 emojis al inicio de línea, CTA claro\",\n  \"facebook_caption\": \"caption 100-200 palabras, 3-5 hashtags, pregunta para comentarios al final, CTA\",\n  \"slides\": [\n    {\n      \"slide_num\": 1,\n      \"texto_overlay\": \"máx 6-8 palabras en español\",\n      \"prompt\": \"Text says: \\\"[texto_overlay exacto aquí]\\\". Dark background #1a1a2e, bold white sans-serif typography centered, purple #6B46C1 to magenta #EC4899 gradient glow, professional AI/tech aesthetic, ultra-detailed, crisp text, square 1:1, no other text visible. [descripción visual específica del slide].\"\n    }\n  ]\n}\n\nEJEMPLO DE UN BUEN PROMPT:\nText says: \"Automatiza tu WhatsApp\". Dark background #1a1a2e, bold white sans-serif typography centered, purple #6B46C1 to magenta #EC4899 gradient glow behind text, professional AI/tech aesthetic, minimalist icons of chat bubbles and automation gears, ultra-detailed, crisp text, square 1:1, no other text visible.",
-              "role": "system"
-            },
-            {
-              "content": "=Tema: \"{{ $json.body.topic }}\"\nTipo: {{ $json.body.type }}\n{% if $json.body.angle %}Ángulo: {{ $json.body.angle }}\n{% endif %}Slides requeridos: {{ $json.body.num_images }}\n\nElige la estructura del carrusel apropiada y genera EXACTAMENTE {{ $json.body.num_images }} prompts de imagen, más los captions para Instagram y Facebook."
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messages: [{ role: 'system', content: \"Eres el director creativo de Propulsar.ai, agencia de automatizaciones IA para PYMEs.\\n\\nTu tarea es generar prompts de imagen para cada slide de un carrusel de Instagram/Facebook, m\\u00e1s los captions para ambas plataformas.\\n\\nPRIMERO elige la estructura de carrusel m\\u00e1s adecuada para el tema y tipo:\\n- narrativo: cuenta una historia con arco (inicio \\u2192 desarrollo \\u2192 resoluci\\u00f3n)\\n- listicle: lista de tips, herramientas o beneficios numerados\\n- paso-a-paso: instrucciones secuenciales para lograr algo\\n- antes-despu\\u00e9s: contraste entre una situaci\\u00f3n actual y la transformaci\\u00f3n\\n- pregunta-respuesta: hook con pregunta, slides respondiendo, CTA final\\n\\nIDENTIDAD VISUAL PROPULSAR (aplicar en CADA prompt sin excepci\\u00f3n):\\n- Fondo oscuro profundo: #1a1a2e\\n- Gradiente principal: p\\u00farpura #6B46C1 \\u2192 magenta #EC4899\\n- Tipograf\\u00eda bold sans-serif en espa\\u00f1ol, legible, prominente\\n- Formato cuadrado 1:1\\n- Est\\u00e9tica profesional tech/AI, alto contraste, ultra-detailed, 4K quality\\n\\nREGLAS DE TEXTO EN IMAGEN (CR\\u00cdTICO):\\n1. El texto_overlay es el texto EXACTO que aparecer\\u00e1 visible en la imagen. M\\u00e1ximo 6-8 palabras. Si necesit\\u00e1s m\\u00e1s, divid\\u00ed en m\\u00e1s slides.\\n2. En el campo prompt, el texto en espa\\u00f1ol va PRIMERO entre comillas dobles, usando el patr\\u00f3n: Text says: \\\"[texto_overlay exacto]\\\". Despu\\u00e9s describ\\u00ed el visual.\\n3. NUNCA incluir texto en ingl\\u00e9s visible en la imagen. Todo texto visible debe ser en espa\\u00f1ol castellano.\\n4. Prohibido usar texto lorem ipsum, texto decorativo ilegible, o texto de relleno.\\n\\nREGLAS GENERALES:\\n1. Cada campo prompt debe ser COMPLETAMENTE autocontenido con TODAS las restricciones de estilo. Prohibido usar \\\"same as above\\\", \\\"idem\\\" o referencias a otros slides.\\n2. El array slides debe tener EXACTAMENTE el n\\u00famero de slides solicitados.\\n3. Los prompt van en ingl\\u00e9s (excepto el texto visible que va en espa\\u00f1ol entre comillas).\\n4. Los texto_overlay van en espa\\u00f1ol.\\n5. Respond\\u00e9 con JSON puro sin markdown, sin bloques ```json.\\n\\nFORMATO DE RESPUESTA:\\n{\\n  \\\"estructura\\\": \\\"narrativo|listicle|paso-a-paso|antes-despu\\u00e9s|pregunta-respuesta\\\",\\n  \\\"instagram_caption\\\": \\\"caption completo con hook <125 chars, 150-300 palabras, p\\u00e1rrafos cortos, 8-12 hashtags, m\\u00e1x 3 emojis al inicio de l\\u00ednea, CTA claro\\\",\\n  \\\"facebook_caption\\\": \\\"caption 100-200 palabras, 3-5 hashtags, pregunta para comentarios al final, CTA\\\",\\n  \\\"slides\\\": [\\n    {\\n      \\\"slide_num\\\": 1,\\n      \\\"texto_overlay\\\": \\\"m\\u00e1x 6-8 palabras en espa\\u00f1ol\\\",\\n      \\\"prompt\\\": \\\"Text says: \\\\\\\"[texto_overlay exacto aqu\\u00ed]\\\\\\\". Dark background #1a1a2e, bold white sans-serif typography centered, purple #6B46C1 to magenta #EC4899 gradient glow, professional AI/tech aesthetic, ultra-detailed, crisp text, square 1:1, no other text visible. [descripci\\u00f3n visual espec\\u00edfica del slide].\\\"\\n    }\\n  ]\\n}\\n\\nEJEMPLO DE UN BUEN PROMPT:\\nText says: \\\"Automatiza tu WhatsApp\\\". Dark background #1a1a2e, bold white sans-serif typography centered, purple #6B46C1 to magenta #EC4899 gradient glow behind text, professional AI/tech aesthetic, minimalist icons of chat bubbles and automation gears, ultra-detailed, crisp text, square 1:1, no other text visible.\" }, { role: 'user', content: `Tema: \"${$json.body.topic}\"\nTipo: ${$json.body.type}\n${$json.body.angle ? `Ángulo: ${$json.body.angle}\n` : ``}Slides requeridos: ${$json.body.num_images}\n\nElige la estructura del carrusel apropiada y genera EXACTAMENTE ${$json.body.num_images} prompts de imagen, más los captions para Instagram y Facebook.` }], temperature: 0.5 }) }}",
         "options": {
-          "temperature": 0.5
+          "timeout": 60000
         }
       },
       "id": "openai-carousel",
       "name": "🎠 GPT-4o — Prompts Carrusel",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.4,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         640,
         528
       ],
       "credentials": {
-        "openAiApi": {
-          "id": "wWEhRsD5ilt2xGvz",
-          "name": "OpenAI-Propulsar"
+        "httpHeaderAuth": {
+          "id": "Ee94gCuHBqdFr2wy",
+          "name": "AOAI-ApiKey-Header"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json.message.content;\nconst b = $('🎯 Webhook Trigger').first().json.body;\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw.replace(/```json\\n?/g,'').replace(/```\\n?/g,'').trim());\n} catch(e) {\n  throw new Error('JSON inválido de GPT-4o (carrusel): ' + raw.substring(0,200));\n}\n\nconst slides = parsed.slides || [];\n\nif (slides.length !== b.num_images) {\n  console.warn(`⚠ GPT-4o devolvió ${slides.length} slides, se esperaban ${b.num_images}`);\n}\n\nreturn [{\n  json: {\n    instagram:       { caption: parsed.instagram_caption || '' },\n    facebook:        { caption: parsed.facebook_caption || '' },\n    topic:           b.topic,\n    type:            b.type,\n    angle:           b.angle || null,\n    platforms:       b.platforms,\n    image_model:     'ideogram',\n    fal_model_id:    null,\n    has_own_image:   false,\n    image_url:       null,\n    has_text_in_image: true,\n    approval_number: b.approval_number,\n    timestamp:       b.timestamp,\n    publish_at:      b.publish_at || 'now',\n    format:          'carousel',\n    num_images:      b.num_images,\n    estructura:      parsed.estructura || 'listicle',\n    image_prompts:   slides.map(s => ({\n      slide_num:     s.slide_num,\n      texto_overlay: s.texto_overlay,\n      prompt:        s.prompt,\n    })),\n  }\n}];"
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst b = $('🎯 Webhook Trigger').first().json.body;\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw.replace(/```json\\n?/g,'').replace(/```\\n?/g,'').trim());\n} catch(e) {\n  throw new Error('JSON inválido de GPT-4o (carrusel): ' + raw.substring(0,200));\n}\n\nconst slides = parsed.slides || [];\n\nif (slides.length !== b.num_images) {\n  console.warn(`⚠ GPT-4o devolvió ${slides.length} slides, se esperaban ${b.num_images}`);\n}\n\nreturn [{\n  json: {\n    instagram:       { caption: parsed.instagram_caption || '' },\n    facebook:        { caption: parsed.facebook_caption || '' },\n    topic:           b.topic,\n    type:            b.type,\n    angle:           b.angle || null,\n    platforms:       b.platforms,\n    image_model:     'ideogram',\n    fal_model_id:    null,\n    has_own_image:   false,\n    image_url:       null,\n    has_text_in_image: true,\n    approval_number: b.approval_number,\n    timestamp:       b.timestamp,\n    publish_at:      b.publish_at || 'now',\n    format:          'carousel',\n    num_images:      b.num_images,\n    estructura:      parsed.estructura || 'listicle',\n    image_prompts:   slides.map(s => ({\n      slide_num:     s.slide_num,\n      texto_overlay: s.texto_overlay,\n      prompt:        s.prompt,\n    })),\n  }\n}];"
       },
       "id": "parse-carousel",
       "name": "🔧 Parsear prompts carrusel",
@@ -144,45 +143,44 @@
     },
     {
       "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4o",
-          "mode": "list",
-          "cachedResultName": "GPT-4O"
-        },
-        "messages": {
-          "values": [
+        "method": "POST",
+        "url": "https://propulsar-prod-aoai.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "content": "Eres el redactor de contenido de Propulsar.ai, agencia de automatizaciones IA para PYMEs.\n\nVoz: profesional pero accesible, directo, español latinoamericano (tuteo).\nSin buzzwords. Prohibido: revolutionario, disruptivo, sinergia, delve, unleash.\n\nDevolvé SOLO JSON válido, sin markdown:\n{\n  \"instagram\": {\n    \"caption\": \"post completo con hashtags al final\",\n    \"image_prompt\": \"prompt en inglés para generación de imagen, dark background purple-magenta gradients, professional social media\"\n  },\n  \"facebook\": {\n    \"caption\": \"post completo (más corto, 3-5 hashtags)\"\n  }\n}",
-              "role": "system"
-            },
-            {
-              "content": "=Genera un post {{ $json.body.type }} sobre: \"{{ $json.body.topic }}\"\n\n{% if $json.body.angle %}Ángulo: {{ $json.body.angle }}{% endif %}\n{% if $json.body.has_text_in_image %}IMPORTANTE: El image_prompt debe incluir texto visible específico relevante al tema, ya que se usará Ideogram (excelente para texto en imagen).{% endif %}\n\nPlataformas: {{ $json.body.platforms.join(', ') }}\n\nInstagram: hook <125 chars, 150-300 palabras, párrafos cortos, 8-12 hashtags, máx 3 emojis, CTA.\nFacebook: 100-200 palabras, 3-5 hashtags, pregunta final para comentarios, CTA."
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messages: [{ role: 'system', content: \"Eres el redactor de contenido de Propulsar.ai, agencia de automatizaciones IA para PYMEs.\\n\\nVoz: profesional pero accesible, directo, espa\\u00f1ol latinoamericano (tuteo).\\nSin buzzwords. Prohibido: revolutionario, disruptivo, sinergia, delve, unleash.\\n\\nDevolv\\u00e9 SOLO JSON v\\u00e1lido, sin markdown:\\n{\\n  \\\"instagram\\\": {\\n    \\\"caption\\\": \\\"post completo con hashtags al final\\\",\\n    \\\"image_prompt\\\": \\\"prompt en ingl\\u00e9s para generaci\\u00f3n de imagen, dark background purple-magenta gradients, professional social media\\\"\\n  },\\n  \\\"facebook\\\": {\\n    \\\"caption\\\": \\\"post completo (m\\u00e1s corto, 3-5 hashtags)\\\"\\n  }\\n}\" }, { role: 'user', content: `Genera un post ${$json.body.type} sobre: \"${$json.body.topic}\"\n\n${$json.body.angle ? `Ángulo: ${$json.body.angle}` : ``}\n${$json.body.has_text_in_image ? `IMPORTANTE: El image_prompt debe incluir texto visible específico relevante al tema, ya que se usará Ideogram (excelente para texto en imagen).` : ``}\n\nPlataformas: ${$json.body.platforms.join(', ')}\n\nInstagram: hook <125 chars, 150-300 palabras, párrafos cortos, 8-12 hashtags, máx 3 emojis, CTA.\nFacebook: 100-200 palabras, 3-5 hashtags, pregunta final para comentarios, CTA.` }], temperature: 0.5 }) }}",
         "options": {
-          "temperature": 0.5
+          "timeout": 60000
         }
       },
       "id": "openai-text",
       "name": "🤖 GPT-4o — Texto",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.4,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         432,
         368
       ],
       "credentials": {
-        "openAiApi": {
-          "id": "wWEhRsD5ilt2xGvz",
-          "name": "OpenAI-Propulsar"
+        "httpHeaderAuth": {
+          "id": "Ee94gCuHBqdFr2wy",
+          "name": "AOAI-ApiKey-Header"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json.message.content;\nlet parsed;\ntry {\n  parsed = JSON.parse(raw.replace(/```json\\n?/g,'').replace(/```\\n?/g,'').trim());\n} catch(e) {\n  throw new Error('JSON inválido de OpenAI: ' + raw.substring(0,200));\n}\nconst b = $('🎯 Webhook Trigger').first().json.body;\nreturn [{ json: {\n  instagram:       parsed.instagram || null,\n  facebook:        parsed.facebook  || null,\n  image_prompt:    parsed.instagram?.image_prompt || '',\n  platforms:       b.platforms,\n  topic:           b.topic,\n  type:            b.type,\n  angle:           b.angle || null,\n  image_model:     b.image_model || 'flux',\n  fal_model_id:    b.fal_model_id || 'fal-ai/flux-pro/v1.1',\n  has_own_image:   b.has_own_image || false,\n  image_url:       b.image_url || null,\n  has_text_in_image: b.has_text_in_image || false,\n  approval_number: b.approval_number,\n  timestamp:       b.timestamp,\n  format:            b.format || null,\n  aspect_ratio:      b.aspect_ratio || null,\n  num_images:        b.num_images || null,\n  story_expires_at:  b.story_expires_at || null,\n  publish_at:      b.publish_at || 'now'\n}}];"
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nlet parsed;\ntry {\n  parsed = JSON.parse(raw.replace(/```json\\n?/g,'').replace(/```\\n?/g,'').trim());\n} catch(e) {\n  throw new Error('JSON inválido de OpenAI: ' + raw.substring(0,200));\n}\nconst b = $('🎯 Webhook Trigger').first().json.body;\nreturn [{ json: {\n  instagram:       parsed.instagram || null,\n  facebook:        parsed.facebook  || null,\n  image_prompt:    parsed.instagram?.image_prompt || '',\n  platforms:       b.platforms,\n  topic:           b.topic,\n  type:            b.type,\n  angle:           b.angle || null,\n  image_model:     b.image_model || 'flux',\n  fal_model_id:    b.fal_model_id || 'fal-ai/flux-pro/v1.1',\n  has_own_image:   b.has_own_image || false,\n  image_url:       b.image_url || null,\n  has_text_in_image: b.has_text_in_image || false,\n  approval_number: b.approval_number,\n  timestamp:       b.timestamp,\n  format:            b.format || null,\n  aspect_ratio:      b.aspect_ratio || null,\n  num_images:        b.num_images || null,\n  story_expires_at:  b.story_expires_at || null,\n  publish_at:      b.publish_at || 'now'\n}}];"
       },
       "id": "parse-content",
       "name": "🔧 Parsear contenido",
