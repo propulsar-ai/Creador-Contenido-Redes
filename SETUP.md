@@ -115,49 +115,87 @@ GOOGLE_SHEETS_ID=tu_sheets_id
 
 ---
 
-## FASE 4 — Estado entre webhooks (Supabase)
+## FASE 4 — Estado entre webhooks (Azure PostgreSQL)
 
 El flujo de aprobación tiene dos webhooks separados:
 1. El wizard dispara el primero → n8n genera contenido y envía WhatsApp
 2. YCloud dispara el segundo → n8n recibe la respuesta (SI/NO)
 
 **El problema**: n8n no recuerda el contenido entre dos ejecuciones distintas.
-**La solución**: guardar el contenido en Supabase entre los dos webhooks.
+**La solución**: guardar el contenido en Azure PostgreSQL entre los dos webhooks.
 
-### 4.1 Crear tabla en Supabase
+> **Nota histórica (Phase 12.3, 2026-08-01):** este backend usaba Supabase
+> hasta que el proyecto Supabase que lo respaldaba fue eliminado
+> permanentemente, causando una caída total del pipeline. Se migró a Azure
+> PostgreSQL y **Supabase NO se recrea** — ver `.planning/phases/12.3-supabase-to-azure-postgres-migration/`
+> para la investigación y el registro de la migración.
+
+### 4.1 Base de datos: `content_engine` en el servidor `propulsar-db`
+
+Propulsar ya opera un Azure Database for PostgreSQL Flexible Server
+compartido (`propulsar-db`, PG15, `propulsar-production` resource group) —
+el mismo servidor que usa n8n para su propia base de datos operativa.
+`content_engine` es una base de datos nueva y aislada en ese mismo servidor
+(sigue la convención existente de una base de datos por proyecto: `n8n`,
+`propulsar_crm`, `chatwoot_production`, etc.). No hace falta provisionar un
+servidor nuevo.
+
+```bash
+az postgres flexible-server db create \
+  --resource-group propulsar-production \
+  --server-name propulsar-db \
+  --database-name content_engine
+```
+
+DDL actual de `content_sessions` (20 columnas — reconstruido a partir de
+todos los campos leídos/escritos por los nodos vivos del workflow, ver
+`12.3-01-INFRA.md` para el registro de ejecución completo):
+
 ```sql
 CREATE TABLE content_sessions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  session_id TEXT UNIQUE NOT NULL,
-  topic TEXT,
-  type TEXT,
-  platforms TEXT[],
-  instagram_caption TEXT,
-  facebook_caption TEXT,
-  image_url TEXT,
-  approval_number TEXT,
-  status TEXT DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id         TEXT UNIQUE NOT NULL,
+  topic              TEXT,
+  type               TEXT,
+  angle              TEXT,
+  platforms          TEXT[],
+  image_model        TEXT,
+  image_url          TEXT,            -- solo post individual
+  final_image_url    TEXT,            -- post individual + story
+  image_urls         TEXT[],          -- solo carousel
+  format             TEXT,            -- NULL (single), 'carousel' o 'story'
+  aspect_ratio       TEXT,            -- solo story
+  story_expires_at   TIMESTAMPTZ,     -- solo story
+  instagram_caption  TEXT,
+  facebook_caption   TEXT,
+  approval_number    TEXT,
+  status             TEXT DEFAULT 'pending',
+  publish_at         TEXT,            -- literal 'now' o ISO-8601; TEXT a propósito
+  created_at         TIMESTAMPTZ DEFAULT now(),
+  updated_at         TIMESTAMPTZ DEFAULT now()
 );
 ```
 
-### 4.2 Actualizar el nodo "Recuperar contenido aprobado" en n8n
-Reemplazar el código placeholder con:
-```javascript
-// Buscar en Supabase el contenido pendiente por número de teléfono
-const phone = $json.body.message?.from;
-const supabaseUrl = $env.SUPABASE_URL;
-const supabaseKey = $env.SUPABASE_ANON_KEY;
+### 4.2 Cómo se conecta n8n
 
-// Hacer GET a Supabase REST API
-const response = await $http.get(
-  `${supabaseUrl}/rest/v1/content_sessions?approval_number=eq.${phone}&status=eq.pending&order=created_at.desc&limit=1`,
-  { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } }
-);
+A diferencia del resto de integraciones de este proyecto (que usan
+`$env.*` en variables de entorno del contenedor), la conexión a Postgres
+usa una **credencial nativa de n8n**, no variables de entorno:
 
-return [{ json: response.data[0] }];
-```
+- **Credencial:** `Postgres - content_engine` (tipo `postgres`)
+- **Host:** `propulsar-db.postgres.database.azure.com`
+- **Database:** `content_engine`
+- **Usuario:** `propulsaradmin`
+- **Password:** desde Azure Key Vault (`propulsar-prod-kv/db-postgresdb-password`) — nunca hardcodeada, nunca en `.env`
+- **SSL:** `require` (con `allowUnauthorizedCerts: true`, igual que la conexión propia de n8n a este mismo servidor)
+
+Los 4 nodos que leen/escriben `content_sessions` (`💾 Guardar sesión
+Supabase` y sus variantes Carousel/Story, más `🔍 Recuperar sesión
+Supabase` — los nombres se mantuvieron sin cambios porque `connections`
+en n8n se referencia por nombre) son nodos nativos
+`n8n-nodes-base.postgres` (`executeQuery` + SQL parametrizado) en
+`n8n/workflow.json`. No hay ningún snippet manual que copiar — el nodo ya
+está armado en el workflow importado en la FASE 3.
 
 ---
 

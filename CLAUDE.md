@@ -100,8 +100,13 @@ Todas van en `.env` (copiar de `.env.example`):
 | `INSTAGRAM_ACCOUNT_ID` | ID cuenta IG Business | Meta Business Suite |
 | `FACEBOOK_PAGE_ID` | ID página de Facebook | Página → Acerca de |
 | `GOOGLE_SHEETS_ID` | Log de publicaciones | ID en URL del Sheet |
-| `SUPABASE_URL` | Estado entre webhooks | app.supabase.com → Settings |
-| `SUPABASE_ANON_KEY` | Auth Supabase | app.supabase.com → Settings |
+
+> **Estado entre webhooks (Phase 12.3):** ya NO usa Supabase — vive en Azure
+> PostgreSQL (servidor `propulsar-db`, database `content_engine`). No hay
+> variable de entorno local para esto: la autenticación es una credencial
+> nativa de n8n (`Postgres - content_engine`), password desde Azure Key
+> Vault. El proyecto Supabase que respaldaba esto fue eliminado
+> permanentemente (2026-08-01) y no se recrea — ver `SETUP.md` FASE 4.
 
 ---
 
@@ -232,4 +237,4 @@ node scripts/test-webhook.js
 node wizard/run.js
 ```
 
-Para el setup completo de credenciales (Meta, YCloud, Supabase), ver `SETUP.md`.
+Para el setup completo de credenciales (Meta, YCloud, Azure PostgreSQL), ver `SETUP.md`.
