@@ -299,4 +299,50 @@ Commit for this section: `docs(14-03): VERIF-02 carousel live-fire evidence + cl
 
 ---
 
-*Appended after Task 5 (resolution) and Task 6 (cleanup): user decision confirmed above, cleanup results captured, pending-IG-manual-deletion list compiled across both fires. Task 7 (end-of-phase manual IG deletion + baseline sign-off) remains — see STATE.md / SUMMARY for final phase closure.*
+## 14. Task 7 Resolution — IG Manual Deletion + Phase Baseline Sign-Off
+
+Both pending IG test posts (compiled in §13's table, both fires' IG media — neither API-deletable with this token's permission set) were deleted manually by the user in-app:
+
+| # | Plan | Format | Media ID | Permalink | User action |
+|---|---|---|---|---|---|
+| 1 | 14-02 | Single | `18174505420425505` | https://www.instagram.com/p/DbgZI2glh3x/ | Deleted manually in-app |
+| 2 | 14-03 | Carousel (5 slides) | `17966364624135172` | https://www.instagram.com/p/DbgeOgrlm5S/ | Deleted manually in-app |
+
+### Programmatic deletion confirmation (orchestrator-verified, not just user-reported)
+
+Direct Graph API GET on both media IDs, same token that successfully read both objects pre-deletion (proving the check is meaningful, not a permissions false-negative):
+
+```
+GET https://graph.facebook.com/v22.0/18174505420425505?access_token=...
+→ 400 {"error":{"message":"...Object does not exist...","type":"OAuthException","code":100,"error_subcode":33,"fbtrace_id":"AcC1_lOz2zHY0xEgDDbJRi2"}}
+
+GET https://graph.facebook.com/v22.0/17966364624135172?access_token=...
+→ 400 {"error":{"message":"...Object does not exist...","type":"OAuthException","code":100,"error_subcode":33,"fbtrace_id":"AO5uNlXHjfGu07ofjUjjWDp"}}
+```
+
+Both return `code 100, error_subcode 33 ("Object does not exist")` — the canonical Graph API "gone" signature, distinct from the `code 10` permission-class errors seen throughout this phase's DELETE attempts. Because the same token previously succeeded at reading these exact objects (Task 4/6 evidence above), a `code 100/33` here is a reliable, meaningful confirmation of deletion rather than a permissions artifact. **Both IG test posts confirmed gone.**
+
+### Full-phase cleanup status (final)
+
+| Platform | Plan | Media/Post ID | Cleanup method | Status |
+|---|---|---|---|---|
+| Facebook | 14-02 | `981931321668013_122133764865238849` | API DELETE | Deleted (confirmed 14-02) |
+| Facebook | 14-03 | `981931321668013_122133770775238849` | API DELETE | Deleted (confirmed §13) |
+| Instagram | 14-02 | `18174505420425505` | Manual in-app (user) | Deleted — confirmed via GET (`code 100/33`) above |
+| Instagram | 14-03 | `17966364624135172` | Manual in-app (user) | Deleted — confirmed via GET (`code 100/33`) above |
+
+**Zero test content remains live from Phase 14.**
+
+### Baseline sign-off
+
+User reviewed the Section 10 phase-level criteria table (all 3 ROADMAP Phase 14 success criteria TRUE) and the cleanup status above, and explicitly signed off: **clean v1.3 baseline accepted.** Response: "fase cerrada."
+
+Phase 14 (v1.2 Regression Live-Fire) is complete:
+- VERIF-01 (single-post live-fire) — satisfied, Plan 14-02.
+- VERIF-02 (carousel live-fire) — satisfied, this plan.
+- No Postgres-migration-related errors surfaced in either fire — clean baseline declared, Criterion 3 TRUE.
+- All test content cleaned up (FB via API both plans, IG manually both plans, both confirmed programmatically).
+
+---
+
+*Appended after Task 5 (resolution), Task 6 (cleanup), and Task 7 (IG manual deletion + baseline sign-off, confirmed programmatically above). Phase 14 CLOSED. See `14-03-SUMMARY.md` and `STATE.md` for final phase closure record.*
