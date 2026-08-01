@@ -1,340 +1,77 @@
-# Stack Research — v1.2 Stories Publishing
+# Stack Research — v1.3 Diseño Premium
 
-**Domain:** Meta Graph API — Instagram Stories + Facebook Page Stories
-**Researched:** 2026-04-18
-**Confidence:** MEDIUM-HIGH (training knowledge Aug 2025 + codebase verification; web search unavailable in this session)
-**Milestone:** v1.2 — Stories Publishing (IG + FB)
+**Domain:** Real typography/design engine for social image generation (replacing/augmenting diffusion-model text-in-image)
+**Researched:** 2026-08-01
+**Confidence:** MEDIUM-HIGH (official docs verified via WebFetch for Gamma/Remotion/Creatomate; exact dollar pricing has minor source conflicts noted inline)
 
 ---
 
 ## Context
 
-This is an additive research document. The existing stack (Node.js 22 Wizard, n8n 2.14.2 on Azure Container Apps, GPT-4o, Flux/Ideogram/Nano Banana, YCloud WhatsApp, Supabase, Azure Blob, Google Sheets, Meta Graph API v22) is validated and locked in. This document covers ONLY what changes or is added for Stories publishing.
+This is an **additive** research document for the v1.3 milestone. The existing stack (Node.js 22 Wizard, n8n 2.14.2 on Azure Container Apps, GPT-4o text, Ideogram v3 / Flux 2 Pro / Nano Banana Pro image generation, Meta Graph API v22 publishing, YCloud WhatsApp, Azure PostgreSQL sessions, Hostinger VPS rehost-service, Google Sheets log) is validated and locked in — see `.planning/milestones/v1.1-research/`, `.planning/milestones/v1.2-ROADMAP.md`.
 
-**Codebase baseline verified:** 73-node n8n workflow with these confirmed API patterns:
-- IG publishing: `POST graph.facebook.com/v22.0/{IG_USER_ID}/media` → `media_publish`
-- FB publishing: `POST graph.facebook.com/v22.0/{PAGE_ID}/photos` (single) + `attached_media` feed (carousel)
-- All image generation currently uses 1:1 aspect ratio (`ASPECT_1_1` / `square_hd` / `1:1`)
+This document covers ONLY the new capability: a design/typography engine to beat Ideogram v3's 90-95% text accuracy and produce genuinely brand-consistent output (dark `#1a1a2e` background, purple-magenta gradient accents, bold Spanish typography) instead of diffusion-approximated text.
 
----
-
-## Question 1: Instagram Stories — Does `media_type=STORIES` work on existing endpoints?
-
-**Answer: YES — same 2-step endpoint, new `media_type` parameter.**
-
-The existing `/{IG_USER_ID}/media` → `/{IG_USER_ID}/media_publish` flow supports Stories by adding `media_type=STORIES`. No new endpoint.
-
-**Step 1 — Create Story container:**
-```
-POST https://graph.facebook.com/v22.0/{IG_USER_ID}/media
-Body: {
-  "image_url": "<PUBLIC_HTTPS_URL>",
-  "media_type": "STORIES",
-  "access_token": "<PAGE_ACCESS_TOKEN>"
-}
-Returns: { "id": "<CONTAINER_ID>" }
-```
-
-**Step 2 — Publish (identical to FEED):**
-```
-POST https://graph.facebook.com/v22.0/{IG_USER_ID}/media_publish
-Body: {
-  "creation_id": "<CONTAINER_ID>",
-  "access_token": "<PAGE_ACCESS_TOKEN>"
-}
-Returns: { "id": "<IG_STORY_MEDIA_ID>" }
-```
-
-**Key differences vs FEED posts:**
-| Parameter | FEED (current) | STORIES |
-|-----------|---------------|---------|
-| `media_type` | absent (defaults to IMAGE) | `"STORIES"` (required) |
-| `caption` | supported | **ignored** — captions are not supported for Stories via API |
-| `is_carousel_item` | used for carousel | not applicable |
-| Container wait | 30s current + 45s carousel | same 30s wait sufficient |
-| `media_publish` retry | disabled per ERR-02 | keep disabled (same non-idempotent behavior) |
-
-**CRITICAL: No captions on IG Stories.** The caption field is silently ignored. Any text that needs to appear on the Story must be embedded in the image itself. This drives the prompt engineering requirement: the Story image prompt must include visible text or the concept must be self-explanatory without caption.
-
-**Confidence:** MEDIUM-HIGH. `media_type=STORIES` is documented in Meta Graph API content publishing reference as of mid-2025. The URL structure is confirmed consistent with existing codebase patterns.
+**Three candidates evaluated per user request:** Gamma (gamma.app API), Creatomate (template render API), Remotion (React-based programmatic rendering library).
 
 ---
 
-## Question 2: Facebook Page Stories — Correct Endpoint?
+## Recommended Stack
 
-**Answer: Use `/{PAGE_ID}/photo_stories` — 1-step publish (no container/publish split).**
+### Core Technologies
 
-Facebook Page Stories use a dedicated endpoint that differs from the Feed publishing pattern:
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| **Creatomate REST API** | `v1` (`api.creatomate.com/v1/renders`) | Template-based compositing engine — renders **real text layers** (not diffusion pixels) over a background image, at exact IG pixel dimensions | Only candidate offering deterministic, 100%-accurate Spanish typography (real font rendering, not AI approximation) at a per-image cost *below* current Ideogram spend. Templates are designed once visually in Creatomate's web editor, then driven entirely via API — matches the existing "design once, automate forever" pattern already used for prompts in the Wizard. |
+| **Flux 2 Pro (existing, via FAL.AI)** | `fal-ai/flux-pro/v1.1` | Generates the **background art** (photorealistic scene, no text needed) that Creatomate composites text onto | Already integrated in the n8n workflow at $0.03/img. Removing the "render legible text" burden from the diffusion model (Creatomate's job now) means the cheapest/best photorealism model can be used unconditionally — no need for Ideogram's text-specialized (and pricier) generation for the art layer. |
+| **Ideogram v3 (existing)** | current | Fallback/alternative background generator when Flux art doesn't fit; kept as baseline for comparison and for `has_own_image=false` + "quick post" flows that don't need the premium pipeline | Already integrated, zero migration cost. Confidence: HIGH — this is the existing, shipped component. |
 
-```
-POST https://graph.facebook.com/v22.0/{PAGE_ID}/photo_stories
-Body: {
-  "url": "<PUBLIC_HTTPS_URL>",
-  "access_token": "<PAGE_ACCESS_TOKEN>"
-}
-Returns: { "post_id": "<STORY_POST_ID>" }
-```
+### Supporting Libraries
 
-**How this differs from existing FB patterns:**
-| Pattern | FB Feed Photo (current) | FB Photo Stories |
-|---------|------------------------|-----------------|
-| Endpoint | `/{PAGE_ID}/photos` | `/{PAGE_ID}/photo_stories` |
-| Steps | 1-step (published=true) | 1-step |
-| `message`/`caption` | supported | **not supported** (same as IG — no captions via API) |
-| `attached_media` | used for carousel | not applicable |
-| Return field | `id` + `post_id` | `post_id` |
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| None required in Node.js/Wizard | — | Creatomate is called via plain HTTPS REST — same `fetch`/HTTP pattern the Wizard already uses for its webhook POST | Default path: n8n HTTP Request node, not Wizard-side |
+| `creatomate` (official Node SDK) | latest (npm) | Optional convenience wrapper (`Client.render()`) if template orchestration logic ever moves server-side (e.g., into a future Content Studio GUI backend) instead of n8n | Only if a persistent Node service is built later — not needed for the n8n-only integration path recommended here |
 
-**No 2-step upload-then-publish pattern for FB Stories.** Unlike FB carousel (which uses unpublished photos + feed post), `photo_stories` is atomic.
+### Development Tools
 
-**No `attached_media` needed.** That pattern is only for multi-photo feed posts.
-
-**Confidence:** MEDIUM. The `/photo_stories` endpoint is documented in Meta's Pages API reference. However, the exact parameter name (`url` vs `photo_id`) and return shape should be verified with a test call before building the n8n nodes. Flag for verification task in the plan.
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| Creatomate web template editor (app.creatomate.com) | Design the brand templates visually (dark bg, gradient accents, text placeholders, logo) | One-time setup per template variant (1:1 single, 4:5 single, 9:16 story, carousel slide). Produces a `template_id` used by every subsequent API call — this is the "brand kit" mechanism (no separate brand-kit API object; the template itself IS the brand kit). |
 
 ---
 
-## Question 3: Image Requirements for Stories
+## Installation
 
-**Answer: 9:16 aspect ratio (1080x1920px). ALL three image generators need their aspect_ratio parameter changed for Stories.**
+```bash
+# No new npm packages required for the recommended n8n-only integration path.
+# Creatomate is called exactly like Ideogram/FAL today: HTTP Request node with header auth.
 
-### Canonical Stories image spec (from Meta docs):
-| Property | Value |
-|----------|-------|
-| Aspect ratio | 9:16 (vertical) |
-| Recommended resolution | 1080 x 1920 px |
-| Minimum resolution | 500 x 888 px |
-| Max file size | 8 MB for images |
-| Formats | JPEG, PNG |
-| Safe zone | Keep key content within center 1080x1420px (avoids UI overlays at top/bottom) |
-
-### Current vs Required per image generator:
-
-**Ideogram v3** (primary generator):
-- Current: `"aspect_ratio": "ASPECT_1_1"` (square)
-- Required for Stories: `"aspect_ratio": "ASPECT_9_16"`
-- Confidence: HIGH — Ideogram API documents `ASPECT_9_16` as a valid enum value alongside `ASPECT_1_1`, `ASPECT_16_9`, etc.
-- No other parameter changes needed.
-
-**Flux 2 Pro via FAL.AI:**
-- Current: `"image_size": "square_hd"` (1024x1024)
-- Required for Stories: `"image_size": { "width": 1080, "height": 1920 }` OR `"image_size": "portrait_16_9"` if FAL supports named portrait sizes
-- Confidence: MEDIUM — FAL.AI supports custom `{"width": N, "height": N}` objects for image_size. Whether `portrait_9_16` or similar named size exists needs verification. Use custom object `{"width": 1080, "height": 1920}` as the safe fallback.
-- Named sizes confirmed on FAL: `square_hd`, `landscape_4_3`, `landscape_16_9`, `portrait_4_3`, `portrait_16_9` — use `"portrait_16_9"` (1080x1920 equivalent). Confidence: MEDIUM (training knowledge).
-
-**Nano Banana Pro via FAL.AI:**
-- Current: `"aspect_ratio": "1:1"`
-- Required for Stories: `"aspect_ratio": "9:16"`
-- Confidence: MEDIUM — Nano Banana uses string aspect_ratio values; `"9:16"` is the expected format based on existing `"1:1"` pattern.
-
-### Implementation approach — no cropping needed:
-
-Generate at native 9:16 directly. Do NOT generate at 1:1 and crop — cropping square to vertical loses ~44% of the image content and produces visually poor results. The correct approach is to change `aspect_ratio`/`image_size` in the generator call.
-
-**This means Stories require a parallel image generation path** — the same prompt with different aspect ratio parameters. The n8n router for image generators needs Stories-aware variants of each image generation node (or dynamic aspect_ratio injection).
-
----
-
-## Question 4: Additional Meta Permissions Required
-
-**Current confirmed scopes (from v1.1 setup):**
-- `pages_read_engagement`
-- `pages_manage_posts`
-- `instagram_basic`
-- `instagram_content_publish` (legacy path — still functional)
-- Missing: `instagram_manage_comments` (known gap from v1.1)
-
-**Stories-specific permission analysis:**
-
-| Permission | Required for | Status |
-|------------|-------------|--------|
-| `instagram_content_publish` | IG Stories via `media_type=STORIES` | Already present |
-| `pages_manage_posts` | FB Page Stories via `/photo_stories` | Already present |
-| `pages_read_engagement` | Read FB page data (already used) | Already present |
-| `instagram_manage_insights` | NOT required for publishing | N/A |
-
-**Conclusion: No new permissions required for Stories publishing.** The existing token (derived from Susana's session with `instagram_content_publish` + `pages_manage_posts`) covers both IG and FB Stories publishing.
-
-**Caveat:** If Meta has added a specific `pages_manage_stories` permission in a recent API update (post-Aug 2025), this research would not catch it. Flag as a verification task: test the Stories endpoint with the current token and check if a 403 with permission error is returned.
-
-**Confidence:** MEDIUM. Based on training data through August 2025. Permission requirements can change with Meta API version bumps.
-
----
-
-## Question 5: New npm Packages for Vertical Image Preview in Wizard?
-
-**Answer: No new npm packages needed.**
-
-The Wizard currently sends image URLs to YCloud for WhatsApp preview — it does not do any local image processing. For Stories, the same pattern applies: the vertically-generated image URL gets sent to YCloud as a WhatsApp image message. YCloud renders it in the preview, and the vertical format will display correctly in WhatsApp (portrait images display fine in WA image messages).
-
-**The only Wizard changes needed:**
-1. Add `"stories"` as a selectable format alongside `"single"` and `"carousel"` in PASO 1 (format selector)
-2. Add Stories-specific prompt context hint (remind user text must be in the image)
-3. Include `format: 'stories'` in the brief JSON sent to n8n webhook
-
-**No preview library (sharp, jimp, canvas, etc.) is needed.** The image generators produce the 9:16 image directly. There is no local image manipulation in the Wizard today and none is required for v1.2.
-
-**Confidence:** HIGH — confirmed by reading the existing wizard/run.js pattern and understanding the Wizard's role as a brief-collector that delegates all image work to n8n.
-
----
-
-## Question 6: Stories-Specific Scheduling Considerations — `expires_at`?
-
-**Answer: Stories expire after 24 hours. `expires_at` is returned but no special handling required at publish time.**
-
-Instagram Stories have a built-in 24-hour expiry. The `expires_at` timestamp is available via:
-```
-GET https://graph.facebook.com/v22.0/{IG_STORY_MEDIA_ID}?fields=id,permalink,expires_at&access_token={TOKEN}
+# Optional — only if building a standalone Node service later:
+npm install creatomate
 ```
 
-**However:** This is read-only metadata. The Story expires automatically on Meta's side — the n8n workflow does not need to track or enforce this. There is no action to take when a Story expires (unlike scheduled posts where the window matters).
-
-**What this means for v1.2:**
-- No scheduling gate changes needed for Stories — the existing scheduling infrastructure works the same way
-- `expires_at` can optionally be included in the success WhatsApp notification ("Tu Story expira en 24h") but is not required
-- No new Supabase fields needed for Stories expiry tracking
-- The 24-hour scheduling cap from v1.1 (`SCHED-04`) is unrelated to Stories expiry — they are independent concepts
-
-**Scheduling conflict to avoid:** If a Story is scheduled to publish in 23.5 hours, it will go live for only 30 minutes before expiring. This is a user awareness issue, not a technical one. The Wizard success message should note "Las Stories expiran a las 24h de publicarse."
-
-**Facebook Page Stories expiry:** Same 24-hour behavior on FB side.
-
-**Confidence:** HIGH — Stories 24h expiry is a well-established platform characteristic, not a recent API change.
-
----
-
-## New Components Needed (Delta from v1.1)
-
-### n8n Workflow Additions
-
-| Component | Type | Purpose | Integration Point |
-|-----------|------|---------|------------------|
-| Format router: Stories branch | IF node (typeVersion 1) | Route `format=stories` separately from `single`/`carousel` | After session recovery, before rehost |
-| IG Story image generators (3 nodes) | HTTP Request nodes | Ideogram+Flux+Nano Banana with 9:16 aspect_ratio | Parallel to existing image gen nodes |
-| IG Story container creation | HTTP Request node | `POST /{IG_USER_ID}/media` with `media_type=STORIES` | After Azure Blob rehost |
-| IG Story Wait 30s | Wait node | Container readiness (same as single post) | After container creation |
-| IG Story media_publish | HTTP Request node | `POST /{IG_USER_ID}/media_publish` | After wait |
-| FB Page Story publish | HTTP Request node | `POST /{PAGE_ID}/photo_stories` | Parallel to IG Story publish |
-| Notify WhatsApp Stories | HTTP Request node (YCloud) | Success notification with 24h expiry note | After both IG+FB publish |
-
-### Wizard Additions
-
-| Component | Type | Purpose |
-|-----------|------|---------|
-| Format option "stories" | PASO 1 selector | Let user choose Stories as format |
-| Stories caption warning | Console output | Inform user text must be in the image |
-| `format: 'stories'` in brief JSON | Field addition | Signals n8n to use Stories pipeline |
-
-### No New npm Packages
-
-The `package.json` currently has only `dotenv: ^16.4.5`. No new dependencies for v1.2. Image generation at 9:16 is handled by changing parameters in existing API calls.
-
----
-
-## API Endpoints — Complete Reference for v1.2
-
-### Instagram Stories Publish (2-step, same as FEED)
-
-```
-Step 1 — Create Story container:
-POST https://graph.facebook.com/v22.0/{IG_USER_ID}/media
-Body: {
-  "image_url": "<PUBLIC_BLOB_URL>",
-  "media_type": "STORIES",
-  "access_token": "<PAGE_ACCESS_TOKEN>"
-}
-Returns: { "id": "<CONTAINER_ID>" }
-
-Wait 30s (same as single post — container readiness)
-
-Step 2 — Publish:
-POST https://graph.facebook.com/v22.0/{IG_USER_ID}/media_publish
-Body: {
-  "creation_id": "<CONTAINER_ID>",
-  "access_token": "<PAGE_ACCESS_TOKEN>"
-}
-Returns: { "id": "<IG_STORY_MEDIA_ID>" }
-```
-
-### Facebook Page Stories Publish (1-step)
-
-```
-POST https://graph.facebook.com/v22.0/{PAGE_ID}/photo_stories
-Body: {
-  "url": "<PUBLIC_BLOB_URL>",
-  "access_token": "<PAGE_ACCESS_TOKEN>"
-}
-Returns: { "post_id": "<STORY_POST_ID>" }
-```
-
-### Stories Metadata (optional — for `expires_at` in notification)
-
-```
-GET https://graph.facebook.com/v22.0/{IG_STORY_MEDIA_ID}
-  ?fields=id,permalink,expires_at
-  &access_token={PAGE_ACCESS_TOKEN}
-```
-
----
-
-## Image Generation Parameter Changes
-
-### Ideogram v3 — Stories variant
-
-Change only `aspect_ratio`:
+n8n integration: new **HTTP Request node**, `Authorization: Bearer <CREATOMATE_API_KEY>` header (same auth pattern already used for FAL/Ideogram bearer tokens), `POST https://api.creatomate.com/v1/renders`, body:
 ```json
 {
-  "image_request": {
-    "prompt": "...",
-    "aspect_ratio": "ASPECT_9_16",
-    "model": "V_2_TURBO",
-    "magic_prompt_option": "OFF",
-    "style_type": "DESIGN"
+  "template_id": "<TEMPLATE_UUID>",
+  "modifications": {
+    "Background-Image.source": "<FAL/Ideogram generated art URL>",
+    "Headline-Text.text": "<GPT-4o generated Spanish headline>",
+    "Subtext-Text.text": "<optional subcopy>"
   }
 }
 ```
-
-### Flux 2 Pro via FAL.AI — Stories variant
-
-Change `image_size` from named square to portrait:
-```json
-{
-  "prompt": "...",
-  "image_size": "portrait_16_9",
-  "num_inference_steps": 28,
-  "guidance_scale": 3.5,
-  "num_images": 1
-}
-```
-
-If `portrait_16_9` is not accepted, fallback:
-```json
-{
-  "image_size": { "width": 1080, "height": 1920 }
-}
-```
-
-### Nano Banana Pro via FAL.AI — Stories variant
-
-Change `aspect_ratio` string:
-```json
-{
-  "prompt": "...",
-  "num_images": 1,
-  "aspect_ratio": "9:16",
-  "output_format": "png",
-  "safety_tolerance": "4"
-}
-```
+Response is async (returns `id` + `status: planned`); poll `GET /v1/renders/{id}` — same polling pattern already implemented in the workflow for IG Story container readiness (Wait node + status check loop). Rate limit: 30 requests / 10-second window (429 on excess) — far above Propulsar's post cadence.
 
 ---
 
 ## Alternatives Considered
 
-| Decision | Chosen Approach | Alternative | Why Not |
-|----------|----------------|-------------|---------|
-| Stories image | Generate native 9:16 | Generate 1:1 + server-side crop | Cropping loses 44% content; needs `sharp` npm package; output looks bad |
-| FB Stories | `/{PAGE_ID}/photo_stories` | Reel video format | Video Stories require video generation pipeline — out of scope v1.2 |
-| Stories caption | Embed text in image via prompt | Pass caption to API | IG Stories API ignores caption field; text must be in the image |
-| IG Stories path | `media_type=STORIES` on existing endpoint | Dedicated Stories-only node set | Same endpoint as FEED — reusing pattern is simpler and consistent |
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| Creatomate (fixed template = guaranteed brand consistency) | **Gamma API** (`developers.gamma.app`, `format: "social"`, `cardOptions.dimensions: 1x1 \| 4x5 \| 9x16`) | Use Gamma when you want AI to **vary the layout** per post (different card structures, auto-selected image placement) rather than a fixed brand template — e.g., for a future "surprise me" content mode. Gamma's `themeId` param does give color/font brand control, and it natively supports all three IG aspect ratios needed (1x1, 4x5, 9x16) — technically viable. But it is a *presentation* engine repurposed for social, so exact pixel-for-pixel repeatability across posts is not guaranteed the way a fixed Creatomate template is, and per-image cost is higher (see cost table below). |
+| Creatomate (SaaS API, pay-per-render, zero infra to run) | **Remotion** (`remotion`, `@remotion/renderer`, `@remotion/lambda`, current major v4.x) | Use Remotion only if/when: (a) volume grows to justify its licensing minimum (see Pitfalls below), or (b) the roadmap adds **animated** Stories/Reels — Remotion's real differentiator is programmatic **video**, where React/CSS-level control over motion graphics has no equivalent in Creatomate/Gamma at this design fidelity. For static-image typography today, Remotion is technically capable (`renderStill()` produces PNG/JPEG/WebP directly from a React component) but its licensing model makes it the most expensive option at Propulsar's current post volume. |
 
 ---
 
@@ -342,106 +79,77 @@ Change `aspect_ratio` string:
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `caption` parameter on IG Stories | Silently ignored by Meta API | Embed text in image via the generation prompt |
-| `message` parameter on FB `/photo_stories` | Not supported | Text must be in the image |
-| 1:1 generated image for Stories | Wrong aspect ratio — displayed with black bars or cropped | Generate at `ASPECT_9_16` / `portrait_16_9` / `9:16` natively |
-| Midjourney | No official API | Ideogram v3 (default), Flux 2 Pro, Nano Banana Pro |
-| `graph.instagram.com` host | v1.1 already uses `graph.facebook.com` for IG endpoints | Keep consistent with existing: `graph.facebook.com/v22.0/` |
-| 3-step carousel flow for Stories | Stories are single images only | 2-step single flow with `media_type=STORIES` |
-| `sharp` or any image manipulation library | Would add npm dependency just to crop/resize | Generate at correct aspect ratio from the start |
+| **Remotion for the v1.3 static-image use case** | Any *programmatic* call to `renderMedia()`/`renderStill()` (i.e., anything triggered from n8n, exactly Propulsar's use case) falls under the "**Remotion for Automators**" license track, **regardless of company size** (the free ≤3-employee tier only covers manual use inside Remotion Studio, not automation). Automators pricing: **$0.01/render, billed in 1,000-render increments, $100/month minimum spend.** At Propulsar's current volume (~30-90 images/month), that is effectively a **flat $100/month tax** (~$1.10-$3.30 per image), 15-50x more expensive than Ideogram today and 30-80x more than the recommended Creatomate approach. This applies whether rendering runs on Remotion Lambda (AWS) or self-hosted on Azure Container Apps/Hostinger VPS — the license is about *usage*, not *hosting location*. | Creatomate (pay-per-render at ~$0.02/image, no minimum-spend floor at entry tier) |
+| Gamma as the **primary/default** pipeline replacing Ideogram | AI-orchestrated layout (even with `themeId`) means the exact same brand template isn't guaranteed to render identically post-to-post the way a hand-built Creatomate template does; also costlier per image at typical quality tiers (see cost table) and rate-limited to 50 generations/hour (fine for volume, but confirms it's tuned for occasional deck generation, not a high-frequency content-factory primitive) | Creatomate for the deterministic default path; keep Gamma as an optional "variety" mode later |
+| Midjourney (carried over rule, still applies) | No official API, ToS risk | Flux 2 Pro / Ideogram v3 / Nano Banana Pro (unchanged) |
+| Cropping a 1:1 image to 4:5/9:16 to avoid a second render | Loses ~20-44% of composed content, defeats the purpose of "premium design" | Generate/composite natively at the target aspect ratio (Creatomate template per format, exactly like the existing per-format Ideogram `aspect_ratio` pattern from v1.2) |
+| Building a self-hosted headless-Chromium render service (Puppeteer/Playwright + custom HTML/CSS templates) as a Remotion-avoidance workaround | Reinvents exactly what Creatomate already sells as a maintained SaaS API, adds real Azure Container Apps hosting + Chromium-in-Docker maintenance burden the company doesn't currently carry (no existing headless-browser infra in the stack) | Creatomate (someone else runs and patches the renderer) |
+
+---
+
+## Stack Patterns by Variant
+
+**If the post format is single (1:1 or 4:5) or Story (9:16):**
+- Use one Creatomate `render` call per image: background art URL (from Flux/Ideogram, unchanged generation call) + GPT-4o headline/subtext text modifications + format-specific `template_id`.
+- Because each format needs its own template (text placement/safe-zone differs meaningfully between square and 9:16), not just a different render `modifications` value.
+
+**If the post format is carousel (multi-slide):**
+- Creatomate has no dedicated "carousel" endpoint — send N sequential (or batched) `render` calls, one per slide, each referencing the carousel-slide template with that slide's background + text modifications.
+- Because this mirrors the existing v1.0 carousel pattern exactly (n8n already loops Ideogram generation per slide) — no new orchestration concept, just swap the per-slide image-generation node for a per-slide Creatomate node downstream of it.
+
+**If a future milestone adds animated/video Stories or Reels:**
+- Re-evaluate Remotion at that point — its per-render licensing model and React/CSS/animation timeline model become genuinely differentiated (no diffusion or template-SaaS competitor does frame-accurate motion graphics), and the $100/month minimum is easier to justify once video (a fundamentally more expensive medium everywhere) is in scope.
+- Because introducing Remotion today, for static images only, pays its full licensing/hosting cost for a capability (animation) the product doesn't yet use.
 
 ---
 
 ## Version Compatibility
 
-| Component | Version | Stories Notes |
-|-----------|---------|---------------|
-| Meta Graph API | v22.0 (pinned) | `media_type=STORIES` confirmed supported in v22 |
-| n8n | 2.14.2 | No new node types — same HTTP Request (typeVersion 4.2) + Wait (typeVersion 1) + IF (typeVersion 1) patterns |
-| Ideogram API | v2 Turbo model | `ASPECT_9_16` is a documented enum value |
-| FAL.AI Flux | fal-ai/flux-pro/v1.1 | `portrait_16_9` named size or custom `{width,height}` object |
-| Nano Banana Pro | fal-ai/nano-banana | `aspect_ratio: "9:16"` string format |
-| YCloud WhatsApp | v2 | Vertical images render fine in WA preview — no API changes |
-| Azure Blob | Current (SAS 2027-04-10) | Same public URL pattern; Stories images are just 9:16 blobs |
-| Node.js | v22.20.0 | No new packages needed |
+| Component | Version | v1.3 Notes |
+|-----------|---------|------------|
+| n8n | 2.14.2 (pinned, existing) | New Creatomate node is a plain HTTP Request node (typeVersion 4.2, same as every other API call in the workflow) — no new node types, no IF v2/Switch v3 needed |
+| Creatomate API | `v1` (`api.creatomate.com/v1/renders`) | Stable REST API; template editor is a separate web app, not versioned per-call |
+| FAL.AI Flux 2 Pro | `fal-ai/flux-pro/v1.1` (existing) | Unchanged — now used purely for background art, no text-rendering burden |
+| Ideogram v3 | current (existing) | Unchanged — remains available as baseline/fallback per user's explicit framing ("Ideogram v3 stays as the quality baseline to beat") |
+| Gamma API | `v0.2` per `developers.gamma.app/v0.2/...` docs (evaluate as secondary option only) | `format: "social"` + `cardOptions.dimensions` supports `1x1`/`4x5`/`9x16` natively — matches all three IG targets if adopted later |
+| Remotion | v4.x current (NOT adopted this milestone) | If revisited for video: requires `remotion`, `@remotion/cli`, `@remotion/renderer` (self-host on Azure Container Apps with Chromium) or `@remotion/lambda` (AWS) — either way, Automators licensing applies |
+| Node.js | v22.20.0 (existing) | No runtime change |
 
 ---
 
-## Brief JSON Changes for v1.2
+## Cost Comparison (per single image, at Propulsar's current low-to-medium volume)
 
-The Wizard sends this additional field for Stories:
+| Approach | Per-image cost | Basis | Text accuracy |
+|----------|----------------|-------|----------------|
+| **Ideogram v3 only (current baseline)** | $0.06 | Existing production cost | 90-95% (diffusion-approximated) |
+| **Flux 2 Pro (art) + Creatomate (text overlay) — RECOMMENDED** | ~$0.03 (Flux) + ~$0.02-0.03 (Creatomate, 1 credit/image, Essential plan `$41/mo ÷ ~2,000 credits ≈ $0.0205/credit`) = **~$0.05-0.06 total** | Two API calls per image; Creatomate Essential plan is the entry tier | ~100% (real text layer, not diffusion) |
+| **Gamma (`format: social`, budget image model e.g. Ideogram 3 Turbo = 6 credits)** | Pro plan `$25/mo ÷ 4,000 credits`= $0.00625/credit → ~1 card (1-3 credits) + 6-credit image ≈ 7-9 credits ≈ **$0.04-0.06/image** at cheapest model; up to **$0.70-0.80/image** at premium/ultra image models (75-125 credits) | Highly variable by chosen image model tier; social-format card overhead is small | Real card-layout text (high) for the text portions Gamma composes; image portion still diffusion if `imageOptions.source=aiGenerated` |
+| **Remotion (Automators license)** | $0.01/render **but $100/month minimum spend regardless of volume** → at ~30-90 images/month, effective **$1.10-$3.33/image** | Confirmed via official pricing page (`remotion.pro/license`, `remotion.dev/docs/license/pricing`) | 100% (full CSS/React control) — but cost-prohibitive at this volume |
 
-```json
-{
-  "topic": "...",
-  "type": "educational | authority | case_study",
-  "angle": "...",
-  "platforms": ["instagram", "facebook"],
-  "image_model": "ideogram | flux | nanoBanana | custom",
-  "fal_model_id": "...",
-  "format": "stories",
-  "has_own_image": false,
-  "image_url": null,
-  "has_text_in_image": true,
-  "approval_number": "34612345678",
-  "publish_at": "now | <ISO_UTC>",
-  "timestamp": "2026-04-18T..."
-}
-```
-
-The only new field is `format: 'stories'`. The `has_text_in_image: true` is already in the schema and should default to true for Stories (since captions are embedded in the image).
-
----
-
-## Verification Tasks (Phase Plan Should Include)
-
-1. **Test `media_type=STORIES` on IG endpoint** with current token before building full pipeline. A failing test reveals permission gaps early. Expected response: `{ "id": "<container_id>" }`.
-
-2. **Test `/{PAGE_ID}/photo_stories`** with current FB token. Verify exact return shape (`post_id` vs `id`). This endpoint shape may vary slightly from training data.
-
-3. **Test `portrait_16_9`** on Flux 2 Pro — if it returns a 400, switch to `{ "width": 1080, "height": 1920 }` custom object.
-
-4. **Test `aspect_ratio: "9:16"`** on Nano Banana Pro — if it returns a 400, try `"16:9"` (reversed) as some APIs flip convention.
-
-5. **Confirm no new Meta permission prompt** needed — if `/photo_stories` returns OAuthException with permission error, Susana will need to reauthorize with additional scope.
-
----
-
-## Open Questions
-
-1. **FB `/photo_stories` exact parameter names.** Training knowledge says `url` — but Meta sometimes uses `photo_id` (upload first, then reference). The verification test call in Question 2 resolves this.
-
-2. **FB `/photo_stories` response shape.** Returns `post_id` per training knowledge. Verify during initial test.
-
-3. **`instagram_manage_stories` permission.** Some Meta developer community posts (pre-Aug 2025) mention this scope for reading stories. It may or may not be required for *publishing* Stories. The current token may already have implicit access via `instagram_content_publish`. Only a live test resolves this definitively.
-
-4. **FAL.AI `portrait_16_9` named size for Flux.** Needs a test call to confirm. If unsupported, custom `{width, height}` is the fallback.
-
-5. **Stories permalink availability.** Unlike Feed posts which return a stable permalink, IG Stories permalinks may not be publicly accessible (Stories are ephemeral). The GET `/{STORY_ID}?fields=permalink` may return null or a temporary URL. Success notification should handle null permalink gracefully.
+**Note on Creatomate plan pricing:** sources showed minor conflicts on the exact Essential-tier monthly price (`$41/mo` per one source, `$54/mo` per another — likely reflects monthly-vs-annual billing or a recent price change). Confirm the live number at `creatomate.com/pricing` before committing budget; the credit-cost-per-image ($0.0205-0.027/image at Essential tier) is consistent either way and remains cheaper than Ideogram regardless of which base price is current.
 
 ---
 
 ## Sources
 
-### High Confidence (training knowledge through Aug 2025, consistent with codebase)
-- Meta Graph API Content Publishing Reference — `media_type` parameter for `/{IG_USER_ID}/media` endpoint, Stories support
-- Meta Graph API Pages Reference — `/{PAGE_ID}/photo_stories` endpoint
-- Existing n8n workflow (`n8n/workflow.json`) — confirmed IG/FB endpoint patterns, typeVersions, body structures
-- Ideogram API Reference — `ASPECT_9_16` enum value documented
-- v1.1-research/STACK.md — permissions, token type, endpoint patterns (HIGH confidence, verified against official Meta docs during v1.1 research)
-
-### Medium Confidence (training knowledge, requires live verification)
-- FAL.AI Flux `portrait_16_9` named size — needs test call
-- Nano Banana `aspect_ratio: "9:16"` — inferred from `"1:1"` existing pattern
-- FB `/photo_stories` parameter name `url` vs `photo_id` — needs test call
-- No new permissions required — inferred from `instagram_content_publish` scope coverage, but requires live verification
-
-### Requires Live Testing
-- All 5 verification tasks listed above
-- Actual Stories permalink shape (null vs URL)
+- `developers.gamma.app/get-started/access-and-pricing` — plan tiers requiring API access (Pro/Ultra/Teams/Business), credit-based model (MEDIUM-HIGH, official docs)
+- `developers.gamma.app/guides/generate-api-parameters-explained` — `format: "social"`, `cardOptions.dimensions` (1x1/4x5/9x16), `textOptions.language`, `themeId` brand support (HIGH, official docs, directly answers the aspect-ratio requirement)
+- `developers.gamma.app/reference/image-model-accepted-values` — full image-model credit-cost table, confirms Ideogram 3/Ideogram 3 Turbo/Ideogram 3 Quality are available *inside* Gamma too (MEDIUM-HIGH, official docs)
+- `developers.gamma.app/get-started/understanding-the-api-options` — `X-API-KEY` auth header, `textMode: preserve` for exact copy, `imageOptions.source: noImages` to supply own art (HIGH, official docs)
+- WebSearch (Gamma rate limits) — 50 generations/hour, 429 + backoff pattern, async polling via `x-ratelimit-*` headers (MEDIUM, WebSearch-derived, consistent across sources)
+- `creatomate.com/docs/api/reference/introduction`, `.../post-v1-renders`, `.../the-render-object` — REST API shape, `template_id` + `modifications` pattern, `output_format` param (HIGH, official docs)
+- `creatomate.com/docs/api/reference/limits-and-concurrency` — 30 req/10s rate limit, concurrency tied to plan (MEDIUM-HIGH, WebSearch of official docs)
+- `creatomate.com/docs/api/rest-api/authentication` — `Authorization: Bearer <API_KEY>` header (HIGH, official docs)
+- `creatomate.com/pricing` — Essential/Growth/Beyond tiers, 1 credit = 1 image, 50-credit free trial (MEDIUM — exact dollar figures conflicted across mirrored sources, flagged above)
+- `creatomate.com/docs/fundamentals/getting-started/template-modifications`, `.../how-to/create-images-by-api` — dynamic `source` URL for image elements, AI-image-generation provider option inside Creatomate too (MEDIUM-HIGH, WebSearch of official docs)
+- `remotion.dev/docs/license/faq` (fetched twice, cross-checked) — automation via `renderMedia()`/`renderStill()`/CLI/`<Player>` triggers "Remotion for Automators" **regardless of company size**; free ≤3-employee tier covers manual Studio use only (HIGH, official docs, directly resolves the licensing question the user flagged)
+- `github.com/remotion-dev/remotion/blob/main/LICENSE.md` — free-tier eligibility criteria (individual / ≤3-employee for-profit / non-profit / evaluation) (HIGH, official license text)
+- `remotion.pro/license` — exact Automators pricing: $0.01/render, 1,000-render billing increments, $100/month minimum, "one render = one video/audio/still image/image sequence" (HIGH, official pricing page)
+- `remotion.dev/docs/lambda/cost-example` — AWS Lambda compute cost examples (separate from and additional to the licensing fee above) (HIGH, official docs)
+- WebSearch (Remotion `renderStill()`) — confirms still-image (PNG/JPEG/WebP) rendering is a first-class, documented use case for social media cards (MEDIUM, multiple community + official sources agree)
 
 ---
 
-*Stack research for: Propulsar Content Engine v1.2 — Stories Publishing*
-*Researched: 2026-04-18*
-*Additive: builds on v1.1-research/STACK.md*
+*Stack research for: Propulsar Content Engine v1.3 — Diseño Premium*
+*Researched: 2026-08-01*
+*Additive: builds on v1.0/v1.1/v1.2 research in `.planning/milestones/`*

@@ -1,215 +1,320 @@
-# Pitfalls Research — v1.2 Stories Publishing
+# Pitfalls Research — v1.3 Diseño Premium
 
-**Project:** Propulsar Content Engine v1.2 Stories Publishing
-**Mode:** Pitfalls (Stories-specific + integration gotchas)
-**Confidence:** HIGH (Meta live docs + full codebase analysis) / MEDIUM (FB photo_stories specifics — official docs 404)
-**Researched:** 2026-04-18
+**Domain:** Adding a template/design-engine rendering path (Gamma, Creatomate, Remotion) to an existing, shipped n8n social-media publishing pipeline (Propulsar Content Engine)
+**Researched:** 2026-08-01
+**Confidence:** MEDIUM-HIGH (official docs verified for Gamma/Creatomate/Remotion licensing; project-specific integration risks HIGH — grounded in this repo's own n8n 2.14.2 constraints and prior Meta CDN/format incidents)
 
 ---
 
 ## Key Findings
 
-**CRITICAL 1 — Wrong API host for IG Stories.** Meta's official content publishing guide (live, HTTP 200, 2026-04-18) explicitly states *"Reels and stories are not supported"* on `graph.facebook.com`. Instagram Stories require a **different host**: `graph.instagram.com`. Every IG Story node must use this host or receive `(#100) Unsupported media type`. This **contradicts Stack/Features research claims** that said "same endpoint as FEED" — Pitfalls agent validated live docs.
+**CRITICAL 1 — Gamma's API is deck-generation-first, not single-image-first, and this shapes both cost and workflow shape.** Gamma's Generate API (GA since Nov 2025) does support `"format": "social"` with `cardOptions.dimensions` of exactly `1x1`, `4x5`, `9x16` — the three ratios this pipeline needs. But the underlying primitive is a **generation** (a "deck," even a 1-card one), billed in credits per generation (~40 credits for a from-prompt generation on Pro), not per finished image like Ideogram's flat $0.06. For single-post format this is likely far more expensive per image than Ideogram; for carousels it may be *cheaper* per slide (many cards per one generation charge) — but this must be measured, not assumed, per format.
 
-**CRITICAL 2 — Routing silently misroutes `format=story`.** The existing `🔀 ¿Formato Carrusel?` binary IF will route Stories to the FEED single-post path with NO ERROR. A second `🔀 ¿Formato Story?` IF must be inserted on the FALSE output of the carousel router.
+**CRITICAL 2 — Gamma has no webhooks; Creatomate does.** Gamma's docs show polling-only (`GET /v1.0/generations/{id}`), recommending a 5-second poll interval. n8n 2.14.2's Wait node has a **65-second floor before execution state persists to DB** (documented project constraint). A naive "wait 5s, check, repeat" loop either (a) violates the 65s floor and risks losing in-flight executions on Azure Container Apps restarts, or (b) requires batching multiple checks inside one longer Wait, adding real latency (Gamma generations take 1-3 min typically). Creatomate, by contrast, supports native webhooks — a fundamentally different integration shape that changes how the phase should be architected (webhook-resume workflow vs poll loop).
 
-**CRITICAL 3 — Hashtag comment on Stories burns API quota.** `💬 IG: Post Hashtag Comment` runs unconditionally after `media_publish`. Stories don't support comments → `(#200) Does not support Comments`. Currently swallowed by `continueErrorOutput`, but wastes quota and contributes to rate limits. Stories branch must terminate BEFORE hashtag comment nodes.
+**CRITICAL 3 — Remotion's automation license, not its company-size threshold, is what applies here.** Propulsar.ai is a 2-person company, comfortably under Remotion's "4+ personnel" Company License threshold — but that threshold is irrelevant to this project. Remotion's own FAQ classifies **any code that programmatically calls `renderMedia()`** (which is exactly what an n8n → render-service call does) as "Remotion for Automators," billed at **$0.01/render with a $100/month minimum spend**, regardless of headcount or self-hosting. Assuming "we're a 2-person shop, we qualify for free" is the trap — company size and automation-use are two independent gates, and this project trips the second one.
 
-**CRITICAL 4 — Scheduling cap mismatch.** Stories expire 24h post-publish. Wizard's 24h cap means scheduling at 23h = 1h visibility. Max should be **22h for Stories** (guarantees ≥2h visibility). Both `parsePublishTime` (Wizard) and `🕐 Compute wait_seconds` (n8n Code node) need format-aware caps. Session must store `format=story` so Code node can read it.
+**CRITICAL 4 — Design-engine PNG exports collide with Meta's documented JPEG-only + alpha-channel gotcha.** Meta's IG Graph API docs state images must be JPEG; Gamma's social export delivers a `.zip` of PNGs (one per card), and Creatomate defaults can go either way. This pipeline has *already* shipped PNG (`output_format: "png"`) from Flux through `rehost-service` (which does zero image processing — pure passthrough by extension/Content-Type) directly to Meta without incident, so PNG-to-Meta is evidently tolerated in practice today. The **new, untested risk** is not "PNG vs JPEG" per se but **alpha-channel transparency**: template/design engines are far more likely than a diffusion image model to emit RGBA PNGs with transparent regions (e.g., card backgrounds, cutout shapes). When Meta (or any JPEG converter) flattens an RGBA PNG, the alpha gets filled with an implementation-defined color — commonly black or white, not necessarily brand `#1a1a2e`. Because the brand background is already dark, a wrong-color fill could look "close enough" and ship unnoticed for months before someone spots a jarring pure-black or pure-white artifact on a lighter template.
 
-**CRITICAL 5 — FB Page Story may need 2-step flow (CONFLICT with Stack/Features research).** Pitfalls agent inferred `POST /{PAGE_ID}/photos?published=false` → `POST /{PAGE_ID}/photo_stories?photo_id=X` by analogy with v1.1 FB carousel flow. Stack/Features agents said single-step `POST /photo_stories` with `url` param. Official `photo_stories` docs returned 404 for Pitfalls agent. **This must be verified with a live API test in Phase 13.**
+**CRITICAL 5 — Remotion self-hosted rendering doesn't fit any of this project's existing infra without new decisions.** Remotion is AWS-Lambda-native by default (`@remotion/lambda`); this project is exclusively Azure (per global CLAUDE.md: Azure Container Apps / Functions only, Hostinger VPS reserved for `rehost-service`). Self-hosted Remotion rendering (`@remotion/renderer`) needs headless Chromium — a heavy, stateful, CPU/RAM-hungry process that fails this project's own Function-vs-Container-App decision table ("cold start inaceptable," "dependencias pesadas: mejor evitar" for Functions) and doesn't belong on the lightweight Hostinger VPS currently running `rehost-service` (a thin Express passthrough, not designed for headless-browser workloads).
 
 ---
 
 ## Full Pitfall Catalogue
 
-### CRITICAL Pitfalls
+### Pitfall 1: Gamma API — presentation/deck framing produces per-generation pricing surprises
 
-#### Pitfall 1: Wrong API host for IG Stories
+**What goes wrong:**
+Treating Gamma like "an image API with an extra `format` param" leads to assuming cost scales like Ideogram (flat $ per finished image). In reality billing is per-generation in credits, and a single-post use case (1 card) may not be materially cheaper than a 10-card carousel use case in credits — meaning the *effective* cost-per-image for single posts could be several multiples of Ideogram's $0.06, while carousels might land near or below it.
 
-- **What goes wrong:** `POST graph.facebook.com/{IG_ID}/media?media_type=STORIES` → `(#100) Unsupported media type` or `(#200) Permissions error`.
-- **Why:** v1.1 uses `graph.facebook.com` throughout. Developer assumes only `media_type=STORIES` changes.
-- **Source:** Meta content publishing docs (live, 2026-04-18) — *"Reels and stories are not supported"* on the standard chain.
-- **How to avoid:** IG Story nodes use `https://graph.instagram.com/v22.0/{IG_ID}/media` and `…/media_publish`. Do not copy-paste existing FEED nodes.
-- **Warning signs:** `(#100) Unsupported media type` or `(#200)` from `graph.facebook.com`.
-- **Phase:** Phase 12 (IG Story container creation).
+**Why it happens:**
+Gamma's core product is decks/presentations; "social" is one export mode bolted onto that primitive. Vendor pricing pages emphasize "credits per plan," not "$ per finished social image," so the true unit economics only surface once you do a live generation and read the `credits` field in the completed response.
 
-#### Pitfall 2: Fixed 30s wait insufficient for Story containers
+**How to avoid:**
+During the comparison phase, run at least 3 real generations per format (single, carousel-5-slide, story) through Gamma and record the actual `credits` consumed and the plan's $/credit. Build a per-format cost table before deciding whether Gamma coexists with or replaces Ideogram — don't extrapolate from vendor marketing pages.
 
-- **What goes wrong:** Vertical 9:16 re-encode on Meta side can keep `status_code=IN_PROGRESS` beyond 30s → `media_publish` fires → `2207027` ("Media container is not ready").
-- **How to avoid:** Use 45s Wait node for Stories (matching carousel pattern). Polling deferred to future milestone.
-- **Warning signs:** Error `2207027` on `media_publish` for Stories.
-- **Phase:** Phase 12.
+**Warning signs:**
+Comparison phase only tests carousel (Gamma's best case) and skips single-post cost measurement; monthly credit allotment quietly exhausted mid-month by single-post generations.
 
-#### Pitfall 3: FB Page Story wrong endpoint (copy `/{PAGE_ID}/photos`)
-
-- **What goes wrong:** Using `POST /{PAGE_ID}/photos` (without `published=false`) publishes a FEED photo, not a Story. Image appears letterboxed in Feed; no Story published.
-- **How to avoid:** Two-step flow (CONFIRM with live test in Phase 13):
-  1. `POST /{PAGE_ID}/photos` with `url={blob_url}` + `"published": false` → `{ id: "<PHOTO_ID>" }`
-  2. `POST /{PAGE_ID}/photo_stories` with `photo_id={PHOTO_ID}` → `{ success: true }`
-- **Warning signs:** No Story on Page; square/portrait image in Feed; missing `photo_stories` from topology.
-- **Phase:** Phase 13 (FB Story publish).
-
-#### Pitfall 4: `photo_stories` not idempotent — orphaned photos on retry
-
-- **What goes wrong:** Step 1 success + step 2 fail → retry step 1 → orphaned unpublished photo. Step 2 retry after success → duplicate Story.
-- **How to avoid:** Step 1 `retryOnFail=true` (orphans invisible, deletable via `DELETE /{PHOTO_ID}`). Step 2 `retryOnFail=false`.
-- **Warning signs:** Two Stories on Page within 5min; multiple `GET /{PAGE_ID}/photos?published=false` entries.
-- **Phase:** Phase 13.
-
-#### Pitfall 5: Story scheduling >22h — Story effectively invisible
-
-- **What goes wrong:** Wizard 24h cap for Stories → schedule at 23h = only 1h visibility. No error.
-- **How to avoid:** For `format=story`, apply **22h cap** in `parsePublishTime` + `🕐 Compute wait_seconds`. Wizard warning:
-  > Las Historias expiran 24h después de publicarse. Para ≥2h de visibilidad, máximo 22h de anticipación.
-- **Phase:** Phase 10 (Wizard) + Phase 12 (Code node guard).
-
-#### Pitfall 6: Aspect ratio rejection — 9:16 must be exact
-
-- **What goes wrong:** Flux `portrait_4_3` = 896×1152 (ratio 0.778 ≠ 0.5625) → rejection. Nano Banana `9:16` observed 1080×1918 (ratio 0.5636, Δ=0.0011) — borderline.
-- **How to avoid:** **Default Stories to Ideogram `ASPECT_9_16` only in v1.2.** Ideogram consistently produces 1080×1920 exact. Don't offer Flux or Nano Banana for Stories until empirically verified.
-- **Warning signs:** `(#100) Image ratio not supported`; `(#2207001) Image size not supported`; `status_code=ERROR`.
-- **Phase:** Phase 11 (image gen for Stories).
-
-#### Pitfall 7: Hashtag comment node runs on Story media_id
-
-- **What goes wrong:** `💬 IG: Post Hashtag Comment` calls `POST /{STORY_MEDIA_ID}/comments` → `(#200) Does not support Comments`. Swallowed by `continueErrorOutput` but wastes quota.
-- **How to avoid:** Stories publish chain MUST be a separate terminal branch. Never share hashtag comment nodes with Story path.
-- **Phase:** Phase 12 (topology design).
-
-#### Pitfall 8: WA success notification with expiring Story permalink
-
-- **What goes wrong:** `instagram.com/stories/{username}/{media_id}/` works during Story lifetime, 404s after 24h. FB `photo_stories` returns only `{success:true}` — no URL.
-- **How to avoid:** Story-specific notification:
-  ```
-  ✅ Historia publicada en Instagram y Facebook.
-  ⏰ Expira: {publish_timestamp + 24h in CET}
-  📸 Instagram: {permalink} (válido 24h)
-  📘 Facebook: Historia publicada (sin URL permanente)
-  📝 Tema: {topic}
-  ```
-- **Phase:** Phase 13 (Story notification).
+**Phase to address:** Comparison/technical-analysis phase (quality + cost measured together, per format).
 
 ---
 
-### MODERATE Pitfalls
+### Pitfall 2: Gamma's polling-only async model breaks against n8n 2.14.2's Wait-node floor
 
-#### Pitfall 9: `format=story` falls through to FEED path
+**What goes wrong:**
+Implementing Gamma's recommended "poll every 5s" pattern literally in n8n either creates Wait nodes under the 65s persistence floor (execution state not saved — a mid-poll Azure Container App restart silently drops the whole content-generation run) or spins in a tight Code-node loop without a Wait node at all (blocks the workflow execution slot, burns n8n execution time, and can hit Gamma's rate-limit headers `x-ratelimit-remaining*`).
 
-- **What goes wrong:** `🔀 ¿Formato Carrusel?` FALSE output routes to single-post FEED. Story publishes as square FEED post.
-- **How to avoid:** Add `🔀 ¿Formato Story?` IF v1 on FALSE output. Check `$json.format == 'story'`.
-- **Phase:** Phase 12 (routing).
+**Why it happens:**
+Vendor docs are written assuming a normal server-side loop (Node script, Lambda, etc.), not a workflow engine with its own persistence quirks. It's easy to copy the vendor's polling cadence without checking it against this project's already-documented n8n constraint.
 
-#### Pitfall 10: Azure Blob URL with SAS params rejected
+**How to avoid:**
+Use the same bounded Wait→IF→loop-back pattern already proven for Meta container polling in this project (`⏳ IG: Wait 30s Carousel` style nodes), but set Wait amount to a value ≥65s, and cap total loop iterations (e.g., max 6 iterations ≈ 6-8 min) with an explicit timeout branch that fails cleanly to the existing WA error-notification path rather than looping forever.
 
-- **What goes wrong:** If `blob_urls[0].url` contains SAS query params (`?sv=&sig=...`), Meta Story container fetcher may fail → `FAILED_DOWNLOAD_IMAGE`. Story containers more sensitive than FEED.
-- **How to avoid:** Assertion guard: `if (url.includes('?')) throw new Error('Story URL has query params')`.
-- **Phase:** Phase 12 (container creation assertion).
+**Warning signs:**
+Executions vanish from n8n's execution list with no error; Gamma generations that take >90s never complete within the workflow; repeated `x-ratelimit-remaining` near zero in Gamma responses.
 
-#### Pitfall 11: YCloud WA preview renders 9:16 as padded/cropped
+**Phase to address:** Engine-integration phase (whichever phase wires the winning engine into the n8n image router) — needs its own polling-loop design task, reusable pattern documented for future async-render integrations.
 
-- **What goes wrong:** WhatsApp renders in ~4:3 or 1:1 container. 9:16 image shows with black bars or extreme crop. Preview doesn't represent Instagram full-screen view.
-- **How to avoid:** WA disclaimer: *"(Imagen vertical 9:16 — en Instagram se verá a pantalla completa)"*.
-- **Phase:** Phase 11 (WA preview for Stories).
+---
 
-#### Pitfall 12: IG Story permalink dead after 24h in Sheets `IG_URL`
+### Pitfall 3: Remotion automation-license misclassification
 
-- **What goes wrong:** `instagram.com/stories/...` written to Sheets `IG_URL`. Dead after 24h. `Expires_At` column not populated.
-- **How to avoid:** Populate `Expires_At = new Date(Date.now() + 86400000).toISOString()`. Consider renaming column to `IG_Story_URL_24h`. Skip `GET permalink` to save one API call.
-- **Phase:** Phase 13 (Sheets log).
+**What goes wrong:**
+Assuming Propulsar's 2-person headcount automatically qualifies for Remotion's free/Creators tier, then shipping an n8n-triggered render service that is, by Remotion's own license FAQ, definitionally "Remotion for Automators" ($0.01/render, $100/month minimum spend) — an unbudgeted recurring cost discovered only when Remotion's team reaches out or the terms are audited later.
 
-#### Pitfall 13: Code node guard doesn't know format
+**Why it happens:**
+The "4+ personnel" Company License threshold is the most visible/searched licensing fact about Remotion; the separate Automators tier (triggered by *how* the code is invoked — programmatically vs. interactively — not by company size) is a less-publicized, easy-to-miss clause.
 
-- **What goes wrong:** `🕐 Compute wait_seconds` reads `publish_at` only, not `format`. Story scheduled at 23h passes guard (under 24h cap) → Wait node → Story has 1h visibility.
-- **How to avoid:** Guard reads `const format = data.format; if (format === 'story' && diffMs > 79200000) { /* error or immediate */ }`. Requires `format` to survive Supabase session.
-- **Phase:** Phase 12 (Code node guard).
+**How to avoid:**
+If Remotion is a comparison candidate, budget the Automators tier ($100/month minimum, i.e., ~10,000 renders/month included at $0.01 each) into the cost comparison from the start, not as a surprise after a "free" pilot. Confirm current terms directly against `remotion.dev/docs/license/faq` and `/docs/license/terms` before committing (license terms can change between versions — this research reflects the terms as published at research time).
 
-#### Pitfall 14: Supabase session `format=story` not stored
+**Warning signs:**
+Cost comparison spreadsheet treats Remotion as "$0" because "we're under the company-size threshold"; no line item for render volume × $0.01 or the $100/month floor.
 
-- **What goes wrong:** If Supabase session save doesn't include `format: 'story'`, retrieved session has `format=null` → `🔀 ¿Formato Story?` FALSE → FEED path.
-- **How to avoid:** Supabase session save for Stories includes `format: 'story'` in JSON body (analogous to carousel). Verify post-save in E2E.
-- **Phase:** Phase 11 (Supabase session save for Stories).
+**Phase to address:** Comparison/technical-analysis phase (licensing cost must be part of the decision matrix, not discovered post-decision).
+
+---
+
+### Pitfall 4: Remotion hosting — no fitting slot in existing infra decision tree
+
+**What goes wrong:**
+Remotion rendering (headless Chromium via `@remotion/renderer`) gets bolted onto whichever compute happens to be "available" (e.g., squeezed onto the Hostinger VPS next to `rehost-service`, or an Azure Function) without going through this project's own Function-vs-Container-App checklist, leading to OOM crashes, multi-second-to-minute cold starts, or resource contention with the already-load-bearing `rehost-service`.
+
+**Why it happens:**
+Remotion's own docs are Lambda/Vercel/Cloud-Run-centric (all non-Azure), so there's no ready-made "how to deploy this on Azure" recipe to follow, and the path of least resistance is reusing whatever server is already SSH-accessible (the Hostinger VPS).
+
+**How to avoid:**
+If Remotion wins the comparison, run it through the standard decision table explicitly: constant-ish trigger volume + heavy dependency (headless browser) + latency not critical (async render) → **Azure Container App**, sized with enough memory for Chromium (historically ≥2-4GB recommended by Remotion for headless rendering), deployed as its own resource (`propulsar-<cliente>-ca-remotion-render` naming convention), NOT layered onto the existing Hostinger VPS which is a thin passthrough service with its own mount-durability fragility already documented (Docker Swarm mount re-attach runbook).
+
+**Warning signs:**
+Render service sharing a VPS process pool with `rehost-service`; render times inconsistent or degrading as carousel volume grows; VPS memory alarms.
+
+**Phase to address:** Engine-integration phase (if Remotion wins) — infra provisioning as its own task, not an afterthought bolted onto image-router wiring.
+
+---
+
+### Pitfall 5: PNG alpha-channel flattening produces unpredictable fill color on Meta's side
+
+**What goes wrong:**
+A design-engine export (Gamma social PNG, or a Creatomate/Remotion composition with a transparent or semi-transparent layer) reaches Meta's media container endpoint as RGBA PNG. Meta's JPEG conversion strips alpha and fills it with an implementation-defined color that is not guaranteed to be brand `#1a1a2e` or even a fixed color at all. On the dark brand background this can look "fine enough" and go unnoticed, then surface as a jarring black/white patch on a template variant with lighter accent areas.
+
+**Why it happens:**
+Diffusion image models (Ideogram, Flux, Nano Banana) generate flat, fully-opaque raster output by construction — there was never an alpha channel to worry about in this pipeline before. Design/template engines routinely composite semi-transparent layers (drop shadows, gradient overlays, cutout badges) that DO carry real alpha data, and it's invisible in a design-tool preview (which renders alpha correctly) but not in the final Meta-side JPEG.
+
+**How to avoid:**
+Force fully-opaque, flattened output at export time (most template engines have a "flatten"/"no alpha"/output as JPEG-not-PNG option — prefer requesting JPEG output directly from the engine when available, e.g., Creatomate's `output_format: "jpg"`, instead of relying on Meta's undocumented conversion behavior). For any engine that only exports PNG (Gamma), add an explicit flatten-to-opaque step (composite onto the brand's dark background color) before handing the URL to `rehost-service`.
+
+**Warning signs:**
+Any card/template with a lighter background color or a badge/shadow element; visual QA only checked on the dark-background templates and never on lighter/alternate brand accent templates.
+
+**Phase to address:** Engine-integration phase — add an explicit "flatten/opaque export" verification step to the image-generation node(s), independent of which engine wins.
+
+---
+
+### Pitfall 6: Text auto-fit still overflows or unreadably shrinks on worst-case Spanish headlines
+
+**What goes wrong:**
+Auto-fit modes (Creatomate's min/max font size auto-sizing, Gamma's `textOptions.amount`, Remotion's manual measure-and-shrink code) are validated against short demo copy during the comparison phase, then break in production on GPT-4o-generated Spanish headlines that run long — Spanish text is routinely 15-25% longer than equivalent English for the same meaning, and headlines with `¿`/`¡` punctuation and accented capitals (Á, É, Í, Ó, Ú, Ñ) add extra glyph width most demo fonts weren't stress-tested with. Auto-fit either shrinks below the minimum readable font size (defeating the point of a "premium typography" engine) or clips/truncates.
+
+**Why it happens:**
+Comparison testing naturally gravitates toward cherry-picked short, clean example headlines ("Automatiza tu negocio hoy") rather than the actual distribution of GPT-4o output, which can include longer conversational hooks, question headlines, or stat callouts with extra digits/symbols.
+
+**How to avoid:**
+Pull 10-20 *real* headline/caption strings already generated by this pipeline's GPT-4o node in past executions (n8n execution history or Sheets log) — including the longest ones — and run those specific strings through each engine's auto-fit during the comparison, not synthetic short copy. Explicitly test at least one deliberately long (40+ character) headline with `¿`/`¡` and full accents per format (single/carousel/story).
+
+**Warning signs:**
+Comparison phase report shows only 1-2 example outputs per engine, all short; no minimum-font-size floor documented per template; no test string containing `ñ`, `¿`, or a stacked accented capital.
+
+**Phase to address:** Comparison/technical-analysis phase — must be an explicit test-matrix requirement, not left implicit.
+
+---
+
+### Pitfall 7: Bundled/display fonts missing Spanish-required glyphs
+
+**What goes wrong:**
+A visually striking bold display font is picked for the "premium typography" look, but the font's character set doesn't include `ñ`, acute-accented vowels, or `¿¡` — rendering as a missing-glyph box (tofu), a fallback system font mid-headline, or (worse) the accent silently dropped ("años" → "aos").
+
+**Why it happens:**
+Many premium/display fonts marketed for English headline design ship with only basic Latin (no Latin Extended-A) glyph coverage — this is invisible until Spanish-specific characters are actually rendered, and template galleries rarely flag glyph coverage.
+
+**How to avoid:**
+Before adopting any font (whether via Remotion's bundled Google Fonts package, Creatomate's font library, or Gamma's theme fonts), explicitly render a test string containing all of `ñ Ñ á é í ó ú Á É Í Ó Ú ¿ ¡` and visually confirm every glyph renders — don't rely on the font's marketing preview, which is usually English-only.
+
+**Warning signs:**
+Font preview thumbnails in the engine's UI show only English sample text; comparison phase screenshots never contain `ñ` or accented capitals.
+
+**Phase to address:** Comparison/technical-analysis phase (font selection gate) — carried into engine-integration phase as a locked font choice.
+
+---
+
+### Pitfall 8: Cherry-picked single-output comparison biases the engine decision
+
+**What goes wrong:**
+The comparison concludes "Engine X wins" based on one hand-picked best-case render per engine (often the vendor's own showcase-style prompt), when in production the pipeline needs consistent quality across dozens of auto-generated topics/angles without human curation at generation time (the human only approves/rejects via WhatsApp SI/NO — they don't retry-and-pick).
+
+**Why it happens:**
+It's natural (and faster) to run each engine once, eyeball the nicest result, and move on — especially under time pressure to "just pick one." Diffusion models like Ideogram already have an implicit retry-until-good workflow in most people's mental model; template engines are more deterministic per-input but still vary with real GPT-4o-generated copy of varying length/content.
+
+**How to avoid:**
+Run a fixed batch (minimum 5-8 real, already-logged briefs pulled from Sheets/execution history, covering all 3 content types — educational/authority/case_study — and worst-case-length copy from Pitfall 6) through every engine and Ideogram baseline. Score on a consistent rubric (text legibility, brand color accuracy, layout consistency, Spanish glyph correctness) across the whole batch, not a single favorite.
+
+**Warning signs:**
+Comparison report contains fewer than 5 samples per engine; no explicit "worst case" sample; decision rationale cites one screenshot per engine.
+
+**Phase to address:** Comparison/technical-analysis phase — batch size and rubric should be a stated success criterion for that phase's plan.
+
+---
+
+### Pitfall 9: Re-hosting a design-engine's own CDN URL instead of routing through `rehost-service`
+
+**What goes wrong:**
+Gamma's `exportUrl`, Creatomate's render output URL, or a Remotion render-service's own storage URL gets wired directly into the Meta media container `image_url` field (it "just works" in initial testing because Meta briefly caches or the test happens fast), then fails intermittently or entirely once Meta's fetcher hits rate limits, auth requirements, or an outright host block on that third-party CDN — mirroring exactly what already happened with Azure Blob and Azure Front Door in this project.
+
+**Why it happens:**
+Every one of these engines returns a working, publicly-fetchable URL as part of its API response, so it's tempting to treat that as "done" and skip an extra re-hosting hop that looks redundant.
+
+**How to avoid:**
+Treat `rehost-service` as the **only** Meta-facing image origin, full stop — every new engine's output must be downloaded server-side (n8n or the render service itself) and re-uploaded to `rehost-service` before any Meta API call touches it, exactly like the existing Ideogram/Flux/Nano Banana flow. Do not assume a new vendor's CDN is Meta-compatible just because it responds 200 to a browser — this project has direct proof (`Phase 12.1`, rolled back) that "looks publicly accessible" is not sufficient evidence.
+
+**Warning signs:**
+Any new HTTP Request node whose URL points at `gamma.app`, `creatomate.com`, or a Remotion render-service's storage bucket being passed straight into a Meta `media` container creation call.
+
+**Phase to address:** Engine-integration phase — this is a hard architectural rule, should be a named checklist item in that phase's plan.
+
+---
+
+### Pitfall 10: Creatomate/Gamma webhook or community-node install assumptions on a locked-down Azure Container Apps n8n
+
+**What goes wrong:**
+Assuming Creatomate's native webhook or a community n8n node (e.g., the official `n8n-nodes-gamma` package) can be toggled on from the n8n UI, when this project's n8n instance runs as a custom container image on Azure Container Apps — community package installation typically requires `N8N_COMMUNITY_PACKAGES_ENABLED=true` baked into the image/environment and a redeploy, not a runtime UI action, and self-hosted webhook receivers need a publicly reachable, already-known n8n webhook URL (same domain as the existing Wizard webhook trigger) plus signature/secret verification so a spoofed "render complete" callback can't fake an approval-ready state.
+
+**Why it happens:**
+Community nodes and webhooks "just work" in local/desktop n8n tutorials; the gap between that and a hardened, custom-deployed Azure Container App is easy to underestimate, especially since this project already has hard-won operational knowledge about n8n-on-Azure quirks (patch-based deploys, credential re-linking) that a new integration must inherit.
+
+**How to avoid:**
+Default to plain HTTP Request nodes calling each vendor's REST API directly (proven pattern already used for FAL.AI/Ideogram) rather than installing vendor community nodes, unless there's a strong reason to add the deployment complexity. If a webhook-driven design (Creatomate) is chosen, add basic signature/secret validation on the receiving n8n webhook and confirm the callback URL matches the project's stable public n8n hostname before wiring it to any auto-continue logic.
+
+**Warning signs:**
+A plan step says "install n8n-nodes-gamma" without a corresponding Azure Container App redeploy step; a webhook node accepts any inbound POST as a valid "render succeeded" signal with no shared-secret check.
+
+**Phase to address:** Engine-integration phase.
 
 ---
 
 ## Technical Debt Patterns
 
-| Shortcut | Benefit | Cost | Acceptable? |
-|----------|---------|------|-------------|
-| Fixed 45s wait (no polling) | No extra nodes | Fails under heavy Meta load | Yes — polling deferred to future |
-| Skip FB Story URL in WA | Simpler message | No FB URL in logs/WA | Yes — API design limitation |
-| Ideogram-only for Stories | Avoids AR errors | No model diversity | Yes — verify Flux/NanoBanana dims before enabling |
-| Separate Stories terminal branch | Prevents hashtag bug; simpler | More nodes; duplicated common logic | Correct — not a shortcut |
-| Sessions never marked consumed | — | Accumulated leaks | Existing debt; no new risk |
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|-----------------|------------------|
+| Skip a dedicated flatten/opaque-export step, trust Meta's PNG conversion | Fewer nodes to build | Silent black/white artifacts on lighter templates, hard to notice until a client/Susana flags it | Never for production; okay only during comparison-phase manual review with human eyes on every sample |
+| Poll Gamma with a single long Wait instead of a proper bounded loop | Simple to build fast | Either wastes minutes of latency per post (worst-case wait) or times out on slow generations with no graceful failure | Acceptable for the comparison/prototype phase only, not for the shipped engine-integration phase |
+| Reuse `rehost-service` code path unchanged for the new engine's output | Zero new infra | If the new engine's file sizes are much larger (e.g., multi-MB PNG carousels), untested against `rehost-service`'s current storage/mount limits | Acceptable short-term if file sizes are verified comparable to existing Ideogram/Flux outputs first |
+| Pick one "safe" font without full Spanish glyph testing during comparison, fix later | Faster comparison phase | Re-render/re-test cycle after production headlines reveal missing glyphs | Never — glyph testing is cheap (one test string), do it during comparison |
+| Treat the comparison-phase render service as ephemeral (delete after decision) | No idle Azure/Remotion cost | Have to rebuild render infra decisions from scratch when going from prototype to shipped integration | Acceptable only for Remotion/Creatomate spike testing, not once an engine is chosen to ship |
 
 ---
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| IG Story API host | `graph.facebook.com/{IG_ID}/media?media_type=STORIES` | `graph.instagram.com/v22.0/{IG_ID}/media?media_type=STORIES` |
-| FB Page Story | Copy `/{PAGE_ID}/photos` node | 2-step: `/photos?published=false` → `/photo_stories?photo_id=X` |
-| Ideogram for 9:16 | Reuse existing `ASPECT_1_1` | Change to `ASPECT_9_16` |
-| Flux for 9:16 | Use `portrait_4_3` (wrong ratio) | DO NOT use Flux for Stories in v1.2 |
-| n8n routing | Extend `¿Formato Carrusel?` to 3 outputs | Add new `¿Formato Story?` IF v1 on FALSE output |
-| WA preview | Send 9:16 without disclaimer | Add vertical format disclaimer |
+|-------------|-----------------|-------------------|
+| Gamma Generate API | Assume real-time/sync response like Ideogram | Async generation (`POST /generations` → poll `GET /generations/{id}`); typically 1-3 min; build bounded Wait/IF loop respecting n8n's 65s floor |
+| Gamma social export | Assume free-form pixel dimensions | Only `1x1`, `4x5`, `9x16` accepted via `cardOptions.dimensions`; invalid values silently fall back to format default with a warning in the response — always check the response for that warning |
+| Gamma pricing | Assume flat $-per-image like Ideogram | Credit-based per-generation billing; measure actual `credits` field per format before comparing cost |
+| Creatomate render | Poll aggressively (tight loop) | Use Creatomate's native webhook, POST to a signed/secret-validated n8n webhook endpoint instead of polling |
+| Creatomate text elements | Assume default text box already auto-fits | Auto-fit is opt-in per element (must explicitly set sizing mode + min/max font size in the template) |
+| Remotion | Assume Lambda is usable | This project is Azure-only; Remotion Lambda is AWS-specific — self-host on Azure Container App or reconsider |
+| Remotion licensing | Assume 2-person company = free tier | Programmatic/automated calls trigger the separate "Automators" license ($0.01/render, $100/mo min) regardless of headcount |
+| Meta media container (any engine) | Point `image_url` at the vendor's own CDN/export URL | Always re-host through the existing `rehost-service` on Hostinger VPS first — proven Meta-accepted origin |
+| Meta media container, PNG output | Assume PNG "just works" because Flux PNG has shipped fine | Verify per-engine: check for alpha-channel/transparency specifically, not just file extension |
+| n8n community nodes on Azure Container Apps | Install via n8n UI at runtime | Requires `N8N_COMMUNITY_PACKAGES_ENABLED` + image rebuild/redeploy; default to plain HTTP Request nodes instead where feasible |
+
+---
+
+## Performance Traps
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|-----------------|
+| Gamma/Creatomate render latency added to the WhatsApp-preview path | User waits noticeably longer for SI/NO preview than with Ideogram (near-instant) | Measure end-to-end latency per engine during comparison; consider whether preview should show a "generating..." interim message | Breaks UX once render time exceeds ~30-60s per image, common for Gamma multi-card decks |
+| Remotion cold start on Azure Container App scaled to zero | First render of the day/session takes many seconds longer (headless Chromium boot) | Set `minReplicas=1` on the render Container App if render frequency justifies always-on cost, or accept and communicate the cold-start latency | Breaks noticeably once posting cadence is sparse (few posts/day) and Container App scales to zero between runs |
+| Carousel = N sequential engine calls (same pattern as current Ideogram sequential loop) | N-slide carousel render time scales linearly, same risk profile as existing 45s-wait carousel issue that caused exec 117 failure | Reuse the already-proven sequential-with-adequate-wait pattern; don't assume a new engine is faster without measuring | Breaks at carousels with 6+ slides if per-slide render time is materially higher than Ideogram's |
+| Creatomate 30-day render auto-delete | Render URL still referenced somewhere (retry logic, audit log) after 30 days, now 404s | Re-host through `rehost-service` immediately (already required by Pitfall 9) so nothing downstream depends on Creatomate's own render URL past initial fetch | Breaks only if something incorrectly stores the raw Creatomate URL long-term instead of the rehosted one |
+
+---
+
+## Security Mistakes
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Hardcoding Gamma/Creatomate/Remotion API keys in n8n Code nodes or workflow JSON instead of Key Vault-backed credentials | Key leakage on workflow export/share, inconsistent with this project's existing Azure Key Vault discipline | Store new vendor API keys in `propulsar-prod-kv`, reference via n8n credential store like existing AOAI/FAL/Ideogram keys |
+| Accepting any inbound POST to a new Creatomate webhook endpoint as a valid "render complete" signal | A spoofed callback could push a low-quality or attacker-controlled image URL into the approval/publish chain | Validate Creatomate's webhook signature/secret before trusting the payload; never auto-advance to WhatsApp preview without validation |
+| Passing a design-engine's render URL directly to WhatsApp preview or Meta publish without re-fetching through `rehost-service` | Vendor URL could change ownership/expire/be replaced out-of-band between preview approval and publish (time-of-check to time-of-use gap) | Re-host once, immediately after render completes, before any downstream step references the image |
+
+---
+
+## UX Pitfalls
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-------------------|
+| WhatsApp preview shows a lower-fidelity or differently-cropped version of the image than what actually publishes | Susana/Felix approve based on a preview that doesn't match the live post, eroding trust in the SI/NO gate | Preview must be the exact rehosted image bytes that will be published, not a vendor preview/thumbnail URL |
+| Long render times (Gamma/Creatomate multi-card) with no interim feedback in WhatsApp | User assumes the Wizard hung or failed, may re-trigger a duplicate run | Consider an interim "generando diseño premium, esto puede tardar hasta X min" WA message before the final preview, especially if p95 render time exceeds ~30s |
+| Inconsistent visual quality across formats (e.g., story looks premium, carousel still falls back to Ideogram) without clear labeling | Confusing brand experience if coexistence (not full replacement) is the outcome | If Ideogram is kept for some formats and a new engine for others, make that split an explicit, documented decision — not an accidental gap |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] IG Story container node URL starts with `graph.instagram.com` (not `graph.facebook.com`)
-- [ ] IG Story `media_publish` node: `retryOnFail=false`
-- [ ] FB Story step 1 body: `"published": false`
-- [ ] FB Story step 2 URL ends in `/photo_stories` (not `/photos`)
-- [ ] FB Story step 2: `retryOnFail=false`
-- [ ] Story Wait node amount = 45 (not 30)
-- [ ] Hashtag comment nodes NOT in Stories execution path
-- [ ] `🔀 ¿Formato Story?` wired on FALSE output of `🔀 ¿Formato Carrusel?`
-- [ ] Wizard scheduling cap = 22h for Stories, not 24h
-- [ ] Ideogram body: `"aspect_ratio": "ASPECT_9_16"`
-- [ ] Supabase session save: `"format": "story"` in JSON body
-- [ ] Code node guard reads `format` and applies 22h cap
-- [ ] WA success: no Story permalink URL; includes expiry timestamp
-- [ ] Sheets log `Expires_At` populated for Stories rows
+- [ ] **Gamma/Creatomate image router node:** Often missing the explicit opaque/flatten export step — verify no alpha channel reaches Meta by inspecting the actual re-hosted file's color/alpha info, not just eyeballing a preview
+- [ ] **Async polling loop (Gamma):** Often missing an iteration cap/timeout branch — verify a forced-failure test (simulate a stuck generation) routes to the existing WA error-notification path instead of looping indefinitely
+- [ ] **Font selection:** Often missing full Spanish glyph verification — verify by rendering `ñ Ñ á é í ó ú ¿ ¡` through the actual chosen font, not the vendor's English preview
+- [ ] **Cost comparison:** Often missing real per-format credit/render cost — verify by reading the actual `credits`/render-cost field from a live API response per format, not the vendor's marketing pricing page
+- [ ] **Re-hosting:** Often missing for the new engine specifically — verify every new-engine image URL that reaches WhatsApp or Meta traces back through `rehost-service`, confirmed by checking the hostname in the final `image_url`
+- [ ] **Remotion licensing (if chosen):** Often missing the Automators-tier budget line — verify the cost comparison explicitly includes $0.01/render + $100/month minimum, not $0
+- [ ] **Worst-case text testing:** Often missing entirely — verify at least one test render per engine used a real long GPT-4o headline with accents/¿¡, not a short demo string
+
+---
+
+## Recovery Strategies
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|-----------------|------------------|
+| PNG alpha-channel artifact discovered live on a published post | MEDIUM | Post is already live (Meta doesn't allow media edits) — delete/redo for feed posts is possible via Graph API; for Stories it is **not** deletable via API (existing project constraint) and must be manually deleted in-app or left to expire; add the flatten step retroactively before next run |
+| Gamma polling loop hangs/exceeds n8n execution timeout in production | LOW-MEDIUM | Add iteration cap + explicit timeout branch (same fix as prevention); no data loss if session state already persists to Azure PostgreSQL before the render call |
+| Remotion Automators bill arrives higher than expected mid-comparison | LOW | Pause/cancel further Remotion test renders; the $100/month minimum is a plan-level commitment — confirm billing cycle terms before running a large comparison batch, not after |
+| New engine's CDN URL used directly in a Meta call and rejected (repeat of the Azure Blob/AFD incident) | LOW | Same fix already proven in this project: swap in `rehost-service` re-hosting step; no architecture change needed, just insert the existing sub-workflow pattern |
+| Comparison decision made on cherry-picked samples, quality issues surface after integration | MEDIUM-HIGH | Re-run the batch/worst-case test matrix retroactively before doing a real Meta live-fire test; may require re-opening the comparison phase rather than patching the integration phase |
 
 ---
 
 ## Pitfall-to-Phase Mapping
 
-| Pitfall | Phase | Verification |
-|---------|-------|--------------|
-| 1. Wrong IG API host | 12 | Node URL starts with `graph.instagram.com` |
-| 2. 30s wait insufficient | 12 | Wait node amount=45 |
-| 3. FB Story wrong endpoint | 13 | Step 2 URL ends `/photo_stories` |
-| 4. `photo_stories` not idempotent | 13 | `retryOnFail=false` on step 2 |
-| 5. Scheduling >22h for Stories | 10 + 12 | Wizard rejects >22h; Code node checks `format=story` |
-| 6. Aspect ratio rejection | 11 | `aspect_ratio=ASPECT_9_16` in Ideogram body |
-| 7. Hashtag comment on Stories | 12 | Comment nodes not in Stories path |
-| 8. Expiring permalink in WA | 13 | WA message has expiry, no `instagram.com/stories/...` |
-| 9. Format falls through to FEED | 12 | `¿Formato Story?` wired |
-| 10. SAS params in blob URL | 12 | Assertion rejects `?` in URL |
-| 11. WA preview misleading | 11 | Disclaimer in WA message |
-| 12. Dead permalink in Sheets | 13 | `Expires_At` column populated |
-| 13. Code node guard no format awareness | 12 | Guard reads `data.format` |
-| 14. Supabase session missing format | 11 | `format: 'story'` in session save body |
+| Pitfall | Prevention Phase | Verification |
+|---------|-------------------|---------------|
+| 1. Gamma per-generation cost surprise | Comparison/technical-analysis phase | Per-format cost table built from real `credits` values, not vendor marketing pages |
+| 2. Polling vs n8n 65s Wait floor | Engine-integration phase | Bounded Wait/IF loop with Wait amount ≥65s and an iteration cap present in the deployed workflow |
+| 3. Remotion Automators license misclassification | Comparison/technical-analysis phase | Cost comparison spreadsheet includes a non-zero Remotion line item if Remotion is a candidate |
+| 4. Remotion hosting doesn't fit existing infra | Engine-integration phase (only if Remotion wins) | New render service provisioned as its own named Azure Container App per project decision table, not layered onto Hostinger VPS |
+| 5. PNG alpha-channel flattening | Engine-integration phase | Rehosted file inspected for alpha channel / forced-opaque export confirmed for every engine in use |
+| 6. Text auto-fit worst-case failure | Comparison/technical-analysis phase | Test matrix includes ≥1 long real headline with accents/¿¡ per format per engine |
+| 7. Missing Spanish glyphs in chosen font | Comparison/technical-analysis phase | Glyph test string rendered and visually confirmed before font is locked in |
+| 8. Cherry-picked comparison bias | Comparison/technical-analysis phase | Batch of ≥5 real briefs per engine, consistent rubric, documented in the comparison report |
+| 9. Vendor CDN URL bypassing `rehost-service` | Engine-integration phase | Final `image_url` sent to Meta traced to the `rehost-service` hostname, never the vendor's own domain |
+| 10. Community-node/webhook assumptions on locked-down Azure n8n | Engine-integration phase | Plan step confirms deployment method (HTTP Request node vs community node + redeploy) before build starts; webhook receiver (if used) validates a shared secret |
 
 ---
 
 ## Sources
 
-- Meta official content publishing guide (developers.facebook.com/docs/instagram-api/guides/content-publishing, HTTP 200, 2026-04-18): *"Reels and stories are not supported"* — HIGH
-- v1.1 n8n/workflow.json full read (73 nodes) — HIGH
-- v1.1 PROJECT.md decisions — HIGH
-- FB Page Story 2-step flow: inferred from v1.1 FB carousel child container pattern — MEDIUM (official `photo_stories` docs 404 during research)
-- Ideogram `ASPECT_9_16`: from existing carousel workflow + Ideogram v3 docs — MEDIUM
-- Flux AR limitations: math inference (896×1152=0.778 ≠ 0.5625) — MEDIUM
+- Gamma Developer Docs — Getting Started, Generate API parameters, async/polling guide, access & pricing (developers.gamma.app) — HIGH (official docs, verified live)
+- Gamma social format dimensions (`1x1`/`4x5`/`9x16`) and n8n integration example — MEDIUM (WebSearch-aggregated from Gamma docs + community n8n node references; not independently cross-checked against a raw API response in this session)
+- Gamma pricing/credits figures (Pro $25/mo, 4,000 credits, ~40 credits/generation) — MEDIUM (third-party pricing-tracker sites, not Gamma's own pricing page directly fetched; treat as directionally correct, verify exact figures before finalizing budget)
+- Creatomate API docs — render lifecycle, webhook setup, `output_format`, text auto-fit sizing modes (creatomate.com/docs) — HIGH (official docs)
+- Remotion License Terms & FAQ (remotion.dev/docs/license/terms, /docs/license/faq) and Remotion Pro pricing page (remotion.pro) — HIGH (official docs), with the "n8n counts as Automators" conclusion at MEDIUM confidence (reasonable direct reading of the FAQ's own definition, but not a case explicitly named "n8n" in the source text)
+- Remotion Lambda cost/cold-start docs (remotion.dev/docs/lambda/cost-example, /docs/compare-ssr) — HIGH (official docs)
+- Meta Instagram Graph API media reference (developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media) — HIGH (official docs, directly fetched)
+- PNG alpha-channel-to-JPEG flattening behavior — MEDIUM (general image-processing knowledge, not Meta-specific documentation; Meta's own exact fill-color behavior is undocumented and should be verified empirically)
+- This project's own `.planning/research/PITFALLS.md` (v1.2), `PROJECT.md`, and `rehost-service/server.js` — HIGH (first-party, direct repo inspection) — source for all n8n 2.14.2 constraints (IF v1 only, no `require()`, 65s Wait floor), the Azure Blob/Front Door Meta-rejection precedent, and confirmation that `rehost-service` performs no image format conversion (pure passthrough)
 
 ---
-
-## Open Conflicts for Synthesizer
-
-1. **IG Stories host:** Stack/Features say `graph.facebook.com` (same as FEED). Pitfalls says `graph.instagram.com` per live Meta docs 2026-04-18. **Pitfalls is likely correct** — requires Phase 12 live test to confirm before production.
-
-2. **FB Stories flow:** Stack/Features say single-step `POST /photo_stories?url=X`. Pitfalls says 2-step `POST /photos?published=false` → `POST /photo_stories?photo_id=X`. Official docs 404 for both agents. **Requires live test in Phase 13 planning.**
+*Pitfalls research for: Propulsar Content Engine v1.3 "Diseño Premium" — adding a template/design-engine rendering path to an existing automated social pipeline*
+*Researched: 2026-08-01*
