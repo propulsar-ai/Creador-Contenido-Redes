@@ -42,8 +42,8 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 - [x] **Phase 12: Instagram Story Publishing** - Create IG Story container, publish, retrieve permalink/expiry, wire error handler; SCHED-02 guard in same phase (completed 2026-04-23; Options D/B/E band-aid applied — Phase 12.1 CDN Layer required)
 - [x] **Phase 12.1 (NEW, URGENT): CDN Layer** - Azure Front Door Standard fronting Azure Blob restores Phase 4 re-host invariant broken by Meta 2026-04-17 domain-wide block. **FAILED 2026-04-23** — Meta rejects all AFD hostnames (default + custom domain), rolled back. Superseded by Phase 12.2.
 - [x] **Phase 12.2 (NEW, URGENT): Hostinger VPS Re-host Layer** - Self-hosted upload/serve/delete microservice on the existing Hostinger VPS (EasyPanel wildcard domain, proven accepted by Meta via 2026-07-31 smoke test) replaces Azure Blob as the re-host backend. Same Options D revert pattern as 12.1, new backend. **COMPLETE 2026-07-31** — live E2E verification: real sub-workflow success + injected-failure execs, 5/5 Meta container-creation calls PASS.
-- [ ] **Phase 12.3 (NEW, URGENT): Supabase → Azure Postgres Migration** - Supabase project backing `content_sessions` permanently deleted (discovered 2026-08-01, full pipeline outage). Migrate session persistence to Azure PostgreSQL + rewire all Supabase n8n nodes. Blocks Phase 13 resumption.
-- [ ] **Phase 13: Facebook Story + Log + Notifications** - Live-fire re-confirm the already-built FB Story chain (Phase 12) against the Hostinger backend, extend Sheets log schema (Formato/Expires_At), send Story-specific WA success notification (depends on 12.2 for clean contract; **PAUSED at 13-01 Task 2 — blocked by 12.3**)
+- [x] **Phase 12.3 (NEW, URGENT): Supabase → Azure Postgres Migration** - Supabase project backing `content_sessions` permanently deleted (discovered 2026-08-01, full pipeline outage). Migrated session persistence to Azure PostgreSQL + rewired all 4 Supabase n8n nodes. **COMPLETE 2026-08-01** — patch-based deploy live (versionId `f81aeed2`, 92 nodes), 2 real Wizard Story fires proved the rewired Postgres INSERT works end-to-end (the exact node that failed pre-migration), WhatsApp preview delivered and user replied NO, zero Meta-facing nodes ran, dead Supabase Container App config retired. Unblocks Phase 13.
+- [ ] **Phase 13: Facebook Story + Log + Notifications** - Live-fire re-confirm the already-built FB Story chain (Phase 12) against the Hostinger backend, extend Sheets log schema (Formato/Expires_At), send Story-specific WA success notification (depends on 12.2 for clean contract; **UNBLOCKED 2026-08-01 — resume from 13-01 Task 2**)
 
 ## Phase Details
 
@@ -99,12 +99,12 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
   3. A real Wizard→webhook fire reaches the WhatsApp preview again (the exact step that failed in exec `1786295`) for at least the Story format, proving the outage is over end-to-end
   4. `SETUP.md`/`.env.example` updated — Supabase env vars retired, new Postgres connection vars documented
 
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans executed — **PHASE COMPLETE 2026-08-01**
 
 Plans:
 - [x] 12.3-01-PLAN.md — Provision `content_engine` DB + `content_sessions` table on existing `propulsar-db` + n8n credential `Postgres - content_engine` (API-first, UI fallback checkpoint) — COMPLETE 2026-08-01, credential id `3k4OsKJRGlUcWDrq`
 - [x] 12.3-02-PLAN.md — Rewire the 4 Supabase PostgREST nodes to native Postgres executeQuery + add empty-result guard node + retire Supabase from .env.example/SETUP.md/CLAUDE.md — COMPLETE 2026-08-01, node count 91 → 92
-- [ ] 12.3-03-PLAN.md — Patch-based deploy to production n8n + real Wizard Story fire reaching the WhatsApp preview (user replies NO — nothing published) + Container App env cleanup
+- [x] 12.3-03-PLAN.md — Patch-based deploy to production n8n + real Wizard Story fire reaching the WhatsApp preview (user replied NO — nothing published) + Container App env cleanup — COMPLETE 2026-08-01, versionId `f81aeed2`, 92 nodes live. 2 live fires (exec `1787106`, `1787184`) proved the Postgres INSERT node works end-to-end; NO-reply exec `1787219` confirmed rejection path with zero Meta-facing nodes touched. `SUPABASE_URL`/`SUPABASE_ANON_KEY` env vars + `supabase-anon-key` secret removed from `propulsar-n8n` Container App. Diagnostic bonus: found + resolved a WhatsApp 24h customer-service-window delivery failure (errorCode 131047), unrelated to migration scope — see STATE.md Open Items.
 
 ### Phase 12.2: Hostinger VPS Re-host Layer (INSERTED)
 
@@ -173,5 +173,5 @@ Plans:
 | 12. Instagram Story Publishing | v1.2 | Complete    | 2026-04-23 | 2026-04-23 |
 | 12.1. CDN Layer | v1.2 | 3/3 | FAILED — Meta rejects AFD hostnames, rolled back (superseded by 12.2) | 2026-04-24 |
 | 12.2. Hostinger VPS Re-host Layer | v1.2 | 3/3 | Complete | 2026-07-31 |
-| 12.3. Supabase → Azure Postgres Migration | v1.2 | 2/3 | In Progress | - |
-| 13. Facebook Story + Log + Notifications | v1.2 | 0/3 | PAUSED at 13-01 Task 2 — blocked by 12.3 | - |
+| 12.3. Supabase → Azure Postgres Migration | v1.2 | 3/3 | Complete | 2026-08-01 |
+| 13. Facebook Story + Log + Notifications | v1.2 | 0/3 | Unblocked — resume from 13-01 Task 2 | - |
