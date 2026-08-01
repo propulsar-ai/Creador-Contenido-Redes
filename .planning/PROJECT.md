@@ -2,21 +2,27 @@
 
 ## What This Is
 
-AI-powered content generation and publishing engine for Propulsar.ai's social media (Instagram + Facebook). Interactive Wizard (wizard/run.js) + 73-node n8n workflow on Azure generate posts — both single images and multi-slide carousels — with AI-generated text and images in Propulsar's visual identity. Content is previewed via WhatsApp, approved with SI/NO, and automatically published to Instagram and Facebook with scheduling support, error handling, and full audit trail in Google Sheets.
+AI-powered content generation and publishing engine for Propulsar.ai's social media (Instagram + Facebook). Interactive Wizard (wizard/run.js) + 92-node n8n workflow on Azure generate posts — single images, multi-slide carousels, and 9:16 vertical Stories — with AI-generated text and images in Propulsar's visual identity. Content is previewed via WhatsApp, approved with SI/NO, and automatically published to Instagram and Facebook with scheduling support, error handling, and full audit trail in Google Sheets.
 
-**Shipped as of v1.1:** Full automated publishing pipeline — Wizard → n8n → GPT-4o text → Ideogram/Flux/Nano Banana images → Azure Blob re-hosting → WhatsApp preview → SI approval → IG + FB publish (single + carousel) → WhatsApp success notification → Sheets log. Scheduling (CET/CEST, max 24h). Error handler with WA alerts + Sheets fail log + blob cleanup.
+**Shipped as of v1.2:** Wizard → n8n → GPT-4o (Azure OpenAI) text → Ideogram/Flux/Nano Banana images → Hostinger `rehost-service` re-hosting → WhatsApp preview → SI approval → IG + FB publish (single, carousel, AND Story) → WhatsApp success notification → Sheets log. Session state in Azure PostgreSQL. Scheduling (CET/CEST, max 24h; Stories capped at 22h). Error handler with WA alerts + Sheets fail log + rehost cleanup.
 
 ## Core Value
 
-Generate and publish complete social media posts (single or carousel) in one wizard run, each with AI-generated images that include readable Spanish text overlays following Propulsar's brand — previewed via WhatsApp, approved with SI, and automatically published to Instagram + Facebook.
+Generate and publish complete social media posts (single, carousel, or story) in one wizard run, each with AI-generated images that include readable Spanish text overlays following Propulsar's brand — previewed via WhatsApp, approved with SI, and automatically published to Instagram + Facebook.
 
 ## Current State
 
-**v1.1 shipped 2026-04-17.** Full pipeline live: Wizard → n8n webhook → GPT-4o text → Ideogram/Flux/Nano Banana images → Azure Blob re-hosting → WhatsApp preview → SI/NO approval → Instagram + Facebook publish (single + carousel) → WhatsApp success notification → Google Sheets log. Scheduling via Wait node. Error handler with WA alerts, Sheets fail log, and blob cleanup.
+**v1.2 shipped 2026-08-01.** Stories publishing live end-to-end: "Historia" format in Wizard (Ideogram v3 auto-selected, 9:16 validated, 22h cap) → IG Story (media_type=STORIES via graph.facebook.com) + FB Story (2-step photo_stories, multipart) → Story-specific WA notification (IG permalink "válido 24h" + FB line) → Sheets log with Formato/Expires_At. Two real production Stories published and human-verified during closeout.
 
-**Stack:** Node.js 22 Wizard (1,751 LOC), n8n 2.14.2 on Azure Container Apps (`propulsar-n8n`, 73 nodes), Ideogram v3 / Flux 2 Pro / Nano Banana Pro APIs, Meta Graph API v22, YCloud WhatsApp, Supabase (session state), Azure Blob Storage (image re-hosting), Google Sheets (audit log).
+**Two emergency infra replacements landed mid-milestone:** (1) Meta silently blocked `*.blob.core.windows.net` AND rejects all Azure Front Door hostnames — image re-hosting now runs on `rehost-service` (Node/Express) on Propulsar's Hostinger VPS (EasyPanel, `*.bacu5y.easypanel.host`, Meta-accepted). (2) The Supabase project backing `content_sessions` was permanently deleted — session persistence migrated same-day to Azure PostgreSQL (`propulsar-db` server, `content_engine` DB, native n8n Postgres nodes).
 
-**Known gap:** `instagram_manage_comments` scope missing from Meta token — hashtag comments on IG posts blocked until Susana adds scope to Facebook App and regenerates token.
+**Stack:** Node.js 22 Wizard (~1,940 LOC), n8n 2.14.2 on Azure Container Apps (`propulsar-n8n`, 92 nodes + 10-node re-host sub-workflow), Azure OpenAI (gpt-4o via `propulsar-prod-aoai`), Ideogram v3 / Flux 2 Pro / Nano Banana Pro (FAL.AI), Meta Graph API v22, YCloud WhatsApp, Azure PostgreSQL Flexible Server (session state), Hostinger VPS rehost-service (Meta-facing images), Google Sheets (audit log), Azure Key Vault `propulsar-prod-kv` (secrets).
+
+**Known gaps (see milestones/v1.2-MILESTONE-AUDIT.md):**
+- `has_own_image=true` path silently skips session persistence — SI approval dies with zero audit trail (pre-v1.2, unflagged until the v1.2 audit; top backlog item, natural fix inside the Content Studio GUI project)
+- `instagram_manage_comments` scope missing from Meta token — hashtag comments + FB feed branch blocked until Susana regenerates token
+- WhatsApp 24h customer-service window silently kills approval previews (won't-fix: approval moves to the GUI)
+- Single/carousel formats not live-fired since the Postgres migration (identical INSERT pattern proven twice via Story)
 
 ## Requirements
 
@@ -43,24 +49,20 @@ Generate and publish complete social media posts (single or carousel) in one wiz
 - ✓ Azure blob cleanup after publish or failure — v1.1
 - ✓ Duplicate post prevention (media_publish retry disabled) — v1.1
 
+- ✓ "Historia" 9:16 Story format in Wizard (Ideogram auto-select, 9:16 validation, 22h cap) — v1.2
+- ✓ Instagram Story publishing (media_type=STORIES, permalink + computed expiry) — v1.2
+- ✓ Facebook Page Story publishing (2-step photo_stories, multipart) — v1.2
+- ✓ Story WhatsApp preview with 9:16 disclaimer + Story success notification (IG permalink + FB line) — v1.2
+- ✓ Sheets log Formato column (all formats) + Expires_At (Story) — v1.2
+- ✓ Durable Meta-facing image re-host (Hostinger rehost-service, replaced Azure Blob after Meta block) — v1.2
+- ✓ Session persistence on Azure PostgreSQL (replaced deleted Supabase project) — v1.2
+
 ### Active
 
-**Milestone v1.2 Stories Publishing** — requirements defined in `.planning/REQUIREMENTS.md`
-
-## Current Milestone: v1.2 Stories Publishing
-
-**Goal:** Tras aprobar SI en WhatsApp, el sistema publica una Story vertical 9:16 en Instagram + Facebook con imagen generada por IA, scheduling limitado a <22h (ventana útil) y audit trail completo — reutilizando el pipeline existente de v1.0/v1.1 sin romperlo.
-
-**Target features:**
-- Nuevo formato "Historia" en Wizard PASO 3 (además de single post y carousel)
-- Generación de imagen vertical 9:16 (1080x1920) con Ideogram v3 / Flux 2 Pro / Nano Banana Pro
-- Publicación a Instagram Story vía Meta Graph API v22 (`media_type=STORIES`)
-- Publicación a Facebook Page Story vía `photo_stories` (2-step: upload unpublished → publish as story)
-- Preview WhatsApp con imagen vertical + caption para decisión SI/NO (caption NO se envía a Meta)
-- Scheduling con warning si > 22h (la Story expira 24h post-publicación)
-- Log Google Sheets con `Format=story` + columna `Expires_At`
-- Skip hashtag comment en Stories (no soportado por Meta)
-- Error handling reusando el subgraph de v1.1
+**Next milestone not yet defined.** Leading candidate: **Content Studio GUI** (separate project `propulsar-content-studio` — see `.planning/research/CONTENT-STUDIO-GUI-SEED.md`): in-app approval replacing WhatsApp SI/NO, Postgres-backed publish history panel, full creation flow in browser. Carry-over backlog for whichever comes next:
+- [ ] Fix `has_own_image=true` silent session-persistence gap (top audit item)
+- [ ] Live-fire spot-check of single + carousel formats post-Postgres-migration
+- [ ] `instagram_manage_comments` scope (needs Susana's token regeneration)
 
 ### Out of Scope
 
@@ -78,11 +80,13 @@ Generate and publish complete social media posts (single or carousel) in one wiz
 
 ## Context
 
-- **Codebase:** Wizard (wizard/run.js, 1,751 LOC JS) + n8n workflow (73 nodes, 3,306 LOC JSON) on Azure Container Apps
-- **n8n version 2.14.2 quirks:** IF v2/Switch v3 broken (use IF v1); no `$env` in Code nodes; no `require()` in sandbox; Set v3.0 silently drops cross-node refs in fan-out chains
-- **Deployment:** workflow.json via n8n API PUT. Credentials (OpenAI, Google Sheets, Supabase) require manual linking after upload.
-- **Azure Blob:** Storage account `propulsarcontent`, container `posts`, SAS `sp=rwdlc sr=c se=2027-04-10`. Public access for reads, SAS for writes + deletes.
-- **Meta tokens:** Generated from Susana's admin account. Depend on her maintaining admin role on Propulsar AI Facebook page.
+- **Codebase:** Wizard (wizard/run.js, ~1,940 LOC JS) + n8n main workflow (92 nodes) + re-host sub-workflow (10 nodes) on Azure Container Apps, + `rehost-service/` (Node/Express, deployed on Hostinger VPS via EasyPanel)
+- **n8n version 2.14.2 quirks:** IF v2/Switch v3 broken (use IF v1); no `require()` in Code sandbox; Set v3.0 silently drops cross-node refs in fan-out chains; `connections` keyed by node display NAME; PUT rejects `settings.availableInMCP`/`binaryMode`
+- **Deployment discipline:** ALWAYS diff remote vs last-known-good before PUT (production drifts out-of-band); patch-based deploy replacing only intended nodes. Credentials (AOAI header, Google Sheets, Postgres) live in n8n's credential store.
+- **Session store:** Azure PostgreSQL Flexible Server `propulsar-db` (rg `propulsar-production`), DB `content_engine`, table `content_sessions` (20 cols), n8n credential `Postgres - content_engine` (id `3k4OsKJRGlUcWDrq`)
+- **Meta-facing images:** `rehost-service` on Hostinger VPS — public GET, secret-gated PUT/DELETE (`HOSTINGER_REHOST_*` env vars on Container App). Mount durability runbook: re-attach Docker Swarm mount after any EasyPanel restart/redeploy.
+- **Meta tokens:** Generated from Susana's admin account. Depend on her maintaining admin role on Propulsar AI Facebook page. Meta blocks `*.blob.core.windows.net` and all `*.azurefd.net`/AFD custom domains as image_url sources; Stories (IG + FB) are NOT deletable via API.
+- **WhatsApp:** YCloud. `accepted` ≠ delivered — always verify via `GET /v2/whatsapp/messages/{id}`. Free-form sends fail (131047) outside the 24h customer-service window.
 - **Visual brand:** dark background `#1a1a2e`, purple-magenta gradient accents, bold readable Spanish typography.
 
 ## Constraints
@@ -116,6 +120,13 @@ Generate and publish complete social media posts (single or carousel) in one wiz
 | Tag Error = Code nodes (not Set) | Set v3.4 drops 'error' key from continueErrorOutput | ✓ Good |
 | Two-stage JSON decode for Meta errors | AxiosError double-encodes Meta API responses | ✓ Good |
 | Fan-in without Merge node | Both Wait and IF FALSE wire to same target | ✓ Good — simpler |
+| graph.facebook.com for IG Stories (not graph.instagram.com) | Live test: graph.instagram.com needs OAuth flow unavailable to Page token | ✓ Good — verified twice live |
+| Hostinger VPS rehost-service over Azure CDN | Meta rejects ALL Azure Front Door hostnames (proven via 3 controlled tests); accepts `*.bacu5y.easypanel.host` | ✓ Good — 2 real publishes served |
+| Azure Postgres over recreating Supabase | Supabase project deleted + explicit stack anti-pattern; `propulsar-db` server already existed (n8n's own DB) | ✓ Good — zero new infra, live-proven |
+| Patch-based n8n deploys (diff remote first) | Production drifts out-of-band (AOAI migration found twice); blind PUT would revert live changes | ✓ Good — canonical deploy discipline |
+| Reply NO for infra-phase live tests, SI only when publish IS the test | Keeps real publishes scoped to phases whose goal is publishing | ✓ Good |
+| No WA-template fix for 24h window | WhatsApp approval is on deprecation path (GUI replaces it) | ✓ Good — avoided dead-end investment |
+| Story log via harness + backfill instead of 3rd real publish | Stories aren't API-deletable; harness proved identical node config | ✓ Good — evidence without pollution |
 
 ---
-*Last updated: 2026-04-17 after starting v1.2 Stories milestone*
+*Last updated: 2026-08-01 after v1.2 Stories Publishing milestone*
