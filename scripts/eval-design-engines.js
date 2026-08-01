@@ -185,9 +185,22 @@ async function callIdeogram(imagePrompt, format) {
 //
 // Reads creatomate/templates/<layout>.json (Plan 15-01's brand templates),
 // substitutes {{PLACEHOLDER}}-style tokens with brief text, POSTs inline via
-// the `source` field to /v2/renders (falls back to /v1/renders if /v2 rejects),
+// the `source` field (confirmed live: POSTing RenderScript fields directly
+// at the request root — no `source` key — is REJECTED with "The parameter
+// template_id, tags, or source must be provided"; `{ output_format, width,
+// height, source: { elements } }` is the shape the live API actually
+// accepts, verified with a real 202-accepted render during Plan 15-01),
 // polls until status === "succeeded", downloads the PNG.
+//
+// Base URL: confirmed empirically during Plan 15-01 checkpoint resolution
+// that this account's working base is /v1 (GET/POST /v2/... 404s; /v1
+// returns 200/202). Tries v1 first, falls back to v2 on 404 for forward-
+// compatibility, and polls whichever base actually succeeded (the original
+// draft always polled /v2/renders/{id} regardless of which base the create
+// call used — fixed here too, Rule 1).
 // ─────────────────────────────────────────────
+const CREATOMATE_BASES = ["https://api.creatomate.com/v1", "https://api.creatomate.com/v2"];
+
 function substitutePlaceholders(obj, values) {
   const json = JSON.stringify(obj);
   const replaced = json.replace(/\{\{\s*([A-Z_]+)\s*\}\}/g, (m, key) => {
@@ -208,19 +221,27 @@ async function callCreatomate({ layout, values, width, height, backgroundUrl }) 
   const apiKey = process.env.CREATOMATE_API_KEY;
   if (!apiKey) throw new Error("CREATOMATE_API_KEY not set (Plan 15-01 pending) — skipping Creatomate call");
 
-  let source = loadCreatomateTemplate(layout);
-  if (!source) {
+  let templateObj = loadCreatomateTemplate(layout);
+  if (!templateObj) {
     throw new Error(`creatomate/templates/${layout}.json not found (Plan 15-01 pending)`);
   }
-  source = substitutePlaceholders(source, { ...values, BACKGROUND_URL: backgroundUrl || "" });
-
-  const renderBody = JSON.stringify({ output_format: "png", width, height, source });
+  templateObj = substitutePlaceholders(templateObj, { ...values, BACKGROUND_URL: backgroundUrl || "" });
+  // templateObj carries informational metadata keys (_template, _description)
+  // that are not valid RenderScript fields — only forward `elements` inside
+  // the `source` wrapper; output_format/width/height are set at the request
+  // root from the caller's format-derived values (source of truth per format).
+  const renderBody = JSON.stringify({
+    output_format: "png",
+    width,
+    height,
+    source: { elements: templateObj.elements },
+  });
   const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
 
-  let res = await httpJson("https://api.creatomate.com/v2/renders", { method: "POST", headers, body: renderBody });
-  if (res.statusCode === 404) {
-    // fallback per plan: some accounts still resolve on /v1
-    res = await httpJson("https://api.creatomate.com/v1/renders", { method: "POST", headers, body: renderBody });
+  let res, base;
+  for (base of CREATOMATE_BASES) {
+    res = await httpJson(`${base}/renders`, { method: "POST", headers, body: renderBody });
+    if (res.statusCode !== 404) break;
   }
   if (res.statusCode < 200 || res.statusCode >= 300) {
     throw new Error(`Creatomate ${res.statusCode}: ${res.body.toString("utf8").slice(0, 300)}`);
@@ -233,7 +254,7 @@ async function callCreatomate({ layout, values, width, height, backgroundUrl }) 
   while (status !== "succeeded" && Date.now() - start < 120000) {
     if (status === "failed") throw new Error(`Creatomate render ${renderId} failed`);
     await sleep(3000);
-    const poll = await httpJson(`https://api.creatomate.com/v2/renders/${renderId}`, { headers });
+    const poll = await httpJson(`${base}/renders/${renderId}`, { headers });
     status = poll.json?.status;
     url = poll.json?.url || url;
   }

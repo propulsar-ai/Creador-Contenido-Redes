@@ -1,0 +1,133 @@
+{
+  "_template": "carousel-middle",
+  "_description": "Propulsar brand — 1:1 carousel middle slide. Canonical layout: image right (~46% width), text left. This is the template exercised by the real 'veterinaria s.' overflow regression test (2026-07-20 slide 2) — headline uses auto-fit (font_size:null + min/max) inside a fixed-width left column so it shrinks instead of breaking mid-word. Placeholders ({{HEADLINE}}, {{BODY}}, {{BADGE}}, {{BACKGROUND_URL}}) are substituted by scripts/eval-design-engines.js before POSTing this JSON as the `source` field.",
+  "output_format": "png",
+  "width": 1080,
+  "height": 1080,
+  "elements": [
+    {
+      "type": "shape",
+      "name": "base-gradient",
+      "x": "50%",
+      "y": "50%",
+      "width": "100%",
+      "height": "100%",
+      "fill_mode": "linear",
+      "fill_x0": "50%",
+      "fill_y0": "0%",
+      "fill_x1": "50%",
+      "fill_y1": "100%",
+      "fill_color": [
+        { "offset": "0%", "color": "#070A18" },
+        { "offset": "50%", "color": "#13082B" },
+        { "offset": "100%", "color": "#08031A" }
+      ]
+    },
+    {
+      "type": "shape",
+      "name": "magenta-glow",
+      "x": "18%",
+      "y": "4%",
+      "width": "70%",
+      "height": "48%",
+      "fill_mode": "radial",
+      "fill_x0": "50%",
+      "fill_y0": "0%",
+      "fill_x1": "50%",
+      "fill_y1": "100%",
+      "fill_radius": "65%",
+      "fill_color": [
+        { "offset": "0%", "color": "rgba(162,0,214,0.28)" },
+        { "offset": "100%", "color": "rgba(162,0,214,0)" }
+      ]
+    },
+    {
+      "type": "image",
+      "name": "side-image",
+      "source": "{{BACKGROUND_URL}}",
+      "x": "100%",
+      "x_anchor": "100%",
+      "y": "50%",
+      "y_anchor": "50%",
+      "width": "46%",
+      "height": "100%",
+      "fit": "cover"
+    },
+    {
+      "type": "shape",
+      "name": "seam-fade",
+      "x": "54%",
+      "x_anchor": "0%",
+      "y": "50%",
+      "width": "16%",
+      "height": "100%",
+      "fill_mode": "linear",
+      "fill_x0": "0%",
+      "fill_y0": "50%",
+      "fill_x1": "100%",
+      "fill_y1": "50%",
+      "fill_color": [
+        { "offset": "0%", "color": "#13082B" },
+        { "offset": "100%", "color": "rgba(19,8,43,0)" }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "badge",
+      "text": "{{BADGE}}",
+      "x": "8%",
+      "x_anchor": "0%",
+      "y": "20%",
+      "font_family": "Arimo",
+      "font_weight": "700",
+      "font_size": "24px",
+      "fill_color": "#C026D3",
+      "x_alignment": "0%",
+      "y_alignment": "50%",
+      "background_color": "#1E0C42",
+      "background_x_padding": "40%",
+      "background_y_padding": "55%",
+      "background_border_radius": "50%"
+    },
+    {
+      "type": "text",
+      "name": "headline",
+      "text": "{{HEADLINE}}",
+      "x": "8%",
+      "x_anchor": "0%",
+      "y": "48%",
+      "width": "44%",
+      "height": "30%",
+      "font_family": "Syne",
+      "font_weight": "700",
+      "font_size": null,
+      "font_size_minimum": "28px",
+      "font_size_maximum": "56px",
+      "line_height": "114%",
+      "fill_color": "#FFFFFF",
+      "x_alignment": "0%",
+      "y_alignment": "50%",
+      "text_wrap": true
+    },
+    {
+      "type": "text",
+      "name": "body",
+      "text": "{{BODY}}",
+      "x": "8%",
+      "x_anchor": "0%",
+      "y": "72%",
+      "width": "44%",
+      "height": "16%",
+      "font_family": "Arimo",
+      "font_weight": "400",
+      "font_size": null,
+      "font_size_minimum": "18px",
+      "font_size_maximum": "26px",
+      "line_height": "130%",
+      "fill_color": "rgba(255,255,255,0.85)",
+      "x_alignment": "0%",
+      "y_alignment": "50%",
+      "text_wrap": true
+    }
+  ]
+}
