@@ -189,4 +189,54 @@ Ideogram v3, 5 slides: **$0.30** (single generation call at submission — the 2
 
 ---
 
-*To be appended after Tasks 5-6: user visual confirmation, cleanup results, and the compiled pending-IG-manual-deletion list across both fires.*
+## 11. Task 5 Visual-Confirmation Issue Report — Investigation & Diagnosis
+
+**User report (Task 5 checkpoint):**
+- Instagram: CORRECT — 5 slides appear as one swipeable carousel.
+- Facebook: user reports it does NOT look like a carousel — appears as "cinco fotos separadas o cinco posteos separados" (five separate photos / five separate posts) on the Page.
+
+**Status: BLOCKED pending user decision. No fix applied, no posts deleted, Task 6 NOT started.**
+
+### Investigation performed
+
+1. **Live Graph API GET on the FB post itself** (`GET /v22.0/981931321668013_122133770775238849?fields=id,message,created_time,attachments{media_type,type,subattachments,url}`, direct `META_PAGE_TOKEN`):
+   - Returned **exactly ONE post object** (`id: "981931321668013_122133770775238849"`), matching the single `post_id` captured in Task 4.
+   - `attachments.data[0].media_type: "album"`, `type: "album"`, containing `subattachments.data` with all **5** photos (ids `122133770535238849`, `122133770613238849`, `122133770583238849`, `122133770667238849`, `122133770559238849` — exactly the 5 unpublished-photo IDs from Task 4's `📤 FB: Upload Photo Unpublished` step).
+   - This is the documented Graph API shape for a multi-photo Page post created via `POST /{page}/feed` + `attached_media` — **one post, `media_type=album`, N subattachments.**
+
+2. **Live GET on the Page's recent posts** (`GET /981931321668013/posts?fields=id,message,created_time&limit=10`):
+   - Returned exactly **ONE** entry for this run (`981931321668013_122133770775238849`), followed by 9 older, unrelated posts. **Not five separate feed posts.**
+
+3. **Live GET on the Page's uploaded photos** (`GET /981931321668013/photos?type=uploaded`):
+   - The same 5 photo IDs each have their own individually browsable permalink (`facebook.com/photo.php?fbid=...`). This is standard, expected Meta behavior for any multi-photo album post — each photo inside an album is also individually addressable — and is almost certainly what the user saw when clicking through the Page (individual photo permalinks look like "separate posts" even though they all belong to one album/post object).
+
+**Conclusion of the API-level check: this is backend-confirmed as ONE Facebook post (`media_type: album`) containing all 5 images, not five separate posts.** The "looks like five separate photos" perception is a **rendering/UX characteristic of Facebook's native multi-photo album layout** (grid/mosaic display in the News Feed and Page timeline, and individually-clickable photos within it) — not a pipeline defect.
+
+### Root cause / classification
+
+**PRE-EXISTING DESIGN from Phase 7 (v1.1, 2026-04-17) — NOT a Postgres-migration regression, NOT a regression introduced by any Phase 14 deploy.**
+
+Evidence:
+- `07-RESEARCH.md` (Pattern 2, "FB Multi-Photo Post via `attached_media`", written 2026-04-17) explicitly documents this exact mechanism as the *only* organic (non-Ads) way to publish multiple photos in one Facebook Page post: `N × POST /{page}/photos?published=false` → single `POST /{page}/feed` with `attached_media`. Meta's Graph API has **no organic equivalent to Instagram's single-frame swipeable carousel** — that UX (one photo visible at a time, swipe for next) is exclusive to Instagram and to Facebook **Ads** (Marketing API carousel ads, a completely different product/endpoint). For organic Page feed posts, `attached_media` is Meta's only mechanism, and Meta renders it as an album/grid, not a swipeable single-view carousel.
+- `07-VERIFICATION.md` (Phase 7 close, 2026-04-17) already recorded FB output for this exact mechanism as "FB multi-photo post" (never called a "carousel" in Meta's own terminology) and marked it VERIFIED/SATISFIED against requirement FBPUB-02, which itself is phrased as "FB carousel via `attached_media`" — the requirement's own name uses "carousel" loosely; Meta's actual behavior was always the album/grid rendering, confirmed unchanged today.
+- **Zero code changes to any FB carousel-branch node across Phase 14.** `git log` + node-by-node diff confirm: Plan 14-01 touched only 2 hashtag-comment error-output connections (IG side); Plan 14-02 touched only the single-post `save-session-supabase` INSERT query text; this plan (14-03) touched only `🖼️ IG: Create Child Container`'s retry parameters (IG side). No `FB:` node (`fb-explode-carousel-slides`, `fb-upload-photo-unpublished`, `fb-collect-photo-ids`, `fb-build-attached-media`, `fb-publish-carousel-feed`) has been modified since Phase 7 (commit `566e1f9`, 2026-04-17).
+- The FB carousel branch was UNREACHABLE from 2026-04-17 until this very run (blocked by the dead-end hashtag-comment error routing that 14-01 fixed) — meaning **today's exec (`1792783`) is the very first live execution of this FB code path since it was written**, so there is no "before" baseline where it rendered differently. There is no regression to compare against; this is the code's first-ever live behavior, matching its original 07-RESEARCH.md design exactly.
+
+### Recommendation
+
+- This is a **Meta platform capability limitation**, not a bug: Facebook's Graph API has no organic single-frame swipeable carousel format. The pipeline is using the only mechanism Meta offers (`attached_media` multi-photo album post) exactly as designed and researched in Phase 7.
+- **Do not fix in this phase.** There is no alternative Graph API call that produces an Instagram-style swipeable carousel on organic Facebook Page posts — building anything "better" here is not possible without moving to Facebook Ads/Marketing API (an entirely different product, paid placement, out of scope).
+- ROADMAP Phase 14 Success Criterion 2 ("the carousel publishes to both Instagram and Facebook") is satisfied at the technical/API level — one verifiable FB post exists containing all 5 images, exactly as `attached_media` is designed to produce. The criterion does not require FB's rendering to visually match Instagram's swipe UX (Meta itself does not support that for organic posts).
+- Suggest logging this as a documented, permanent product limitation (e.g., a note in `CLAUDE.md` or `REQUIREMENTS.md`'s Future Requirements / Known Limitations section) so future users/checkpoints aren't surprised by FB's album rendering — not as an actionable v1.3 requirement, since there is no code fix available.
+
+### Awaiting user decision
+
+Presented to user: this is confirmed pre-existing Meta-platform behavior (single post, `media_type: album`, all 5 photos attached — verified via direct Graph API GET), unchanged since Phase 7, not a Postgres-migration or Phase-14 regression. Options:
+1. **Accept as expected/known behavior** — proceed to Task 6 (cleanup) and Task 7 (sign-off) treating Facebook's album rendering as correct-per-Meta's-API-limits; document the limitation and close the phase.
+2. Request something else be investigated/changed (though per the above, no alternative Graph API mechanism exists for organic posts).
+
+No deletion has been performed. No further tasks executed pending this decision.
+
+---
+
+*To be appended after Tasks 5 (resolution)-6: user decision on the above, cleanup results, and the compiled pending-IG-manual-deletion list across both fires.*
