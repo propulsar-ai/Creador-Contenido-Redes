@@ -85,7 +85,14 @@ Plans:
   3. A Spanish-diacritics stress test set (á/é/í/ó/ú/ñ/¿¡ in headline position) and a two-stage hybrid variant (AI background + typographic overlay) are both included among the rendered comparison outputs.
   4. A written decision document scores all candidates against the 7-criteria rubric (legibility, brand consistency, layout quality, diacritics, latency, cost/image, n8n integration complexity) and names the winning engine plus an explicit Ideogram coexist-vs-replace call.
   5. Remotion is documented as cost-rejected (paper analysis only, Automators license floor cited) with an explicit reconsideration trigger, with no Remotion render service built.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 15-01-PLAN.md — EVAL-01: Creatomate account (free trial) + 5 brand templates as repo-committed RenderScript JSON, live-render verified + user-approved vs brand/referencias
+- [ ] 15-02-PLAN.md — EVAL-02: Gamma access on Susana's account (Pro trial, escalate if paid-only) + Propulsar theme via agent-browser attempt → runbook fallback, themeId captured
+- [ ] 15-03-PLAN.md — EVAL-03/04/05 build: standalone eval harness (scripts/eval-design-engines.js), frozen brief set (real posts + GPT-4o + diacritics stress), hybrid Flux+Creatomate pipeline, blind gallery generator
+- [ ] 15-04-PLAN.md — Full comparison run: preflight (Gamma carousel probe, credit budget), all engines × all briefs × all formats, blind A/B/C/D gallery + Claude's proposed weighted scores with evidence
+- [ ] 15-05-PLAN.md — EVAL-06/07: blind review with Felix + Susana, winner rule applied (must clearly beat Ideogram; coexist default; "stay with Ideogram" valid), Remotion paper rejection, dual-signed 15-DECISION.md
 
 ### Phase 16: Winning-Engine Integration (All Formats)
 **Goal**: The winning engine named by Phase 15's decision is fully wired into the n8n pipeline and can publish real content across all 3 formats through the existing, unchanged downstream chain.
@@ -133,6 +140,6 @@ Phases execute in numeric order: 14 → 15 → 16 → 17
 | 12.3. Supabase → Azure Postgres Migration | v1.2 | 3/3 | Complete | 2026-08-01 |
 | 13. Facebook Story + Log + Notifications | v1.2 | 3/3 | Complete | 2026-08-01 |
 | 14. v1.2 Regression Live-Fire | v1.3 | Complete    | 2026-08-01 | - |
-| 15. Comparison, Templates, Eval Harness & Decision | v1.3 | 0/TBD | Not started | - |
+| 15. Comparison, Templates, Eval Harness & Decision | v1.3 | 0/5 | Planned | - |
 | 16. Winning-Engine Integration (All Formats) | v1.3 | 0/TBD | Not started | - |
 | 17. Wizard Update & Milestone Close | v1.3 | 0/TBD | Not started | - |
