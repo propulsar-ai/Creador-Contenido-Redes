@@ -24,6 +24,16 @@ Generate and publish complete social media posts (single, carousel, or story) in
 - WhatsApp 24h customer-service window silently kills approval previews (won't-fix: approval moves to the GUI)
 - Single/carousel formats not live-fired since the Postgres migration (identical INSERT pattern proven twice via Story)
 
+## Current Milestone: v1.3 Diseño Premium
+
+**Goal:** Replace Ideogram's diffusion-model text-in-image with a real design/typography engine — Gamma, Creatomate, or Remotion, chosen by comparative image+text quality — integrated into the existing n8n pipeline for all 3 formats.
+
+**Target features:**
+- Technical analysis + side-by-side quality comparison: Gamma vs Creatomate vs Remotion vs Ideogram (baseline)
+- Winning engine wired into the n8n image router for single, carousel, and story
+- Explicit Ideogram coexistence/replacement decision driven by the comparison results
+- Live-fire spot-check of single + carousel post-Postgres-migration (v1.2 carry-over)
+
 ## Requirements
 
 ### Validated
@@ -59,10 +69,14 @@ Generate and publish complete social media posts (single, carousel, or story) in
 
 ### Active
 
-**Next milestone not yet defined.** Leading candidate: **Content Studio GUI** (separate project `propulsar-content-studio` — see `.planning/research/CONTENT-STUDIO-GUI-SEED.md`): in-app approval replacing WhatsApp SI/NO, Postgres-backed publish history panel, full creation flow in browser. Carry-over backlog for whichever comes next:
-- [ ] Fix `has_own_image=true` silent session-persistence gap (top audit item)
-- [ ] Live-fire spot-check of single + carousel formats post-Postgres-migration
-- [ ] `instagram_manage_comments` scope (needs Susana's token regeneration)
+- [ ] Technical analysis + quality comparison of premium design engines: Gamma vs Creatomate vs Remotion, against Ideogram v3 as baseline (image+text quality is the deciding criterion)
+- [ ] Winning engine integrated into the n8n image pipeline for all 3 formats (single, carousel, story)
+- [ ] Ideogram coexistence/replacement decision made from the quality comparison (not predetermined)
+- [ ] Live-fire spot-check of single + carousel formats post-Postgres-migration (v1.2 carry-over)
+
+**Deferred to Content Studio GUI** (separate project `propulsar-content-studio` — see `.planning/research/CONTENT-STUDIO-GUI-SEED.md`):
+- Fix `has_own_image=true` silent session-persistence gap (top v1.2 audit item — natural fix inside the GUI)
+- `instagram_manage_comments` scope (needs Susana's token regeneration — independent of any milestone)
 
 ### Out of Scope
 
@@ -129,4 +143,4 @@ Generate and publish complete social media posts (single, carousel, or story) in
 | Story log via harness + backfill instead of 3rd real publish | Stories aren't API-deletable; harness proved identical node config | ✓ Good — evidence without pollution |
 
 ---
-*Last updated: 2026-08-01 after v1.2 Stories Publishing milestone*
+*Last updated: 2026-08-01 after starting milestone v1.3 Diseño Premium*
