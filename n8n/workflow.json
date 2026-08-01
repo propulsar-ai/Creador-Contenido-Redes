@@ -3776,7 +3776,7 @@
         ],
         [
           {
-            "node": "🏷️ Tag IG Error",
+            "node": "🔗 IG: Get Carousel Permalink",
             "type": "main",
             "index": 0
           }
@@ -3939,7 +3939,7 @@
         ],
         [
           {
-            "node": "🏷️ Tag IG Error",
+            "node": "🔗 IG: Get Permalink",
             "type": "main",
             "index": 0
           }
