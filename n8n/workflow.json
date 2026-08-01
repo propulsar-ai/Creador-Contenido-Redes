@@ -1668,7 +1668,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ from: $env.YCLOUD_WHATSAPP_NUMBER, to: $('🔗 Merge Rehost Output').item.json.approval_number, type: 'text', text: { body: '📲 *Story publicada* (válido 24h)\\n\\n📸 Instagram: ' + ($('🔧 IG: Compute Story Expiry').item.json.ig_story_permalink || '(permalink pendiente de propagación)') + '\\n⏳ Expira: ' + new Date($('🔧 IG: Compute Story Expiry').item.json.story_expires_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', weekday: 'short', hour: '2-digit', minute: '2-digit' }) + '\\n\\n📝 Tema: ' + $('🔗 Merge Rehost Output').item.json.topic } }) }}",
+        "jsonBody": "={{ JSON.stringify({ from: $env.YCLOUD_WHATSAPP_NUMBER, to: $('🔗 Merge Rehost Output').item.json.approval_number, type: 'text', text: { body: '📲 *Story publicada* (válido 24h)\\n\\n📸 Instagram: ' + ($('🔧 IG: Compute Story Expiry').item.json.ig_story_permalink || '(permalink pendiente de propagación)') + '\\n⏳ Expira: ' + new Date($('🔧 IG: Compute Story Expiry').item.json.story_expires_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', weekday: 'short', hour: '2-digit', minute: '2-digit' }) + (($('🔗 Merge Rehost Output').item.json.platforms || []).includes('facebook') ? '\\n📘 Facebook: Story publicada (sin URL permanente — expira junto con Instagram)' : '') + '\\n\\n📝 Tema: ' + $('🔗 Merge Rehost Output').item.json.topic } }) }}",
         "options": {}
       },
       "id": "notify-wa-story",
@@ -1683,7 +1683,7 @@
         5820,
         560
       ],
-      "notes": "Envía notificación WA de Story publicada. Cross-refs 🔗 Merge Rehost Output (approval_number, topic) + 🔧 IG: Compute Story Expiry (permalink IG + expires_at). FB permalink format pendiente de Phase 13 (RESEARCH §Open Q #2). onError=stopWorkflow (WA failure no debe bloquear el Sheets log de éxito). Retry seguro — YCloud dedup por message id. Mirrors ✅ Notify WhatsApp Carousel pattern (inline X-API-Key header, no credentials block)."
+      "notes": "Envía notificación WA de Story publicada. Cross-refs 🔗 Merge Rehost Output (approval_number, topic, platforms) + 🔧 IG: Compute Story Expiry (permalink IG + expires_at). NOTIF-01 (Phase 13) implemented: conditional Facebook line appended when platforms includes facebook — static note only, no FB permalink (Photo Stories have no public URL to show; real response shape confirmed live in Plan 13-01: {success:true, post_id:<id>}). onError=stopWorkflow (WA failure no debe bloquear el Sheets log de éxito). Retry seguro — YCloud dedup por message id. Mirrors ✅ Notify WhatsApp Carousel pattern (inline X-API-Key header, no credentials block)."
     },
     {
       "parameters": {
