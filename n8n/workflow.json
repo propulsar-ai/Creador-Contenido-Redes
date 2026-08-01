@@ -414,7 +414,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, image_url, final_image_url, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12) RETURNING *",
+        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, format, image_url, final_image_url, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'single',$8,$9,$10,$11,'pending',$12) RETURNING *",
         "options": {
           "queryBatching": "independently",
           "queryReplacement": "={{ ['propulsar_' + Date.now(), $json.approval_number, $json.topic, $json.type, $json.angle || null, $json.platforms || [], $json.image_model, $json.image_url || null, $json.final_image_url, ($json.instagram && $json.instagram.caption) || null, ($json.facebook && $json.facebook.caption) || null, $json.publish_at || 'now'] }}"
@@ -434,7 +434,7 @@
           "name": "Postgres - content_engine"
         }
       },
-      "notes": "Phase 12.3: Inserts pending approval session into content_sessions on Azure PostgreSQL (content_engine DB, replaces the dead Supabase PostgREST call). Native Postgres executeQuery node with parameterized SQL + RETURNING * — same flat response shape the old PostgREST call produced. session_id computed as a bound parameter, same 'propulsar_' + Date.now() semantics as before."
+      "notes": "Phase 12.3: Inserts pending approval session into content_sessions on Azure PostgreSQL (content_engine DB, replaces the dead Supabase PostgREST call). Native Postgres executeQuery node with parameterized SQL + RETURNING * — same flat response shape the old PostgREST call produced. session_id computed as a bound parameter, same 'propulsar_' + Date.now() semantics as before. Phase 14-02: added literal format='single' to the column list (was previously omitted, leaving format NULL for every single-post session — carousel/story INSERTs always set it explicitly; found live during 14-02's Postgres verification query returning zero rows for format='single')."
     },
     {
       "parameters": {
