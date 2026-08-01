@@ -174,4 +174,4 @@ Plans:
 | 12.1. CDN Layer | v1.2 | 3/3 | FAILED — Meta rejects AFD hostnames, rolled back (superseded by 12.2) | 2026-04-24 |
 | 12.2. Hostinger VPS Re-host Layer | v1.2 | 3/3 | Complete | 2026-07-31 |
 | 12.3. Supabase → Azure Postgres Migration | v1.2 | Complete    | 2026-08-01 | 2026-08-01 |
-| 13. Facebook Story + Log + Notifications | v1.2 | 0/3 | Unblocked — resume from 13-01 Task 2 | - |
+| 13. Facebook Story + Log + Notifications | v1.2 | 1/3 | In Progress — Plan 13-01 complete (FBSTORY-01 confirmed live), Plans 13-02/13-03 remain | - |
