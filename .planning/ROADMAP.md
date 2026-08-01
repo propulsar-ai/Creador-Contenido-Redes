@@ -68,7 +68,12 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full phase details, [v1.2-
   1. A live single-post run persists its session correctly in Azure PostgreSQL, WhatsApp SI approval succeeds, and the post publishes to both Instagram and Facebook.
   2. A live carousel run (multi-slide) persists its session correctly, WhatsApp SI approval succeeds, and the carousel publishes to both Instagram and Facebook.
   3. No Postgres-migration-related errors surface during either live-fire test, confirming a clean baseline for v1.3 work.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — Reroute hashtag-comment onError (skip, not halt) + patch-based production deploy, unblocking the FB feed branch
+- [ ] 14-02-PLAN.md — VERIF-01: single-post live-fire (Wizard → Postgres session → WhatsApp SI → IG+FB publish), full verification + cleanup
+- [ ] 14-03-PLAN.md — VERIF-02: carousel live-fire (multi-slide), full verification + cleanup + clean-baseline phase close
 
 ### Phase 15: Comparison, Templates, Eval Harness & Decision
 **Goal**: Produce a defensible, evidence-based decision on which design engine (if any) replaces or coexists with Ideogram, backed by real rendered output scored against a documented rubric — not predetermined.
@@ -127,7 +132,7 @@ Phases execute in numeric order: 14 → 15 → 16 → 17
 | 12.2. Hostinger VPS Re-host Layer | v1.2 | 3/3 | Complete | 2026-07-31 |
 | 12.3. Supabase → Azure Postgres Migration | v1.2 | 3/3 | Complete | 2026-08-01 |
 | 13. Facebook Story + Log + Notifications | v1.2 | 3/3 | Complete | 2026-08-01 |
-| 14. v1.2 Regression Live-Fire | v1.3 | 0/TBD | Not started | - |
+| 14. v1.2 Regression Live-Fire | v1.3 | 0/3 | Planned | - |
 | 15. Comparison, Templates, Eval Harness & Decision | v1.3 | 0/TBD | Not started | - |
 | 16. Winning-Engine Integration (All Formats) | v1.3 | 0/TBD | Not started | - |
 | 17. Wizard Update & Milestone Close | v1.3 | 0/TBD | Not started | - |
