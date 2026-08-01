@@ -48,6 +48,7 @@ Progress: [██████████] 100% (v1.0) — [██████�
 - Phase 12.2 inserted after Phase 12: Hostinger VPS Re-host Layer (URGENT, 2026-07-31) — replaces the originally-planned Cloudflare R2 migration after a smoke test proved Meta accepts the existing Hostinger VPS/EasyPanel hostname (`*.bacu5y.easypanel.host`), avoiding a new vendor account. See `12.2-HOSTINGER-SMOKE-TEST.md`.
 - Phase 12.2 Plan 01 complete 2026-07-31: `rehost-service` built + deployed live, n8n env vars wired, real Meta Graph API call PASS. Mount-durability gap found and escalated (see Open Items) — must be weighed before Plan 03 closes the phase.
 - Phase 12.2 Plan 02 complete 2026-07-31: sub-workflow + 5 Meta-facing nodes + ERR-01 cleanup rewired to `rehost-service`; both workflows deployed live (patch-based deploy for main workflow after discovering out-of-band production drift on 4 unrelated OpenAI nodes — see Open Items). Only Plan 03 (E2E + phase close) remains.
+- Phase 12.3 inserted after Phase 12: Supabase → Azure Postgres Migration (URGENT, 2026-08-01) — Supabase project backing `content_sessions` permanently deleted, full pipeline outage discovered during Phase 13 Plan 13-01 live-fire (exec `1786295`, see `13-01-BLOCKED.md`). User decision: migrate to Azure PostgreSQL now, do NOT recreate Supabase. Blocks Phase 13 resumption.
 
 ### Open Items
 
