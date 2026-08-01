@@ -103,4 +103,54 @@ NodeOperationError: Refresh the columns list in the 'Column to Match On' paramet
 
 **PASS.** The FB Story 2-step chain (Upload Story Photo Unpublished → Publish Photo Story) fired for real against the Phase 12.2 Hostinger-backed re-host contract and succeeded with a genuine Meta API response (`{success: true, post_id: "1454521203100646"}`). No error path (`🏷️ Tag FB Error`) was taken. The IG Story branch in the same execution also succeeded with no regression. Real evidence — not code review — confirms this chain works end-to-end today.
 
-Pending: human visual confirmation that the Story is actually visible on the real Facebook Page (Task 4 checkpoint) to close out ROADMAP Success Criteria #2.
+## Task 4: Human visual confirmation — PASSED
+
+**User confirmed (2026-08-01):** the Story IS visible on the real Facebook Page (Propulsar.ai) as a proper Story (vertical, Stories tray) — NOT a feed post — matching the approved image. **ROADMAP Success Criteria #2 satisfied with real human-observed evidence.**
+
+## Cleanup — test Story deletion attempts
+
+Per this project's standing rule (delete Meta test content after E2E tests) and explicit user request, both test Stories were attempted to be deleted via the Graph API immediately after the Task 4 confirmation, since both were published to the real production Propulsar.ai accounts.
+
+### FB Story — API deletion FAILED (both ids tried)
+
+**Attempt 1: `DELETE /v22.0/1454521203100646`** (the `post_id` returned by `fb-publish-photo-story`)
+```json
+{"error":{"message":"Unsupported delete request. Object with ID '1454521203100646' does not exist, cannot be loaded due to missing permissions, or does not support this operation. Please read the Graph API documentation at https://developers.facebook.com/docs/graph-api","type":"GraphMethodException","code":100,"error_subcode":33,"fbtrace_id":"AFSYL7LghABGOP3_IHkUO-5"}}
+```
+
+**Attempt 2: `DELETE /v22.0/122133722601238849`** (the underlying `photo_id` from `fb-upload-story-photo`)
+```json
+{"success":false}
+```
+
+**Verification (GET both ids, after both DELETE attempts):**
+- `GET /v22.0/1454521203100646` → `{"post_id":"1454521203100646","status":"published","creation_time":"1785584684","media_type":"photo","url":"https://facebook.com/stories/122094720729238849/UzpfSVNDOjE0NTQ1MjEyMTMxMDA2NDU=/?view_single=1","media_id":"122133722601238849"}` — **still `status: "published"`, DELETE had no effect.**
+- `GET /v22.0/122133722601238849` → `{"created_time":"2026-08-01T11:44:41+0000","id":"122133722601238849"}` — **still exists.**
+
+**Conclusion:** the Graph API does not support deleting an active (unexpired) FB Photo Story via either its `post_id` or underlying `photo_id`. This is consistent with the Plan 12-02 decision already recorded in STATE.md ("FB Story cleanup: Stories auto-expire via 24h lifecycle; Graph API DELETE on an *expired* Story returns code 100/subcode 33") — this test shows the same code 100/subcode 33 error also occurs on an **unexpired** Story, i.e. FB Photo Stories are not API-deletable at any point in their lifecycle with this token/permission set, only auto-expire.
+
+### IG Story — API deletion FAILED (both id forms tried, expected)
+
+**Attempt 1: `DELETE /v22.0/3954092904642171710`** (the permalink's numeric story id)
+```json
+{"error":{"message":"Unsupported delete request. Object with ID '3954092904642171710' does not exist, cannot be loaded due to missing permissions, or does not support this operation. Please read the Graph API documentation at https://developers.facebook.com/docs/graph-api","type":"GraphMethodException","code":100,"error_subcode":33,"fbtrace_id":"Ash4LyxULaZh4zYMb_nN85q"}}
+```
+
+**Attempt 2: `DELETE /v22.0/18111117173094367`** (the real IG `media_id` returned by `IG: Story media_publish`)
+```json
+{"error":{"message":"(#10) Insufficient permissions to access this data","code":10,"type":"OAuthException","fbtrace_id":"AKMxLZ4s-sgd80eT_vUsxI1"}}
+```
+
+**Verification (GET, after both DELETE attempts):**
+- `GET /v22.0/18111117173094367?fields=id,media_product_type,permalink,timestamp` → `{"id":"18111117173094367","media_product_type":"STORY","permalink":"https://www.instagram.com/stories/propulsar_ai/3954092904642171710","timestamp":"2026-08-01T11:44:36+0000"}` — **still live.**
+
+**Conclusion:** as expected, the IG Graph API does not support DELETE on Story media at all (not a permissions gap that can be fixed by adding a scope — `media_id` DELETE returns a straight `OAuthException`/insufficient-permissions on IG's platform-level restriction for Stories, and `code 100` on the permalink numeric id since it isn't a valid Graph object id form).
+
+### Manual action required (user, not automatable)
+
+Neither test Story could be deleted via API. **Both will remain live until manually deleted or auto-expiry (~24h from publish, i.e. ~2026-08-02T11:44Z):**
+
+1. **FB Story** (Propulsar.ai Page, published `2026-08-01T11:44:41Z`) — delete manually: open the Facebook app → Page → Stories → tap the Story → menu (•••) → Delete. Or leave it; it auto-expires ~2026-08-02T11:44Z.
+2. **IG Story** (`@propulsar_ai`, permalink `https://www.instagram.com/stories/propulsar_ai/3954092904642171710`) — delete manually: open the Instagram app → tap the Story → menu (•••) → Delete. Or leave it; it auto-expires ~2026-08-02T11:44Z (same ~24h window).
+
+No further API-based cleanup is possible for either platform.
