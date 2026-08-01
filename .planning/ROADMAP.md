@@ -99,10 +99,10 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
   3. A real Wizard→webhook fire reaches the WhatsApp preview again (the exact step that failed in exec `1786295`) for at least the Story format, proving the outage is over end-to-end
   4. `SETUP.md`/`.env.example` updated — Supabase env vars retired, new Postgres connection vars documented
 
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 12.3-01-PLAN.md — Provision `content_engine` DB + `content_sessions` table on existing `propulsar-db` + n8n credential `Postgres - content_engine` (API-first, UI fallback checkpoint)
+- [x] 12.3-01-PLAN.md — Provision `content_engine` DB + `content_sessions` table on existing `propulsar-db` + n8n credential `Postgres - content_engine` (API-first, UI fallback checkpoint) — COMPLETE 2026-08-01, credential id `3k4OsKJRGlUcWDrq`
 - [ ] 12.3-02-PLAN.md — Rewire the 4 Supabase PostgREST nodes to native Postgres executeQuery + add empty-result guard node + retire Supabase from .env.example/SETUP.md/CLAUDE.md
 - [ ] 12.3-03-PLAN.md — Patch-based deploy to production n8n + real Wizard Story fire reaching the WhatsApp preview (user replies NO — nothing published) + Container App env cleanup
 
@@ -173,5 +173,5 @@ Plans:
 | 12. Instagram Story Publishing | v1.2 | Complete    | 2026-04-23 | 2026-04-23 |
 | 12.1. CDN Layer | v1.2 | 3/3 | FAILED — Meta rejects AFD hostnames, rolled back (superseded by 12.2) | 2026-04-24 |
 | 12.2. Hostinger VPS Re-host Layer | v1.2 | 3/3 | Complete | 2026-07-31 |
-| 12.3. Supabase → Azure Postgres Migration | v1.2 | 0/3 | Planned — ready to execute | - |
+| 12.3. Supabase → Azure Postgres Migration | v1.2 | 1/3 | In Progress | - |
 | 13. Facebook Story + Log + Notifications | v1.2 | 0/3 | PAUSED at 13-01 Task 2 — blocked by 12.3 | - |
