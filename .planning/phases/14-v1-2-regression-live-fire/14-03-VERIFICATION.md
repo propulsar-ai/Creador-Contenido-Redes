@@ -239,4 +239,64 @@ No deletion has been performed. No further tasks executed pending this decision.
 
 ---
 
-*To be appended after Tasks 5 (resolution)-6: user decision on the above, cleanup results, and the compiled pending-IG-manual-deletion list across both fires.*
+## 12. Task 5 Resolution
+
+User reviewed the Section 11 investigation and explicitly accepted Facebook's album rendering as expected, pre-existing Meta platform behavior (documented, not a Phase 14 regression) — response: **"confirmado"**. Both platforms' visual confirmation is complete:
+
+- Instagram: CORRECT — 5 slides render as one swipeable carousel.
+- Facebook: CORRECT-per-Meta's-API-design — one post (`media_type: album`, all 5 photos attached, backend-confirmed via Graph API GET in §11), rendered by Meta as an album/grid rather than a single-frame swipe view. Accepted as expected behavior, not fixable via any organic Graph API mechanism.
+
+Proceeding to Task 6 cleanup per locked policy (same-session cleanup after full visual verification).
+
+## 13. Cleanup (Task 6)
+
+All evidence for the carousel run (media IDs, permalinks, raw responses, Postgres row, Sheets row) was already fully captured pre-deletion in Sections 1-10 above (per Task 4's requirement) — nothing additional needed capturing before proceeding with deletion.
+
+### FB carousel post — deleted via API (expected to work, matches 14-02 precedent exactly)
+
+```
+DELETE https://graph.facebook.com/v22.0/981931321668013_122133770775238849?access_token=...
+→ {"success":true}
+```
+
+Follow-up GET to confirm removal:
+
+```
+GET https://graph.facebook.com/v22.0/981931321668013_122133770775238849?access_token=...
+→ 400 {"error":{"message":"(#10) Object does not exist, cannot be loaded due to missing permission or reviewable feature, or does not support this operation. This endpoint requires the 'pages_read_engagement' permission or the 'Page Public Content Access' feature. ...","type":"OAuthException","code":10,"fbtrace_id":"AFE3YCkvQt_m3snYKbLcL24"}}
+```
+
+Same permission-class error as 14-02's follow-up GET (code 10, missing `pages_read_engagement`/Page Public Content Access — this token's scope doesn't support unauthenticated-style page-post reads at all). Not conclusive proof by itself, but the `DELETE` call's own response (`{"success":true}`) is Meta's canonical success payload and the authoritative signal per Graph API semantics, matching the established 14-02 pattern exactly. Treated as **deleted**.
+
+### IG carousel media — deletion attempted, failed as expected (permissions)
+
+```
+DELETE https://graph.facebook.com/v22.0/17966364624135172?access_token=...
+→ 400 {"error":{"message":"(#10) Insufficient permissions to access this data","code":10,"type":"OAuthException","fbtrace_id":"Ae2lKDyh09rYlhtOIWvkbMm"}}
+```
+
+Failed exactly as expected — IG Business media (including carousel `media_publish` output, same as single-post media) is not API-deletable with this token's permission set, identical failure mode to 14-02's IG deletion attempt. **IG carousel is PENDING MANUAL DELETION.**
+
+### Cleanup summary (this plan)
+
+| Platform | Post/Media ID | API deletion result | Status |
+|---|---|---|---|
+| Facebook | `981931321668013_122133770775238849` | `{"success":true}` | Deleted |
+| Instagram | `17966364624135172` | `400 OAuthException code 10 (insufficient permissions)` | Pending manual deletion |
+
+### Compiled pending-IG-manual-deletion list — BOTH fires (Phase 14)
+
+Neither fire's IG API deletion succeeded (both blocked by the same token permission gap, confirmed independently on 2 different media types — single photo and carousel). Two IG test posts remain live, pending user manual in-app deletion:
+
+| # | Plan | Format | Media ID | Permalink | API deletion attempted | Result |
+|---|---|---|---|---|---|---|
+| 1 | 14-02 | Single | `18174505420425505` | https://www.instagram.com/p/DbgZI2glh3x/ | Yes | Failed (code 10, insufficient permissions) |
+| 2 | 14-03 | Carousel (5 slides) | `17966364624135172` | https://www.instagram.com/p/DbgeOgrlm5S/ | Yes | Failed (code 10, insufficient permissions) |
+
+Both FB counterparts (single feed post + carousel album post) were successfully deleted via the API in their respective plans — no FB manual cleanup needed.
+
+Commit for this section: `docs(14-03): VERIF-02 carousel live-fire evidence + cleanup + phase baseline`
+
+---
+
+*Appended after Task 5 (resolution) and Task 6 (cleanup): user decision confirmed above, cleanup results captured, pending-IG-manual-deletion list compiled across both fires. Task 7 (end-of-phase manual IG deletion + baseline sign-off) remains — see STATE.md / SUMMARY for final phase closure.*
