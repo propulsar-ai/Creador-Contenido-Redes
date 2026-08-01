@@ -43,7 +43,7 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full phase details.
 - [x] **Phase 12.1 (NEW, URGENT): CDN Layer** - Azure Front Door Standard fronting Azure Blob restores Phase 4 re-host invariant broken by Meta 2026-04-17 domain-wide block. **FAILED 2026-04-23** — Meta rejects all AFD hostnames (default + custom domain), rolled back. Superseded by Phase 12.2.
 - [x] **Phase 12.2 (NEW, URGENT): Hostinger VPS Re-host Layer** - Self-hosted upload/serve/delete microservice on the existing Hostinger VPS (EasyPanel wildcard domain, proven accepted by Meta via 2026-07-31 smoke test) replaces Azure Blob as the re-host backend. Same Options D revert pattern as 12.1, new backend. **COMPLETE 2026-07-31** — live E2E verification: real sub-workflow success + injected-failure execs, 5/5 Meta container-creation calls PASS.
 - [x] **Phase 12.3 (NEW, URGENT): Supabase → Azure Postgres Migration** - Supabase project backing `content_sessions` permanently deleted (discovered 2026-08-01, full pipeline outage). Migrated session persistence to Azure PostgreSQL + rewired all 4 Supabase n8n nodes. **COMPLETE 2026-08-01** — patch-based deploy live (versionId `f81aeed2`, 92 nodes), 2 real Wizard Story fires proved the rewired Postgres INSERT works end-to-end (the exact node that failed pre-migration), WhatsApp preview delivered and user replied NO, zero Meta-facing nodes ran, dead Supabase Container App config retired. Unblocks Phase 13.
-- [ ] **Phase 13: Facebook Story + Log + Notifications** - Live-fire re-confirm the already-built FB Story chain (Phase 12) against the Hostinger backend, extend Sheets log schema (Formato/Expires_At), send Story-specific WA success notification (depends on 12.2 for clean contract; **2/3 plans complete 2026-08-01 — FBSTORY-01 live-confirmed (13-01), LOG-01/LOG-02/NOTIF-01 implemented locally (13-02) — resume from 13-03 (deploy + live-verify)**)
+- [ ] **Phase 13: Facebook Story + Log + Notifications** - Live-fire re-confirm the already-built FB Story chain (Phase 12) against the Hostinger backend, extend Sheets log schema (Formato/Expires_At), send Story-specific WA success notification (depends on 12.2 for clean contract; **3/3 plans complete 2026-08-01 — FBSTORY-01 live-confirmed (13-01), LOG-01/LOG-02/NOTIF-01 implemented (13-02) + deployed and proven live with real production evidence, including a found-and-fixed live Sheet header typo (13-03) — awaiting phase verifier before this checkbox/table row close**)
 
 ## Phase Details
 
@@ -153,7 +153,7 @@ Plans:
 **Plans**: 3 plans
 - [x] 13-01-PLAN.md — Live-fire re-verification of the already-built FB Story chain against the Hostinger backend (real Wizard→WhatsApp→SI Story fire, execution evidence capture, human-confirmed Story on the FB Page) — COMPLETE 2026-08-01, FBSTORY-01 confirmed live, ROADMAP Success Criteria #2 satisfied
 - [x] 13-02-PLAN.md — NOTIF-01 (Facebook line in Story WA notification) + LOG-01/LOG-02 (Formato + Expires_At Sheets columns) code edits, plus the manual Google Sheet header-column checkpoint — COMPLETE 2026-08-01, all 3 requirements implemented as additive edits to 6 nodes in `n8n/workflow.json` (local only), live Sheet header extended to 15 columns
-- [ ] 13-03-PLAN.md — Deploy to n8n-azure + post-deploy real Story fire + human-confirmed WhatsApp message + Sheet row evidence, closing the phase
+- [x] 13-03-PLAN.md — Deploy to n8n-azure + post-deploy real Story fire + human-confirmed WhatsApp message + Sheet row evidence, closing the phase — COMPLETE 2026-08-01, deployed live (versionId `83aa7f3c`), real Story fired (real IG+FB publish), NOTIF-01 confirmed via YCloud+human, found/fixed a live Sheet header typo blocking Story log rows, backfilled the real log row, human-confirmed both WhatsApp message and Sheet row
 
 ## Progress
 
@@ -174,4 +174,4 @@ Plans:
 | 12.1. CDN Layer | v1.2 | 3/3 | FAILED — Meta rejects AFD hostnames, rolled back (superseded by 12.2) | 2026-04-24 |
 | 12.2. Hostinger VPS Re-host Layer | v1.2 | 3/3 | Complete | 2026-07-31 |
 | 12.3. Supabase → Azure Postgres Migration | v1.2 | Complete    | 2026-08-01 | 2026-08-01 |
-| 13. Facebook Story + Log + Notifications | v1.2 | 2/3 | In Progress — Plans 13-01/13-02 complete (FBSTORY-01 live-confirmed, LOG-01/LOG-02/NOTIF-01 implemented locally), Plan 13-03 (deploy + live-verify) remains | - |
+| 13. Facebook Story + Log + Notifications | v1.2 | 3/3 | In Progress — all 3 plans complete (FBSTORY-01/NOTIF-01/LOG-01/LOG-02 proven with real production evidence), awaiting phase verifier before Complete | - |
