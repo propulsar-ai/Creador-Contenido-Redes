@@ -67,13 +67,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmap) | | |
+| VERIF-01 | Phase 14 | Pending |
+| VERIF-02 | Phase 14 | Pending |
+| EVAL-01 | Phase 15 | Pending |
+| EVAL-02 | Phase 15 | Pending |
+| EVAL-03 | Phase 15 | Pending |
+| EVAL-04 | Phase 15 | Pending |
+| EVAL-05 | Phase 15 | Pending |
+| EVAL-06 | Phase 15 | Pending |
+| EVAL-07 | Phase 15 | Pending |
+| INTEG-01 | Phase 16 | Pending |
+| INTEG-02 | Phase 16 | Pending |
+| INTEG-03 | Phase 16 | Pending |
+| INTEG-04 | Phase 16 | Pending |
+| INTEG-05 | Phase 16 | Pending |
+| INTEG-06 | Phase 16 | Pending |
+| INTEG-07 | Phase 17 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️ (roadmap pending)
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-01*
-*Last updated: 2026-08-01 after initial definition*
+*Last updated: 2026-08-01 after ROADMAP.md creation (Phases 14-17, 100% coverage)*
