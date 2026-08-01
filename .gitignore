@@ -13,3 +13,6 @@ Thumbs.db
 
 # IDE
 .vscode/
+
+# Eval harness (Phase 15) — comparison renders, disposable
+eval-output/
