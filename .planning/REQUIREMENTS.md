@@ -29,8 +29,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Verificación carry-over v1.2 (VERIF)
 
-- [ ] **VERIF-01**: Live-fire spot-check of single post format post-Postgres-migration (session persists, SI approval works, publishes to IG+FB)
-- [ ] **VERIF-02**: Live-fire spot-check of carousel format post-Postgres-migration (same checks)
+- [x] **VERIF-01**: Live-fire spot-check of single post format post-Postgres-migration (session persists, SI approval works, publishes to IG+FB) — verified 2026-08-01 (Phase 14)
+- [x] **VERIF-02**: Live-fire spot-check of carousel format post-Postgres-migration (same checks) — verified 2026-08-01 (Phase 14)
 
 ## Future Requirements
 
@@ -67,8 +67,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VERIF-01 | Phase 14 | Pending |
-| VERIF-02 | Phase 14 | Pending |
+| VERIF-01 | Phase 14 | Complete (2026-08-01) |
+| VERIF-02 | Phase 14 | Complete (2026-08-01) |
 | EVAL-01 | Phase 15 | Pending |
 | EVAL-02 | Phase 15 | Pending |
 | EVAL-03 | Phase 15 | Pending |

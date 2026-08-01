@@ -53,7 +53,7 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full phase details, [v1.2-
 
 **Milestone Goal:** Replace Ideogram's diffusion-model text-in-image with a real design/typography engine — chosen by evidence-driven comparison (Gamma vs Creatomate vs Remotion-paper vs Ideogram baseline) — integrated into the existing n8n pipeline for all 3 formats (single, carousel, story), plus a v1.2 carry-over live-fire regression check.
 
-- [ ] **Phase 14: v1.2 Regression Live-Fire** - Confirm single + carousel formats still work end-to-end after the Postgres migration, before any new design-engine work lands
+- [x] **Phase 14: v1.2 Regression Live-Fire** - Confirm single + carousel formats still work end-to-end after the Postgres migration, before any new design-engine work lands (completed 2026-08-01)
 - [ ] **Phase 15: Comparison, Templates, Eval Harness & Decision** - Build brand templates in Creatomate/Gamma, render a standalone comparison (incl. diacritics stress test + hybrid variant) against Ideogram baseline, score against the 7-criteria rubric, and produce the winning-engine + Ideogram coexist/replace decision (Remotion stays paper-only)
 - [ ] **Phase 16: Winning-Engine Integration (All Formats)** - Wire the Phase 15 winner into the n8n `image_model` router as an additive branch and prove it publishes real single/carousel/story posts through the unchanged rehost → WhatsApp → Meta chain
 - [ ] **Phase 17: Wizard Update & Milestone Close** - Wizard surfaces/suggests the winning engine to the user, completing the milestone's user-visible surface
@@ -132,7 +132,7 @@ Phases execute in numeric order: 14 → 15 → 16 → 17
 | 12.2. Hostinger VPS Re-host Layer | v1.2 | 3/3 | Complete | 2026-07-31 |
 | 12.3. Supabase → Azure Postgres Migration | v1.2 | 3/3 | Complete | 2026-08-01 |
 | 13. Facebook Story + Log + Notifications | v1.2 | 3/3 | Complete | 2026-08-01 |
-| 14. v1.2 Regression Live-Fire | v1.3 | 0/3 | Planned | - |
+| 14. v1.2 Regression Live-Fire | v1.3 | Complete    | 2026-08-01 | - |
 | 15. Comparison, Templates, Eval Harness & Decision | v1.3 | 0/TBD | Not started | - |
 | 16. Winning-Engine Integration (All Formats) | v1.3 | 0/TBD | Not started | - |
 | 17. Wizard Update & Milestone Close | v1.3 | 0/TBD | Not started | - |
