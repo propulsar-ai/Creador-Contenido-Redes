@@ -622,63 +622,44 @@
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.SUPABASE_URL }}/rest/v1/content_sessions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_ANON_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_ANON_KEY }}"
-            },
-            {
-              "name": "Accept",
-              "value": "application/vnd.pgrst.object+json"
-            }
-          ]
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "approval_number",
-              "value": "=eq.{{ $json.body.whatsappInboundMessage.from }}"
-            },
-            {
-              "name": "status",
-              "value": "eq.pending"
-            },
-            {
-              "name": "order",
-              "value": "created_at.desc"
-            },
-            {
-              "name": "limit",
-              "value": "1"
-            }
-          ]
-        },
+        "operation": "executeQuery",
+        "query": "SELECT * FROM content_sessions WHERE approval_number = $1 AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
+          "queryBatching": "independently",
+          "queryReplacement": "={{ [$json.body.whatsappInboundMessage.from] }}"
         }
       },
       "id": "retrieve-session",
       "name": "🔍 Recuperar sesión Supabase",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "alwaysOutputData": true,
       "position": [
         2624,
         384
       ],
-      "notes": "GET pending session from content_sessions, filtered by approval_number = phone + status=pending. Uses PostgREST Accept header 'application/vnd.pgrst.object+json' so response is a SINGLE object (not array), giving downstream nodes the flat session directly. Empty result → 406 → execution fails with clear error (same as the old Code node behavior). Built as HTTP Request because n8n task runner sandbox blocks every HTTP helper inside Code nodes."
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      },
+      "notes": "Phase 12.3: SELECT pending session from content_sessions on Azure PostgreSQL (content_engine DB), filtered by approval_number = phone + status=pending, ORDER BY created_at DESC LIMIT 1. Replaces the dead Supabase PostgREST call — the old node relied on PostgREST's Accept: application/vnd.pgrst.object+json to 406 on zero rows; the native Postgres node returns [] silently instead, so alwaysOutputData=true + the new 🛡️ Assert Session Found guard node downstream recreate the fail-loud behavior explicitly."
+    },
+    {
+      "parameters": {
+        "jsCode": "// 12.3: The old Supabase/PostgREST recovery read returned HTTP 406 when 0 rows matched\n// (Accept: application/vnd.pgrst.object+json), halting the execution with a clear error.\n// The native Postgres node returns an empty result silently instead. Recreate fail-loud explicitly.\nconst items = $input.all();\nif (items.length === 0 || !items[0].json || !items[0].json.session_id) {\n  throw new Error('No pending session found for this approval number (content_sessions, status=pending). The SI reply has nothing to publish.');\n}\nreturn items;",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "assert-session-found",
+      "name": "🛡️ Assert Session Found",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2752,
+        384
+      ],
+      "notes": "12.3 guard: restores the fail-loud no-pending-session behavior that PostgREST's 406 gave for free. Throws when the recovery SELECT returned no row (or an alwaysOutputData empty item)."
     },
     {
       "parameters": {
@@ -3347,6 +3328,17 @@
       ]
     },
     "🔍 Recuperar sesión Supabase": {
+      "main": [
+        [
+          {
+            "node": "🛡️ Assert Session Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🛡️ Assert Session Found": {
       "main": [
         [
           {
