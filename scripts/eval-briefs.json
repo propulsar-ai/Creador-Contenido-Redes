@@ -1,0 +1,249 @@
+{
+  "_readme": "Frozen, reproducible input matrix for scripts/eval-design-engines.js (Phase 15-03, EVAL-03/04/05). Real texts transcribed verbatim from brand/referencias/ published Propulsar posts. The GPT-4o brief's raw API response is frozen here too — never regenerated, for reproducibility. Do not edit content fields without re-freezing a fresh run and documenting why in 15-03-SUMMARY.md or a follow-up plan.",
+
+  "hybrid_background_model": "fal-ai/flux-pro/v1.1",
+  "hybrid_background_rationale": "Claude's-discretion choice for EVAL-05's two-stage hybrid (background generator + Creatomate typographic overlay): Flux 2 Pro ($0.03/img) over Nano Banana Pro ($0.15/img, 5x cost). The hybrid pipeline deliberately splits concerns — the background model only needs to produce photorealistic, text-free art (the overlay engine's job is compositing legible headline/body/badge/CTA text on top). That is exactly Flux's documented strength (fotorrealismo premium) and does not require Nano Banana's extra capability (in-image text/reasoning), which the hybrid design never asks it to use. Nano Banana's premium buys capability this pipeline stage doesn't consume.",
+
+  "briefs": [
+    {
+      "id": "veterinaria-caso-exito",
+      "content_type": "case_study",
+      "source": "2026-07-20_carousel_17981827086045232",
+      "source_note": "Real published Propulsar IG carousel, 2026-07-20 — the July 'norte' target aesthetic. Texts transcribed verbatim from brand/referencias/2026-07-20_carousel_17981827086045232_slide{1,2,4}.jpg. Slide 3 not used in the eval matrix but is the source for supplementary color-accent reference (bot/turno/WhatsApp highlighted words).",
+      "stress": false,
+      "formats": {
+        "single": {
+          "layout_note": "Derived from slide 3's punchy headline for a standalone single-post variant — real text, different slide of the same carousel for content variance.",
+          "badge": "CASO: VETERINARIA",
+          "headline": "La tercera sí atiende.",
+          "body": "No hay nadie despierto del otro lado — atendió el bot, agendó el turno para las 8am y confirmó por WhatsApp en el momento.",
+          "cta": "Escribinos y te mostramos cómo funciona.",
+          "image_prompt": "Text says: \"La tercera sí atiende.\" — smartphone screen close-up showing a WhatsApp veterinary clinic chat conversation at night, appointment confirmation message, dark moody bedroom background — professional design, dark background #070A18, purple and magenta gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+          "background_prompt": "Smartphone screen close-up showing a WhatsApp chat conversation interface at night, dark moody bedroom background, cinematic lighting, photorealistic, no text overlays, dark background #070A18, purple and magenta gradient accents (#8000A8 to #BA00E0)"
+        },
+        "carousel": {
+          "slides": [
+            {
+              "slide_num": 1,
+              "layout": "opening",
+              "layout_note": "Canonical slide-1 layout: image behind, centered text, CASO badge.",
+              "badge": "CASO: VETERINARIA",
+              "headline": "Domingo, 9 de la noche.",
+              "body": "A alguien se le enferma su mascota.",
+              "image_prompt": "Text says: \"Domingo, 9 de la noche. A alguien se le enferma su mascota.\" — man sitting on a dark blue couch late at night, comforting a sick dog resting on his lap, warm lamp light in background, phone visible on side table, emotional atmosphere — professional design, dark background #070A18, purple and magenta gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+              "background_prompt": "Man sitting on a dark blue couch late at night, comforting a sick dog resting on his lap, warm lamp light in background, phone visible on side table, emotional atmosphere, photorealistic, no text overlays, dark background #070A18, purple and magenta gradient accents"
+            },
+            {
+              "slide_num": 2,
+              "layout": "middle",
+              "layout_note": "Canonical middle-slide layout: image right, text left. THIS IS THE LOCKED REAL-OVERFLOW TEST CASE (CONTEXT.md) — in production, this exact headline broke as 'veterinaria s.' on the trailing word wrap. Use as the auto-fit regression test for every engine.",
+              "known_overflow_bug": true,
+              "overflow_bug_note": "Production Ideogram render of this exact headline wrapped 'veterinarias.' as 'veterinaria' + 's.' on two separate lines — a genuine auto-fit failure. Every engine under test should be scored on whether it reproduces or avoids this.",
+              "badge": "CASO: VETERINARIA",
+              "headline": "Llama a 3 veterinarias.",
+              "body": "Dos no atienden — es domingo a la noche, no hay nadie.",
+              "image_prompt": "Text says: \"Llama a 3 veterinarias. Dos no atienden — es domingo a la noche, no hay nadie.\" — smartphone screen showing 3 missed call notifications from veterinary clinics, dark purple gradient background, tech/modern atmosphere — professional design, dark background #070A18, purple and magenta gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+              "background_prompt": "Smartphone screen showing missed call notification banners, dark purple gradient background, tech/modern atmosphere, photorealistic close-up, no text overlays, dark background #070A18 to #13082B gradient"
+            },
+            {
+              "slide_num": 4,
+              "layout": "closing",
+              "layout_note": "Canonical closing-slide layout: no image, blank dark background, centered text + CTA line.",
+              "badge": "CASO: VETERINARIA",
+              "headline": "Esa mascota, y ese dueño, ya son clientes de esa veterinaria — no de las otras dos.",
+              "cta": "Escribinos y te mostramos cómo funciona.",
+              "has_image": false,
+              "image_prompt": "Text says: \"Esa mascota, y ese dueño, ya son clientes de esa veterinaria — no de las otras dos. Escribinos y te mostramos cómo funciona.\" — abstract dark gradient background, no photographic subject, minimalist — professional design, dark background #070A18, dark purple shadow #13082B, magenta glow #4A025D, gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+              "background_prompt": null,
+              "background_prompt_note": "Closing slide has no image in the canonical layout — hybrid variant should render this slide as a pure typographic overlay on the brand gradient background (no Flux call needed)."
+            }
+          ]
+        },
+        "story": {
+          "layout_note": "9:16 derivative of the same carousel content, opening-slide scene (vertical Story composition, safe zones top/bottom per production's Ideogram Story suffix).",
+          "badge": "CASO: VETERINARIA",
+          "headline": "Domingo, 9 de la noche.",
+          "body": "A alguien se le enferma su mascota.",
+          "image_prompt": "Text says: \"Domingo, 9 de la noche. A alguien se le enferma su mascota.\" — man sitting on a dark blue couch late at night, comforting a sick dog resting on his lap, warm lamp light — vertical 9:16 Story composition, subject centered in upper-middle third, safe zone top and bottom 14% for UI, dark background #070A18, purple and magenta gradient accents, bold readable typography",
+          "background_prompt": "Man sitting on a dark blue couch late at night, comforting a sick dog resting on his lap, warm lamp light, vertical 9:16 composition, subject centered in upper-middle third, safe zone top and bottom 14%, photorealistic, no text overlays, dark background #070A18"
+        }
+      }
+    },
+    {
+      "id": "estetica-educativo",
+      "content_type": "educational",
+      "source": "2026-07-15_carousel_18183218272396844",
+      "source_note": "Real published Propulsar IG carousel, 2026-07-15. Texts transcribed verbatim from brand/referencias/2026-07-15_carousel_18183218272396844_slide{1,2,5}.jpg.",
+      "stress": false,
+      "formats": {
+        "single": {
+          "layout_note": "Derived from slide 1 (mito/objection-handling hook) for a standalone single-post variant.",
+          "badge": "CASO: ESTÉTICA",
+          "headline": "Mito: \"Si pongo un bot, mis clientas van a sentir que no me importan.\"",
+          "body": null,
+          "cta": null,
+          "image_prompt": "Text says: \"Mito: Si pongo un bot, mis clientas van a sentir que no me importan.\" — beautician applying a spa facial treatment to a relaxed client lying back on a treatment chair, dark moody studio with cosmetic product shelves in background, warm/emotional atmosphere — professional design, dark background #070A18, purple and magenta gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+          "background_prompt": "Beautician applying a spa facial treatment to a relaxed client lying back on a treatment chair, dark moody studio with cosmetic product shelves in background, warm atmosphere, photorealistic, no text overlays, dark background #070A18"
+        },
+        "carousel": {
+          "slides": [
+            {
+              "slide_num": 1,
+              "layout": "opening",
+              "layout_note": "Canonical slide-1 layout: image behind, centered/left text, CASO badge.",
+              "badge": "CASO: ESTÉTICA",
+              "headline": "Mito: \"Si pongo un bot, mis clientas van a sentir que no me importan.\"",
+              "image_prompt": "Text says: \"Mito: Si pongo un bot, mis clientas van a sentir que no me importan.\" — beautician applying a spa facial treatment to a relaxed client lying back on a treatment chair, dark moody studio with cosmetic product shelves in background, warm/emotional atmosphere — professional design, dark background #070A18, purple and magenta gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+              "background_prompt": "Beautician applying a spa facial treatment to a relaxed client lying back on a treatment chair, dark moody studio with cosmetic product shelves in background, warm atmosphere, photorealistic, no text overlays, dark background #070A18"
+            },
+            {
+              "slide_num": 2,
+              "layout": "middle",
+              "layout_note": "Real published slide 2 uses a blank dark gradient (no photographic subject) rather than the canonical image-right/text-left middle layout — kept verbatim as real production variance, not normalized. Numbered '02' badge accent also present in the original.",
+              "badge": "CASO: ESTÉTICA",
+              "headline": "Realidad: hoy, si no contestas, tu clienta ya se fue con la competencia.",
+              "body": "No hay nada más frío que un teléfono que no atiende.",
+              "has_image": false,
+              "image_prompt": "Text says: \"Realidad: hoy, si no contestas, tu clienta ya se fue con la competencia. No hay nada más frío que un teléfono que no atiende.\" — abstract dark gradient background, no photographic subject, minimalist — professional design, dark background #070A18, dark purple shadow #13082B, gradient elements (#8000A8 to #BA00E0), pearl blue/lavender accent #6B7AFF, bold readable typography, social media post",
+              "background_prompt": null,
+              "background_prompt_note": "Real slide has no image — pure typographic overlay on the brand gradient background for the hybrid variant, matching production's actual design."
+            },
+            {
+              "slide_num": 5,
+              "layout": "closing",
+              "layout_note": "Canonical closing-slide layout: no image, blank dark background, centered text + CTA + pointing-hand emoji.",
+              "badge": "CASO: ESTÉTICA",
+              "headline": "¿Te genera dudas esto?",
+              "body": "Cuéntame en los comentarios",
+              "cta": "y te explico cómo funciona en la práctica 👇",
+              "has_image": false,
+              "image_prompt": "Text says: \"¿Te genera dudas esto? Cuéntame en los comentarios y te explico cómo funciona en la práctica.\" — abstract dark gradient background, no photographic subject, minimalist — professional design, dark background #070A18, dark purple shadow #13082B, magenta glow #4A025D, gradient elements (#8000A8 to #BA00E0), bold readable typography, social media post",
+              "background_prompt": null,
+              "background_prompt_note": "Closing slide has no image in the canonical layout — hybrid variant renders as pure typographic overlay on the brand gradient background."
+            }
+          ]
+        },
+        "story": {
+          "layout_note": "9:16 derivative using slide 2's 'realidad' content for variance from the single format.",
+          "badge": "CASO: ESTÉTICA",
+          "headline": "Realidad: hoy, si no contestas, tu clienta ya se fue con la competencia.",
+          "body": "No hay nada más frío que un teléfono que no atiende.",
+          "image_prompt": "Text says: \"Realidad: hoy, si no contestas, tu clienta ya se fue con la competencia. No hay nada más frío que un teléfono que no atiende.\" — abstract dark gradient background, no photographic subject, minimalist — vertical 9:16 Story composition, subject centered in upper-middle third, safe zone top and bottom 14% for UI, dark background #070A18, purple and magenta gradient accents, bold readable typography",
+          "background_prompt": null,
+          "background_prompt_note": "No image in source content — hybrid variant renders as pure typographic overlay on the brand gradient background."
+        }
+      }
+    },
+    {
+      "id": "gimnasio-gpt4o",
+      "content_type": "case_study",
+      "source": "gpt-4o",
+      "source_note": "Generated live via Azure OpenAI (propulsar-prod-aoai, deployment gpt-4o, api-version 2024-10-21) using production's exact system+user prompt shape from n8n/workflow.json's '🤖 GPT-4o — Texto' node (openai-text), on a fresh Propulsar-typical topic. FROZEN VERBATIM below — never regenerated, for reproducibility. Exercises real auto-fit/overflow length variance instead of hand-tuned fixed text.",
+      "gpt4o_call_params": {
+        "topic": "Cómo un gimnasio evita perder socios por falta de seguimiento post-venta",
+        "type": "case_study",
+        "angle": "Automatización de seguimiento de bajas con WhatsApp + recordatorios",
+        "model": "gpt-4o-2024-11-20",
+        "temperature": 0.5,
+        "endpoint": "https://propulsar-prod-aoai.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-10-21"
+      },
+      "gpt4o_raw_response": {
+        "instagram": {
+          "caption": "¿Tu gimnasio pierde socios por falta de seguimiento? 🏋️‍♂️ Descubre cómo automatizar el post-venta y retener clientes.\n\nUn gimnasio local enfrentaba un problema común: socios que cancelaban su membresía y no volvían. ¿La solución? Implementar un sistema automatizado que utiliza WhatsApp para el seguimiento post-baja.\n\nEl proceso es simple: al recibir una solicitud de cancelación, el sistema envía mensajes personalizados que agradecen al cliente por su tiempo en el gimnasio y les ofrece promociones exclusivas para regresar. Además, envía recordatorios programados con beneficios adicionales, como clases gratuitas o descuentos.\n\nEl resultado: un aumento del 25% en la retención de clientes y una mejora significativa en la percepción de la marca.\n\nAutomatizar este tipo de interacciones no solo ahorra tiempo, también fortalece la relación con tus socios. 💪 ¿Tu gimnasio está listo para dar el siguiente paso?\n\n📩 Contáctanos para implementar esta solución.\n\n#Gimnasio #Automatización #WhatsAppMarketing #RetenciónDeClientes #PostVenta #PYMES #MarketingDigital #Fitness #ClientesFelices #PropulsarAI",
+          "image_prompt": "A professional image showing a gym environment with visible text: 'Automatiza el seguimiento post-baja con WhatsApp' in bold letters. Dark background, purple-magenta gradients, icons of chat bubbles and gym equipment."
+        },
+        "facebook": {
+          "caption": "¿Sabías que un seguimiento post-venta puede evitar bajas en tu gimnasio? 🏋️‍♀️\n\nUn gimnasio local logró reducir cancelaciones al automatizar mensajes personalizados vía WhatsApp. Al recibir una solicitud de baja, el sistema envía agradecimientos y promociones exclusivas para motivar el regreso. También incluye recordatorios con beneficios como clases gratuitas.\n\nEl resultado fue claro: más clientes regresaron y la percepción del gimnasio mejoró.\n\n💡 ¿Te interesa implementar algo similar en tu negocio? Escríbenos y te ayudamos a empezar.\n\n#Gimnasio #Automatización #WhatsAppMarketing #ClientesFelices #PropulsarAI",
+          "question": "¿Tu gimnasio tiene un sistema de seguimiento para clientes que cancelan? Cuéntanos en los comentarios.",
+          "CTA": "Escríbenos y transforma tu proceso post-venta."
+        }
+      },
+      "stress": false,
+      "formats": {
+        "single": {
+          "layout_note": "Headline/body/cta manually derived (deterministically) from the frozen GPT-4o caption above — headline from the IG hook, body summarizing the case, cta from the FB response's own 'CTA' field.",
+          "badge": "CASO: GIMNASIO",
+          "headline": "¿Tu gimnasio pierde socios por falta de seguimiento?",
+          "body": "Un gimnasio local logró +25% de retención automatizando el seguimiento post-baja con WhatsApp.",
+          "cta": "Escríbenos y transforma tu proceso post-venta.",
+          "image_prompt": "A professional image showing a gym environment with visible text: 'Automatiza el seguimiento post-baja con WhatsApp' in bold letters. Dark background, purple-magenta gradients, icons of chat bubbles and gym equipment. — professional design, dark background #070A18, purple and magenta gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+          "background_prompt": "A modern gym environment, weights and equipment visible, dramatic lighting, chat bubble motif subtly integrated into the scene, photorealistic, no text overlays, dark background #070A18, purple-magenta gradient accents"
+        },
+        "carousel": {
+          "slides": [
+            {
+              "slide_num": 1,
+              "layout": "opening",
+              "badge": "CASO: GIMNASIO",
+              "headline": "¿Tu gimnasio pierde socios por falta de seguimiento?",
+              "body": "Un problema común: socios que cancelan su membresía y no vuelven.",
+              "image_prompt": "Text says: \"¿Tu gimnasio pierde socios por falta de seguimiento? Un problema común: socios que cancelan su membresía y no vuelven.\" — modern gym floor with equipment, dramatic moody lighting, empty at night, emotional atmosphere — professional design, dark background #070A18, purple and magenta gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+              "background_prompt": "Modern gym floor with equipment, dramatic moody lighting, empty at night, photorealistic, no text overlays, dark background #070A18"
+            },
+            {
+              "slide_num": 2,
+              "layout": "middle",
+              "badge": "CASO: GIMNASIO",
+              "headline": "La solución: WhatsApp automatizado.",
+              "body": "Mensajes personalizados + recordatorios con beneficios exclusivos para que el socio vuelva.",
+              "image_prompt": "Text says: \"La solución: WhatsApp automatizado. Mensajes personalizados + recordatorios con beneficios exclusivos.\" — smartphone screen showing a WhatsApp conversation with a gym membership retention offer, dark background, tech/modern atmosphere — professional design, dark background #070A18, purple and magenta gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+              "background_prompt": "Smartphone screen close-up showing a chat app interface, dark background, tech/modern atmosphere, photorealistic, no text overlays, dark background #070A18 to #13082B gradient"
+            },
+            {
+              "slide_num": 3,
+              "layout": "closing",
+              "badge": "CASO: GIMNASIO",
+              "headline": "+25% de retención de clientes.",
+              "cta": "Escríbenos y transforma tu proceso post-venta.",
+              "has_image": false,
+              "image_prompt": "Text says: \"+25% de retención de clientes. Escríbenos y transforma tu proceso post-venta.\" — abstract dark gradient background, no photographic subject, minimalist — professional design, dark background #070A18, dark purple shadow #13082B, magenta glow #4A025D, gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+              "background_prompt": null,
+              "background_prompt_note": "Closing slide — pure typographic overlay on the brand gradient background."
+            }
+          ]
+        },
+        "story": {
+          "layout_note": "9:16 derivative of the opening-slide content.",
+          "badge": "CASO: GIMNASIO",
+          "headline": "¿Tu gimnasio pierde socios?",
+          "body": "Automatizá el seguimiento post-baja con WhatsApp.",
+          "image_prompt": "Text says: \"¿Tu gimnasio pierde socios? Automatizá el seguimiento post-baja con WhatsApp.\" — modern gym floor with equipment, dramatic moody lighting, empty at night — vertical 9:16 Story composition, subject centered in upper-middle third, safe zone top and bottom 14% for UI, dark background #070A18, purple and magenta gradient accents, bold readable typography",
+          "background_prompt": "Modern gym floor with equipment, dramatic moody lighting, empty at night, vertical 9:16 composition, subject centered in upper-middle third, safe zone top and bottom 14%, photorealistic, no text overlays, dark background #070A18"
+        }
+      }
+    }
+  ],
+
+  "diacritics_stress": [
+    {
+      "id": "diacritics-1",
+      "stress": true,
+      "stress_type": "diacritics",
+      "content_type": "authority",
+      "source": "handwritten",
+      "note": "Heavy diacritics in headline position: ¿, ó (x3), í, ñ.",
+      "badge": "CASO: PELUQUERÍA",
+      "headline": "¿Cómo aumentó su facturación un 40% esta peluquería española?",
+      "body": "Automatización de reservas y recordatorios, sin perder el trato cercano.",
+      "cta": "Escribinos y te mostramos cómo funciona.",
+      "formats_to_render": ["single"],
+      "image_prompt": "Text says: \"¿Cómo aumentó su facturación un 40% esta peluquería española?\" — modern hair salon interior, stylist working with a client, warm professional lighting — professional design, dark background #070A18, purple and magenta gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+      "background_prompt": "Modern hair salon interior, stylist working with a client, warm professional lighting, photorealistic, no text overlays, dark background #070A18"
+    },
+    {
+      "id": "diacritics-2",
+      "stress": true,
+      "stress_type": "diacritics",
+      "content_type": "authority",
+      "source": "handwritten",
+      "note": "Heavy diacritics in headline position: ¡, á (x2), é, ú, í, ñ.",
+      "badge": "CASO: ATENCIÓN AL CLIENTE",
+      "headline": "¡Automatizá la atención al cliente: público más contento, menos líos, cero españoles esperando!",
+      "body": "Menos citas perdidas, más tiempo para tu equipo.",
+      "cta": "Escribinos y te mostramos cómo funciona.",
+      "formats_to_render": ["single"],
+      "image_prompt": "Text says: \"¡Automatizá la atención al cliente: público más contento, menos líos, cero españoles esperando!\" — busy small business reception desk with a queue, warm professional lighting — professional design, dark background #070A18, purple and magenta gradient elements (#8000A8 to #BA00E0), cyan accent #00E5FF, bold readable typography, social media post",
+      "background_prompt": "Busy small business reception desk with a short queue of customers, warm professional lighting, photorealistic, no text overlays, dark background #070A18"
+    }
+  ]
+}
