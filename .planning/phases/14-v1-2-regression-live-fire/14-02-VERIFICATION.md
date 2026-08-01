@@ -142,4 +142,40 @@ Flux 2 Pro: **$0.03** (single call, Wizard's own suggestion, accepted per locked
 
 ## Cleanup (Task 6 — appended after user visual confirmation)
 
-_Not yet performed — pending Task 5 checkpoint._
+User visually confirmed both posts live and correct on 2026-08-01 ("confirmado") — proceeding with cleanup per locked policy (same-session cleanup after full verification).
+
+### FB feed post — deleted via API (expected to work)
+
+```
+DELETE https://graph.facebook.com/v22.0/981931321668013_122133764865238849?access_token=...
+→ {"success":true}
+```
+
+Follow-up GET to confirm removal:
+
+```
+GET https://graph.facebook.com/v22.0/981931321668013_122133764865238849?access_token=...
+→ 400 {"error":{"message":"(#10) Object does not exist, cannot be loaded due to missing permission or reviewable feature, or does not support this operation. This endpoint requires the 'pages_read_engagement' permission or the 'Page Public Content Access' feature. ...","type":"OAuthException","code":10,"fbtrace_id":"ATbWuf2gWc-W-XpWg-n7UGZ"}}
+```
+
+Note: the follow-up GET's error is a permission-class error (code 10, "missing permission or reviewable feature"), not a clean "does not exist" (code 100). This token's scope doesn't support unauthenticated-style page-post reads at all, so this GET is not by itself conclusive proof of deletion. However, the `DELETE` call itself returned Meta's canonical success payload (`{"success":true}`), which is the authoritative signal per Graph API semantics — matches the established pattern (Propulsar memory: FB test feed posts are API-deletable) and matches this plan's expectation. Treated as **deleted**.
+
+### IG media — deletion attempted, failed as expected (permissions)
+
+```
+DELETE https://graph.facebook.com/v22.0/18174505420425505?access_token=...
+→ 400 {"error":{"message":"(#10) Insufficient permissions to access this data","code":10,"type":"OAuthException","fbtrace_id":"AU2FnxpglN_PuKTyebnf155"}}
+```
+
+Failed exactly as expected — IG Business media is not API-deletable with this token's permission set (consistent with established Propulsar memory/precedent for IG content deletion). **IG post is PENDING MANUAL DELETION** — permalink for the user to act on at the Plan 14-03 end-of-phase checkpoint:
+
+`https://www.instagram.com/p/DbgZI2glh3x/`
+
+### Cleanup summary
+
+| Platform | Post ID | API deletion result | Status |
+|---|---|---|---|
+| Facebook | `981931321668013_122133764865238849` | `{"success":true}` | Deleted |
+| Instagram | `18174505420425505` | `400 OAuthException code 10 (insufficient permissions)` | Pending manual deletion (queued for 14-03 checkpoint) |
+
+**VERIF-01 evidence chain and cleanup complete.** Image cost for this plan: $0.03 (Flux 2 Pro, single call).
