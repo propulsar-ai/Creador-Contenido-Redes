@@ -10,10 +10,11 @@ See: .planning/PROJECT.md (updated 2026-08-01 after v1.2 milestone)
 ## Current Position
 
 Milestone: v1.3 Diseño Premium
-Phase: 14 of 17 (v1.2 Regression Live-Fire) — ready to plan
+Phase: 14 of 17 (v1.2 Regression Live-Fire) — context gathered, ready to plan
 Plan: —
-Status: Roadmap created — ready for `/gsd:plan-phase 14`
-Last activity: 2026-08-01 — ROADMAP.md created for v1.3 (`/gsd:create-roadmap`): 4 phases derived from the 16 v1.3 requirements — Phase 14 v1.2 Regression Live-Fire (VERIF-01/02, sequenced first to isolate Postgres-migration bugs from new design-engine work), Phase 15 Comparison/Templates/Eval Harness/Decision (EVAL-01..07, gates all integration work), Phase 16 Winning-Engine Integration all formats (INTEG-01..06, depends on Phase 15's decision), Phase 17 Wizard Update + Milestone Close (INTEG-07). 16/16 requirements mapped, zero orphans. REQUIREMENTS.md traceability table updated.
+Status: Phase 14 context gathered — ready for `/gsd:plan-phase 14`
+Last activity: 2026-08-01 — Phase 14 context gathered (`/gsd:discuss-phase 14`): test content deleted after verification (FB via API, IG attempt-API-then-manual), normal Wizard flow with Wizard's own model/slide suggestions, pre-fire WhatsApp 24h-window checkpoint, programmatic+visual verification (Postgres row, Sheets via API read, YCloud GET), ~$1.50 image budget with direct fix+re-fire, AND an in-phase fix rerouting the hashtag-comment node's onError so the known-broken FB feed branch works without waiting for Susana's token. See `.planning/phases/14-v1-2-regression-live-fire/14-CONTEXT.md`.
+Resume file: .planning/phases/14-v1-2-regression-live-fire/14-CONTEXT.md
 
 ## Previous Milestone (v1.2) — archived summary
 
