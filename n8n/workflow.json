@@ -2175,10 +2175,10 @@
         200
       ],
       "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 3000,
+      "maxTries": 4,
+      "waitBetweenTries": 8000,
       "onError": "continueErrorOutput",
-      "notes": "Creates one IG child container per carousel slide. is_carousel_item=true required by Meta. Idempotent — retry is safe. Runs once per slide (fan-out from Explode). Output: { id: <child_container_id> }."
+      "notes": "Creates one IG child container per carousel slide. is_carousel_item=true required by Meta. Idempotent — retry is safe. Runs once per slide (fan-out from Explode). Output: { id: <child_container_id> }. maxTries/waitBetweenTries raised 2/3000 -> 4/8000 (Plan 14-03, live evidence: Meta intermittently returns 9004/2207052 'cannot download media' for 1-2 of 5 concurrent-ish slide fetches against rehost-service, self-resolves on retry with more headroom)."
     },
     {
       "parameters": {
