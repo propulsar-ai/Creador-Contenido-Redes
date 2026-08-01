@@ -413,49 +413,28 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.SUPABASE_URL }}/rest/v1/content_sessions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_ANON_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_ANON_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ session_id: 'propulsar_' + Date.now(), approval_number: $json.approval_number, topic: $json.topic, type: $json.type, angle: $json.angle || null, platforms: $json.platforms || [], image_model: $json.image_model, image_url: $json.image_url || null, final_image_url: $json.final_image_url, instagram_caption: ($json.instagram && $json.instagram.caption) || null, facebook_caption: ($json.facebook && $json.facebook.caption) || null, status: 'pending', publish_at: $json.publish_at || 'now' }) }}",
+        "operation": "executeQuery",
+        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, image_url, final_image_url, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12) RETURNING *",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
+          "queryBatching": "independently",
+          "queryReplacement": "={{ ['propulsar_' + Date.now(), $json.approval_number, $json.topic, $json.type, $json.angle || null, $json.platforms || [], $json.image_model, $json.image_url || null, $json.final_image_url, ($json.instagram && $json.instagram.caption) || null, ($json.facebook && $json.facebook.caption) || null, $json.publish_at || 'now'] }}"
         }
       },
       "id": "save-session-supabase",
       "name": "💾 Guardar sesión Supabase",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
       "position": [
         1632,
         600
       ],
-      "notes": "Inserts pending approval session into content_sessions (flat schema — instagram_caption/facebook_caption strings, not nested). Built as HTTP Request (not Code) because n8n task runner sandbox blocks require('https'), global fetch, and $helpers.httpRequest. Response = array of the inserted row."
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      },
+      "notes": "Phase 12.3: Inserts pending approval session into content_sessions on Azure PostgreSQL (content_engine DB, replaces the dead Supabase PostgREST call). Native Postgres executeQuery node with parameterized SQL + RETURNING * — same flat response shape the old PostgREST call produced. session_id computed as a bound parameter, same 'propulsar_' + Date.now() semantics as before."
     },
     {
       "parameters": {
@@ -1885,44 +1864,17 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.SUPABASE_URL }}/rest/v1/content_sessions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_ANON_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_ANON_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ session_id: 'propulsar_' + Date.now(), approval_number: $json.approval_number, topic: $json.topic, type: $json.type, angle: $json.angle || null, platforms: $json.platforms || [], image_model: $json.image_model || 'ideogram', format: 'carousel', image_urls: $json.image_urls, instagram_caption: $json.instagram_caption || ($json.instagram && $json.instagram.caption) || null, facebook_caption: $json.facebook_caption || ($json.facebook && $json.facebook.caption) || null, status: 'pending', publish_at: $json.publish_at || 'now' }) }}",
+        "operation": "executeQuery",
+        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, format, image_urls, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'carousel',$8,$9,$10,'pending',$11) RETURNING *",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
+          "queryBatching": "independently",
+          "queryReplacement": "={{ ['propulsar_' + Date.now(), $json.approval_number, $json.topic, $json.type, $json.angle || null, $json.platforms || [], $json.image_model || 'ideogram', $json.image_urls, $json.instagram_caption || ($json.instagram && $json.instagram.caption) || null, $json.facebook_caption || ($json.facebook && $json.facebook.caption) || null, $json.publish_at || 'now'] }}"
         }
       },
       "id": "save-session-carousel",
       "name": "💾 Guardar sesión Supabase (Carousel)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
@@ -1930,48 +1882,27 @@
         1968,
         700
       ],
-      "notes": "Inserts a carousel session into content_sessions BEFORE the WA preview is sent. Mirrors 💾 Guardar sesión Supabase (single-post). Uses format='carousel' and image_urls (JSONB array). retryOnFail=true — Supabase INSERT is idempotent by session_id (timestamp-based), safe to retry. Response = array of the inserted row."
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      },
+      "notes": "Phase 12.3: Inserts a carousel session into content_sessions on Azure PostgreSQL (content_engine DB, replaces the dead Supabase PostgREST call) BEFORE the WA preview is sent. Mirrors 💾 Guardar sesión Supabase (single-post). Uses format='carousel' and image_urls (TEXT[] — pg driver serializes the JS array natively, no cast needed). retryOnFail=true preserved — INSERT is idempotent by session_id (timestamp-based), safe to retry. RETURNING * gives the same flat response shape the old PostgREST call produced."
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.SUPABASE_URL }}/rest/v1/content_sessions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_ANON_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_ANON_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ session_id: 'propulsar_' + Date.now(), approval_number: $json.approval_number, topic: $json.topic, type: $json.type, angle: $json.angle || null, platforms: $json.platforms || [], image_model: $json.image_model || 'ideogram', format: 'story', aspect_ratio: $json.aspect_ratio || '9:16', story_expires_at: $json.story_expires_at, final_image_url: $json.final_image_url, instagram_caption: ($json.instagram && $json.instagram.caption) || $json.instagram_caption || null, facebook_caption: ($json.facebook && $json.facebook.caption) || $json.facebook_caption || null, status: 'pending', publish_at: $json.publish_at || 'now' }) }}",
+        "operation": "executeQuery",
+        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, format, aspect_ratio, story_expires_at, final_image_url, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'story',$8,$9,$10,$11,$12,'pending',$13) RETURNING *",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
+          "queryBatching": "independently",
+          "queryReplacement": "={{ ['propulsar_' + Date.now(), $json.approval_number, $json.topic, $json.type, $json.angle || null, $json.platforms || [], $json.image_model || 'ideogram', $json.aspect_ratio || '9:16', $json.story_expires_at, $json.final_image_url, ($json.instagram && $json.instagram.caption) || $json.instagram_caption || null, ($json.facebook && $json.facebook.caption) || $json.facebook_caption || null, $json.publish_at || 'now'] }}"
         }
       },
       "id": "save-session-supabase-story",
       "name": "💾 Guardar sesión Supabase (Story)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
@@ -1979,7 +1910,13 @@
         1632,
         720
       ],
-      "notes": "Inserts a Story session into content_sessions BEFORE the WA preview is sent. Mirrors the carousel save pattern. Writes format='story' + aspect_ratio + story_expires_at (all confirmed present in schema by Task 1 probe). retryOnFail=true — INSERT is idempotent by session_id (timestamp-based), safe to retry."
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      },
+      "notes": "Phase 12.3: Inserts a Story session into content_sessions on Azure PostgreSQL (content_engine DB, replaces the dead Supabase PostgREST call) BEFORE the WA preview is sent. Mirrors the carousel save pattern. Writes format='story' + aspect_ratio + story_expires_at (TIMESTAMPTZ — pg parses the ISO-8601 string directly, no cast). retryOnFail=true preserved — INSERT is idempotent by session_id (timestamp-based), safe to retry."
     },
     {
       "parameters": {
