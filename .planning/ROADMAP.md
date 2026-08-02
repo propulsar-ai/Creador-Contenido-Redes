@@ -140,6 +140,6 @@ Phases execute in numeric order: 14 → 15 → 16 → 17
 | 12.3. Supabase → Azure Postgres Migration | v1.2 | 3/3 | Complete | 2026-08-01 |
 | 13. Facebook Story + Log + Notifications | v1.2 | 3/3 | Complete | 2026-08-01 |
 | 14. v1.2 Regression Live-Fire | v1.3 | Complete    | 2026-08-01 | - |
-| 15. Comparison, Templates, Eval Harness & Decision | v1.3 | 0/5 | Planned | - |
+| 15. Comparison, Templates, Eval Harness & Decision | 4/5 | In Progress|  | - |
 | 16. Winning-Engine Integration (All Formats) | v1.3 | 0/TBD | Not started | - |
 | 17. Wizard Update & Milestone Close | v1.3 | 0/TBD | Not started | - |
