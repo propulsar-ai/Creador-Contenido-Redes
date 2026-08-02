@@ -266,43 +266,166 @@ async function callCreatomate({ layout, values, width, height, backgroundUrl }) 
 // ENGINE 3 — Gamma
 //
 // POST /v1.0/generations, poll /v1.0/generations/{id} @5s, export PNG (zip),
-// unzip via `tar -xf` (Node has no built-in unzip; tar handles zip on Win11).
+// unzip via bsdtar (Node has no built-in unzip; Windows' own System32\tar.exe is bsdtar
+// and handles zip natively — Git-for-Windows' tar.exe on PATH is GNU tar and does NOT,
+// confirmed empirically during Plan 15-04 Task 1 preflight: "This does not look like a
+// tar archive"). Absolute path forces the correct binary regardless of PATH order.
+//
+// PREFLIGHT FINDINGS (Plan 15-04 Task 1, live-verified against the real API):
+// 1. Base URL is https://public-api.gamma.app (NOT https://api.gamma.app, which 404s —
+//    this was a real bug in the wave-1 harness, fixed here).
+// 2. `exportAs: "png"` is REQUIRED in the create body — without it, `exportUrl` never
+//    appears in the poll response no matter how long you wait (the original code had no
+//    exportAs field at all and would have hung/timed out on every single Gamma call).
+// 3. `textOptions.amount: "concise"` is not a valid enum value (brief/medium/detailed/
+//    extensive) and `textMode` is effectively required — using `textMode: "preserve"`
+//    keeps our exact frozen brand copy verbatim (Gamma's AI does not rewrite it) AND
+//    costs meaningfully fewer credits (~18/generation) than the default AI-rewrite mode
+//    (~40-42/generation), confirmed via live credit deltas during preflight.
+// 4. Carousel-to-cards mapping (RESEARCH Open Question 2 / Pitfall 6), answered
+//    empirically: ONE generation call with `cardSplit: "inputTextBreaks"` and inputText
+//    sections joined by "\n---\n" produces exactly N distinct card PNGs in the export
+//    zip, in the same order as the input sections (verified: a 4-section input produced
+//    files "1_...png".."4_...png" mapping 1:1, in order, to the 4 input sections). This
+//    means Gamma carousels render via ONE batched call per brief (see
+//    renderGammaCarouselBatch), not one call per slide like the other 3 engines.
 // ─────────────────────────────────────────────
-async function callGamma({ inputText, dimensions, themeId, outDir }) {
+function extractZip(zipPath, outDir) {
+  // Windows' bundled bsdtar (System32) supports zip; Git Bash's tar on PATH (GNU tar)
+  // does not and fails with "This does not look like a tar archive" — force the correct
+  // binary by absolute path on Windows rather than relying on PATH resolution order.
+  const tarBin = process.platform === "win32" ? "C:\\Windows\\System32\\tar.exe" : "tar";
+  execSync(`"${tarBin}" -xf "${zipPath}" -C "${outDir}"`);
+}
+
+async function callGamma({ inputText, dimensions, themeId, outDir, multiCard = false }) {
   const apiKey = process.env.GAMMA_API_KEY;
   if (!apiKey) throw new Error("GAMMA_API_KEY not set (Plan 15-02 pending) — skipping Gamma call");
 
   const body = JSON.stringify({
     inputText,
+    textMode: "preserve", // never let Gamma's AI rewrite the frozen brand copy — identical input across all 4 engines
     format: "social",
     ...(themeId ? { themeId } : {}),
+    cardSplit: "inputTextBreaks", // "\n---\n" boundaries map 1:1 to distinct cards (empirically verified, Task 1 preflight)
     cardOptions: { dimensions },
-    textOptions: { amount: "concise" },
+    exportAs: "png", // REQUIRED — omitting this means exportUrl never appears in the poll response
   });
   const headers = { "X-API-KEY": apiKey, "Content-Type": "application/json" };
   const start = Date.now();
-  const create = await httpJson("https://api.gamma.app/v1.0/generations", { method: "POST", headers, body });
+  const create = await httpJson("https://public-api.gamma.app/v1.0/generations", { method: "POST", headers, body });
   if (create.statusCode < 200 || create.statusCode >= 300) {
     throw new Error(`Gamma create ${create.statusCode}: ${create.body.toString("utf8").slice(0, 300)}`);
   }
   const genId = create.json?.generationId || create.json?.id;
   let status = create.json?.status;
   let exportUrl = null;
+  let creditsDeducted = null;
   while (status !== "completed" && Date.now() - start < 180000) {
     if (status === "failed") throw new Error(`Gamma generation ${genId} failed`);
     await sleep(5000);
-    const poll = await httpJson(`https://api.gamma.app/v1.0/generations/${genId}`, { headers });
+    const poll = await httpJson(`https://public-api.gamma.app/v1.0/generations/${genId}`, { headers });
     status = poll.json?.status;
     exportUrl = poll.json?.exportUrl || poll.json?.pngExportUrl || exportUrl;
+    creditsDeducted = poll.json?.credits?.deducted ?? creditsDeducted;
   }
   if (status !== "completed" || !exportUrl) throw new Error(`Gamma generation ${genId} did not complete in time`);
 
-  const zipPath = path.join(outDir, `${genId}.zip`);
-  await downloadToFile(exportUrl, zipPath);
-  execSync(`tar -xf "${zipPath}" -C "${outDir}"`);
-  const files = fs.readdirSync(outDir).filter((f) => f.toLowerCase().endsWith(".png"));
-  if (!files.length) throw new Error(`Gamma export zip had no PNGs: ${zipPath}`);
-  return { localPath: path.join(outDir, files[0]), latencyMs: Date.now() - start, costUsd: 0, sourceFormat: "png" };
+  // Downloaded as ".dl" first — real format is detected by magic bytes, not guessed from
+  // the exportUrl's filename. Preflight finding (Task 1): a SINGLE-card generation's
+  // exportAs:"png" export returns a bare PNG file directly (no zip wrapper); only
+  // MULTI-card generations (cardSplit producing >1 card) return a real .zip of N PNGs.
+  // Treating a bare-PNG response as a zip made tar fail with "Unrecognized archive
+  // format" — this branch fixes that by checking the actual bytes first.
+  const dlPath = path.join(outDir, `${genId}.dl`);
+  const dl = await downloadToFile(exportUrl, dlPath);
+  let files;
+  if (dl.actualFormat === "png") {
+    const singlePath = path.join(outDir, `${genId}.png`);
+    fs.renameSync(dlPath, singlePath);
+    files = [path.basename(singlePath)];
+  } else {
+    extractZip(dlPath, outDir);
+    files = fs
+      .readdirSync(outDir)
+      .filter((f) => f.toLowerCase().endsWith(".png"))
+      // Export filenames are numbered "1_...png", "2_...png", ... in card order — sort
+      // numerically (not lexically) so multi-card batches map back to slides correctly.
+      .sort((a, b) => {
+        const na = parseInt(a.match(/^(\d+)_/)?.[1] ?? "0", 10);
+        const nb = parseInt(b.match(/^(\d+)_/)?.[1] ?? "0", 10);
+        return na - nb;
+      });
+  }
+  if (!files.length) throw new Error(`Gamma export had no PNGs: ${exportUrl}`);
+  // Gamma Pro is a fixed recurring subscription (~216EUR/yr, see 15-02-GAMMA-ACCESS.md),
+  // not metered per-render — hard costUsd is 0, but the actual credits consumed are
+  // recorded as a note for the decision doc's cost criterion.
+  const costNote = creditsDeducted != null ? `${creditsDeducted} gamma credits` : null;
+  if (multiCard) {
+    return {
+      localPaths: files.map((f) => path.join(outDir, f)),
+      latencyMs: Date.now() - start,
+      costUsd: 0,
+      costNote,
+      sourceFormat: "png",
+    };
+  }
+  return { localPath: path.join(outDir, files[0]), latencyMs: Date.now() - start, costUsd: 0, costNote, sourceFormat: "png" };
+}
+
+// ─────────────────────────────────────────────
+// Gamma carousel batching (Task 1 preflight finding — see callGamma's header comment).
+// Renders ALL slides of a carousel brief in ONE Gamma generation call (cardSplit:
+// inputTextBreaks), then fans the resulting N card PNGs back out to per-slide result
+// entries so the gallery/run-meta grouping stays consistent with the other 3 engines
+// (which render carousels one slide at a time).
+// ─────────────────────────────────────────────
+async function renderGammaCarouselBatch({ brief, outDir }) {
+  const slides = brief.formats.carousel.slides;
+  const cardTexts = slides.map((s) => [s.badge, s.headline, s.body, s.cta].filter(Boolean).join("\n\n"));
+  const inputText = cardTexts.join("\n---\n");
+  const tmpDir = path.join(outDir, "gamma", `_raw_${brief.id}_carousel`);
+  fs.mkdirSync(tmpDir, { recursive: true });
+  const r = await callGamma({
+    inputText,
+    dimensions: "1x1",
+    themeId: process.env.GAMMA_THEME_ID,
+    outDir: tmpDir,
+    multiCard: true,
+  });
+  const results = [];
+  slides.forEach((slide, i) => {
+    const slug = `${brief.id}_carousel_slide${slide.slide_num}`;
+    const localPath = r.localPaths[i];
+    if (!localPath) {
+      results.push({
+        unit: slug,
+        engine: "gamma",
+        format: "carousel",
+        briefId: brief.id,
+        skipped: true,
+        reason: `Gamma batch produced ${r.localPaths.length} card(s), expected ${slides.length} — slide ${i + 1} missing. Not silently dropped: recorded as an honest engine limitation.`,
+      });
+      return;
+    }
+    const destFile = path.join(outDir, "gamma", `${slug}.png`);
+    fs.mkdirSync(path.dirname(destFile), { recursive: true });
+    fs.copyFileSync(localPath, destFile);
+    results.push({
+      unit: slug,
+      engine: "gamma",
+      format: "carousel",
+      briefId: brief.id,
+      latencyMs: r.latencyMs,
+      costUsd: r.costUsd,
+      costNote: r.costNote ? `${r.costNote} (whole ${slides.length}-card batch, not per-slide)` : null,
+      sourceFormat: detectImageFormat(fs.readFileSync(destFile)),
+      destFile,
+      gammaBatch: true,
+    });
+  });
+  return results;
 }
 
 // ─────────────────────────────────────────────
@@ -364,6 +487,25 @@ async function callHybrid({ layout, values, backgroundPrompt, format, width, hei
 }
 
 // ─────────────────────────────────────────────
+// Standalone Creatomate background source (Plan 15-04 Task 1 preflight finding)
+//
+// Creatomate has zero image-generation capability of its own — the 5 brand templates
+// (Plan 15-01) all expect a real photo URL for image-based layouts (single/opening/
+// middle/story). EVAL-03 requires Creatomate to be its own distinct candidate (not the
+// same pipeline as EVAL-05's hybrid, which is FAL Flux background + Creatomate overlay).
+// DECISION (documented, not silent): the standalone "creatomate" candidate uses a
+// deterministic, zero-cost, publicly-hotlinkable placeholder photo (Lorem Picsum, seeded
+// per render unit) instead of an AI-generated background. This isolates what EVAL-03
+// actually needs to test — Creatomate's template/typography/auto-fit/brand-fidelity
+// compositing — from AI-image quality (already covered by Ideogram, Gamma, and Hybrid).
+// It also keeps Task 1's credit-budget arithmetic intact (zero extra FAL spend).
+// carousel-closing.json has no BACKGROUND_URL token at all, so passing one is harmless.
+// ─────────────────────────────────────────────
+function placeholderBackgroundUrl(slug, w, h) {
+  return `https://picsum.photos/seed/${encodeURIComponent(slug)}/${w}/${h}`;
+}
+
+// ─────────────────────────────────────────────
 // Layout naming for Creatomate templates (per 15-01's convention)
 // ─────────────────────────────────────────────
 function layoutForSlide(format, slide) {
@@ -402,13 +544,17 @@ async function renderOneUnit({ engine, brief, format, slide, outDir }) {
     const dl = await downloadToFile(r.imageUrl, destFile);
     result = { ...r, destFile, sourceFormat: dl.actualFormat };
   } else if (engine === "creatomate") {
-    const r = await callCreatomate({ layout, values, width: w, height: h, backgroundUrl: null });
+    const bgUrl = placeholderBackgroundUrl(slug, w, h);
+    const r = await callCreatomate({ layout, values, width: w, height: h, backgroundUrl: bgUrl });
     const dl = await downloadToFile(r.imageUrl, destFile);
     result = { ...r, destFile, sourceFormat: dl.actualFormat };
   } else if (engine === "gamma") {
     const dims = format === "story" ? "9x16" : "1x1";
     const inputText = [fields.badge, fields.headline, fields.body, fields.cta].filter(Boolean).join("\n\n");
-    const tmpDir = path.join(outDir, "gamma", "_raw");
+    // Unique per-call raw dir (Rule 1 fix) — a shared "_raw" dir across every sequential
+    // Gamma call in the run would accumulate PNGs from prior calls and risk picking a
+    // stale file instead of the current one.
+    const tmpDir = path.join(outDir, "gamma", `_raw_${slug}`);
     fs.mkdirSync(tmpDir, { recursive: true });
     const r = await callGamma({ inputText, dimensions: dims, themeId: process.env.GAMMA_THEME_ID, outDir: tmpDir });
     fs.mkdirSync(path.dirname(destFile), { recursive: true });
@@ -442,6 +588,29 @@ async function run() {
     for (const brief of briefs) {
       for (const format of formats) {
         if (!brief.formats[format]) continue;
+
+        // Gamma carousels render via ONE batched generation call, not one call per slide
+        // (Task 1 preflight finding — see callGamma/renderGammaCarouselBatch header comments).
+        if (engine === "gamma" && format === "carousel" && !isSmoke) {
+          try {
+            const nSlides = brief.formats.carousel.slides.length;
+            console.log(`→ [gamma] ${brief.id}/carousel (batched, ${nSlides} cards in 1 generation) ...`);
+            const batchResults = await renderGammaCarouselBatch({ brief, outDir: runDir });
+            for (const r of batchResults) {
+              if (r.skipped) {
+                console.log(`  skipped: ${r.reason}`);
+              } else {
+                console.log(`  OK ${r.unit} (${r.latencyMs}ms, ${r.costNote || "~$0"})`);
+                results.push(r);
+              }
+            }
+          } catch (err) {
+            console.error(`  FAILED: ${err.message}`);
+            errors.push({ engine, briefId: brief.id, format, error: err.message });
+          }
+          continue;
+        }
+
         const units = format === "carousel" ? brief.formats.carousel.slides : [null];
         for (const slide of units) {
           const label = slide ? `${brief.id}/${format}/slide${slide.slide_num}` : `${brief.id}/${format}`;
@@ -498,8 +667,10 @@ async function run() {
       briefId: r.briefId,
       latencyMs: r.latencyMs,
       costUsd: r.costUsd,
+      costNote: r.costNote || null,
       sourceFormat: r.sourceFormat,
       stage2Pending: r.stage2Pending || false,
+      gammaBatch: r.gammaBatch || false,
       // forward-slash always — this path lands in run-meta.json AND as an <img src> in the
       // generated gallery HTML; Windows' path.relative() backslashes are not valid in file:// URLs
       file: r.destFile ? path.relative(runDir, r.destFile).split(path.sep).join("/") : null,
@@ -560,10 +731,11 @@ function generateGallery(runDir) {
           const r = g.byEngine[eng];
           const label = labelMap[eng];
           if (!r) return `<td class="cell empty" data-engine="${eng}"><span class="label">${label}</span><div class="muted">no render</div></td>`;
+          const costLabel = r.costNote ? r.costNote : `~$${(r.costUsd ?? 0).toFixed(2)}`;
           return `<td class="cell" data-engine="${eng}">
             <span class="label">${label}</span>
             <img src="${r.file}" loading="lazy" onclick="zoom(this.src)" alt="${g.unit} — ${eng}" />
-            <div class="meta">${r.latencyMs ?? "?"}ms · ~$${(r.costUsd ?? 0).toFixed(2)} · ${r.sourceFormat || ""}</div>
+            <div class="meta">${r.latencyMs ?? "?"}ms · ${costLabel} · ${r.sourceFormat || ""}</div>
           </td>`;
         })
         .join("\n");
