@@ -361,7 +361,10 @@ async function callGamma({ inputText, dimensions, themeId, outDir, multiCard = f
   // Gamma Pro is a fixed recurring subscription (~216EUR/yr, see 15-02-GAMMA-ACCESS.md),
   // not metered per-render — hard costUsd is 0, but the actual credits consumed are
   // recorded as a note for the decision doc's cost criterion.
-  const costNote = creditsDeducted != null ? `${creditsDeducted} gamma credits` : null;
+  // Deliberately vendor-name-free (not "gamma credits") — this string can end up in the
+  // blind gallery's DOM (CSS-hidden pre-reveal, but still present in HTML source); keep
+  // it generic so it doesn't independently identify the engine outside the reveal toggle.
+  const costNote = creditsDeducted != null ? `${creditsDeducted} credits` : null;
   if (multiCard) {
     return {
       localPaths: files.map((f) => path.join(outDir, f)),
@@ -715,6 +718,30 @@ function generateGallery(runDir) {
   const labels = ["A", "B", "C", "D", "E", "F"];
   const labelMap = {};
   shuffled.forEach((eng, i) => (labelMap[eng] = labels[i] || `#${i}`));
+  const reverseLabelMap = Object.fromEntries(Object.entries(labelMap).map(([eng, lbl]) => [lbl, eng]));
+
+  // Blind-safe image copies (Task 3 fix — the original gallery embedded the real engine
+  // name directly in every <img src> path, e.g. "ideogram/....png", which leaks via
+  // hover/status-bar, "copy image address", or opening the image in a new tab, even
+  // though the visible cell label showed only "A"/"B"/"C"/"D". Copy every render into a
+  // neutral per-label folder so no pre-reveal URL/DOM attribute references the engine's
+  // own name anywhere — only the <script>'s reveal-toggle data (unavoidable for a
+  // client-side-only local HTML file) carries the real mapping, matching run-meta.json.
+  const blindDir = path.join(runDir, "blind");
+  const blindFileCache = {};
+  function blindPathFor(r, eng) {
+    const key = `${eng}::${r.unit}`;
+    if (blindFileCache[key]) return blindFileCache[key];
+    const label = labelMap[eng].toLowerCase();
+    const destDir = path.join(blindDir, label);
+    fs.mkdirSync(destDir, { recursive: true });
+    const destFile = path.join(destDir, `${r.unit}.png`);
+    const srcFile = path.join(runDir, r.file);
+    fs.copyFileSync(srcFile, destFile);
+    const rel = `blind/${label}/${r.unit}.png`;
+    blindFileCache[key] = rel;
+    return rel;
+  }
 
   // Group rows by brief+format(+slide)
   const groups = {};
@@ -730,11 +757,12 @@ function generateGallery(runDir) {
         .map((eng) => {
           const r = g.byEngine[eng];
           const label = labelMap[eng];
-          if (!r) return `<td class="cell empty" data-engine="${eng}"><span class="label">${label}</span><div class="muted">no render</div></td>`;
+          if (!r) return `<td class="cell empty"><span class="label">${label}</span><div class="muted">no render</div></td>`;
           const costLabel = r.costNote ? r.costNote : `~$${(r.costUsd ?? 0).toFixed(2)}`;
-          return `<td class="cell" data-engine="${eng}">
+          const blindSrc = blindPathFor(r, eng);
+          return `<td class="cell">
             <span class="label">${label}</span>
-            <img src="${r.file}" loading="lazy" onclick="zoom(this.src)" alt="${g.unit} — ${eng}" />
+            <img src="${blindSrc}" loading="lazy" onclick="zoom(this.src)" alt="${g.unit} — ${label}" />
             <div class="meta">${r.latencyMs ?? "?"}ms · ${costLabel} · ${r.sourceFormat || ""}</div>
           </td>`;
         })
@@ -743,7 +771,7 @@ function generateGallery(runDir) {
     })
     .join("\n");
 
-  const headerCells = engines.map((eng) => `<th data-engine="${eng}" class="engine-head">${labelMap[eng]}</th>`).join("\n");
+  const headerCells = engines.map((eng) => `<th data-label="${labelMap[eng]}" class="engine-head">${labelMap[eng]}</th>`).join("\n");
 
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -764,7 +792,15 @@ function generateGallery(runDir) {
   .cell img { max-width: 200px; max-height: 200px; cursor: zoom-in; border-radius: 4px; }
   .cell .label { display: block; font-weight: bold; color: #00E5FF; margin-bottom: 4px; }
   .cell.empty .muted { color: #666; font-size: 12px; }
-  .meta { font-size: 11px; color: #8FA2FF; margin-top: 4px; }
+  /* Hidden until reveal — latency/cost text (e.g. "15 credits" vs "~$0.06") is itself a
+     blind-review leak: the currency-vs-credits FORMAT alone could let an attentive
+     reviewer infer which column is credit-metered vs dollar-metered, even with no
+     vendor name ever printed. Keeping the blind pass purely visual also matches
+     CONTEXT.md's intent (visual criteria scored blind; operational criteria — latency,
+     cost, integration complexity — are 1x-weighted and meant to be considered from
+     run-meta.json's numbers, not mixed into the visual-only first pass). */
+  .meta { font-size: 11px; color: #8FA2FF; margin-top: 4px; display: none; }
+  .revealed .meta { display: block; }
   #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 999; align-items: center; justify-content: center; }
   #lightbox img { max-width: 90%; max-height: 90%; }
   .revealed .engine-head::after { content: attr(data-real); display: block; font-size: 12px; color: #8FA2FF; }
@@ -782,13 +818,15 @@ function generateGallery(runDir) {
   </table>
   <div id="lightbox" onclick="this.style.display='none'"><img id="lightbox-img" src="" /></div>
   <script>
-    const labelMap = ${JSON.stringify(labelMap)};
+    // Reveal-toggle data lives ONLY here (unavoidable for a client-side-only local HTML
+    // file) — no engine name appears in any DOM attribute or <img src> before this runs.
+    const reverseLabelMap = ${JSON.stringify(reverseLabelMap)};
     let revealed = false;
     function toggleReveal() {
       revealed = !revealed;
       document.querySelectorAll('.engine-head').forEach(th => {
-        const eng = th.dataset.engine;
-        th.dataset.real = revealed ? eng : '';
+        const lbl = th.dataset.label;
+        th.dataset.real = revealed ? reverseLabelMap[lbl] : '';
       });
       document.getElementById('gallery').classList.toggle('revealed', revealed);
     }
@@ -800,6 +838,14 @@ function generateGallery(runDir) {
 </body>
 </html>`;
   fs.writeFileSync(path.join(runDir, "index.html"), html);
+
+  // Record the anonymization mapping back into run-meta.json (not just embedded in the
+  // HTML's <script>) so it's independently auditable/reproducible — satisfies "A/B/C/D
+  // labels derive from the recorded randomized mapping" as a durable artifact, not only
+  // as client-side JS state.
+  meta.blindMapping = { seed, labelByEngine: labelMap, engineByLabel: reverseLabelMap };
+  fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+
   console.log(`Gallery: ${path.join(runDir, "index.html")}`);
 }
 
