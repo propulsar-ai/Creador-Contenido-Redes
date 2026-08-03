@@ -76,17 +76,27 @@ Production has consistently used **~$0.03/img** as its planning figure for FAL F
 
 ---
 
-## 5. Contracted Plan Record (filled in after Task 2)
+## 5. Contracted Plan Record (Task 2, confirmed by user 2026-08-03)
 
-*Pending user confirmation at the Task 2 checkpoint.*
-
-- Exact price paid: _TBD_
-- Billing cycle: _TBD_
-- Credits/month shown in dashboard: _TBD_
-- API key confirmed still active: _TBD_
+- **Exact price paid: EUR57.86/month.** This is above the ~$50 USD / ~$54 pre-checkout paper estimate (§4) — the delta is consistent with VAT being applied to the EUR-denominated checkout price shown to a Spain-based account, which the pre-checkout research could not account for (it only had USD-denominated aggregator/docs figures). User reviewed the live checkout price and knowingly accepted it despite being over the original ~$50 cap, given the ~20x volume safety margin computed in §3 (Propulsar's real usage is ~90 credits/month generous ceiling vs 2,000 allocated).
+- **Billing cycle: Monthly** (as recommended in §4, for flexibility during the 10-post Hybrid validation window).
+- **Credits/month: 2,000** (Essential tier, confirmed live in the dashboard — matches the statically-listed figure in §1.1).
+- **API key: unchanged, confirmed still active.** The orchestrator verified the user's pasted key matches the pre-existing `CREATOMATE_API_KEY` in local `.env` (project `1b59ad98-657b-4e95-b56d-fa6116279e3a`) — no rotation occurred on plan upgrade.
+- Account email: recovered by the user during the checkout session but not reported/documented (non-blocking).
 
 ---
 
-## 6. Env-Var Wiring Evidence (filled in after Task 3)
+## 6. Env-Var Wiring Evidence (Task 3, completed 2026-08-03)
 
-*Pending Task 3 execution.*
+Wired `CREATOMATE_API_KEY` into the production n8n Container App (`propulsar-n8n`, resource group `propulsar-production`), mirroring the exact `secretRef` + Key-Vault pattern already used by `FAL_API_KEY`:
+
+1. **Pre-flight check** — inspected `az containerapp show -n propulsar-n8n -g propulsar-production --query "properties.template.containers[0].env"`: confirmed `FAL_API_KEY` uses `secretRef: fal-api-key`, and `az containerapp show ... --query "properties.configuration.secrets"` confirmed that secret is a Key Vault reference (`identity: system`, `keyVaultUrl: https://propulsar-prod-kv.vault.azure.net/secrets/fal-api-key`) — i.e. Managed Identity, not a plain container-app secret value. Mirrored this pattern exactly rather than the plain-secret alternative.
+2. **No-running-executions guard** — before the update (which restarts the container), confirmed via `GET {N8N_BASE_URL}/api/v1/executions?status=running` (using local `N8N_API_KEY`) that 0 executions were running.
+3. **Stored the key in Key Vault** (`az` CLI directly, not the Azure MCP keyvault tool, per the known environment gotcha): `az keyvault secret set --vault-name propulsar-prod-kv --name creatomate-api-key --value "<key, piped via command substitution, never printed>"` — succeeded, returned secret id `.../secrets/creatomate-api-key/549fc6b3292445249d004b8298508bf4`.
+4. **Wired the Container App secret**: `az containerapp secret set -n propulsar-n8n -g propulsar-production --secrets "creatomate-api-key=keyvaultref:https://propulsar-prod-kv.vault.azure.net/secrets/creatomate-api-key,identityref:system"` — confirmed present via secret list, with the expected "must be restarted" warning.
+5. **Wired the env var**: `az containerapp update -n propulsar-n8n -g propulsar-production --set-env-vars "CREATOMATE_API_KEY=secretref:creatomate-api-key"` — this restarted the container as expected (guarded by step 2).
+6. **Post-restart verification**:
+   - `az containerapp show ... --query "properties.template.containers[0].env[?name=='CREATOMATE_API_KEY']"` returns `{"name":"CREATOMATE_API_KEY","secretRef":"creatomate-api-key"}` — present.
+   - `GET {N8N_BASE_URL}/api/v1/workflows?limit=1` returned HTTP 200 with 1 workflow — n8n healthy post-restart.
+
+Production `$env.CREATOMATE_API_KEY` now resolves inside any n8n node (e.g. the Hybrid sub-workflow authored in Plan 16-02) via the same Managed-Identity Key Vault path already proven for `FAL_API_KEY`/`IDEOGRAM_API_KEY`/etc. Local `.env` and `.env.example` unchanged in value (key was not rotated) — `.env.example` annotated to clarify the key is required in both places and how production resolves it.
