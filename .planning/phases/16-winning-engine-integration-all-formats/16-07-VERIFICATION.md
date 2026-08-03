@@ -53,6 +53,14 @@ Cumulative Phase 16 spend through 16-06 (per `16-06-SUMMARY.md`/STATE.md):
 
 ---
 
-## Task 2 — Fire the single post (AWAITING USER)
+## Task 2 — Fire the single post (PARKED — never executed)
 
-Status: pending. See checkpoint returned to orchestrator.
+**Status: PARKED 2026-08-03 (user decision).** The user decided to stop all wizard/WhatsApp-based
+live-fire testing and pivot directly to the `propulsar-content-studio` web GUI project (seed:
+`.planning/research/CONTENT-STUDIO-GUI-SEED.md`), where approval will be in-app and WhatsApp
+becomes notification-only. Tasks 2-5 of this plan were never executed; 16-08/16-09 were never
+started. E2E validation of the Hybrid engine is deferred to the GUI project's E2E phases.
+
+Note for any future session resuming this plan: Task 1's pre-fire verification was valid as of
+2026-08-03 (zero drift, main `8b87219d` / sub `c966f86e`, both active). Re-run Task 1 in full
+before any fire — production state must be re-proven, not trusted from this doc.
