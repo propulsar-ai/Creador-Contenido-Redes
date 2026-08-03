@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Votación — Comparación de motores de diseño (Phase 15)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, Arial, sans-serif; background: #070A18; color: #fff; margin: 0; padding: 0 24px 40px; }
+  h1 { color: #BA00E0; font-size: 20px; margin: 0; }
+
+  /* ---- barra sticky ---- */
+  #topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #070A18; border-bottom: 2px solid #1E0C42;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px 0; margin-bottom: 16px;
+  }
+  #progress { color: #00E5FF; font-weight: bold; font-size: 15px; }
+  #topbar .hint { color: #8FA2FF; font-size: 12px; }
+  #topbar .spacer { flex: 1; }
+  button { background: #8000A8; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  button:hover { background: #BA00E0; }
+  button:disabled { background: #3A2A55; cursor: default; }
+  #btn-finish { background: #00784F; }
+  #btn-finish:hover { background: #00A86B; }
+  #conn-error {
+    display: none; background: #5A1020; color: #FFB3C0; border: 1px solid #B0304A;
+    border-radius: 6px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px;
+  }
+
+  /* ---- tabla ---- */
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #1E0C42; padding: 8px; vertical-align: top; text-align: left; }
+  th.row-head, tbody th { background: #0E122B; min-width: 150px; font-size: 13px; }
+  .muted { color: #666; font-size: 12px; font-weight: normal; }
+  .engine-head { text-align: center; font-size: 18px; color: #00E5FF; background: #0E122B; }
+  .engine-head .real { display: block; font-size: 12px; color: #8FA2FF; font-weight: normal; }
+  .cell { text-align: center; width: 240px; }
+  .cell .label { display: block; font-weight: bold; color: #00E5FF; margin-bottom: 4px; }
+  .cell .label .engine-tag { color: #8FA2FF; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .cell img.render { max-width: 210px; max-height: 210px; cursor: zoom-in; border-radius: 4px; }
+  .cell.empty .muted { color: #666; }
+
+  /* ---- criterios / dots ---- */
+  .crits { margin-top: 8px; text-align: left; }
+  .crit { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+  .crit-name { width: 82px; font-size: 12px; color: #C9D2FF; flex-shrink: 0; }
+  .dots { display: flex; gap: 4px; }
+  .dot {
+    width: 20px; height: 20px; padding: 0; border-radius: 50%;
+    background: transparent; border: 2px solid #4A5588; cursor: pointer;
+    font-size: 0; line-height: 1;
+  }
+  .dot:hover { border-color: #00E5FF; }
+  .dot.on { background: #00E5FF; border-color: #00E5FF; }
+  .saved { font-size: 11px; color: #4ADE80; margin-left: 4px; opacity: 0; transition: opacity 0.3s; white-space: nowrap; }
+  .saved.show { opacity: 1; }
+  .saved.err { color: #FF6B81; }
+
+  /* ---- lightbox ---- */
+  #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 999; align-items: center; justify-content: center; cursor: zoom-out; }
+  #lightbox img { max-width: 92%; max-height: 92%; }
+
+  /* ---- pantalla final ---- */
+  #donebox { display: none; position: fixed; inset: 0; background: rgba(7,10,24,0.97); z-index: 1000; align-items: center; justify-content: center; text-align: center; }
+  #donebox .inner { max-width: 560px; padding: 40px; }
+  #donebox .big { font-size: 42px; color: #4ADE80; margin-bottom: 16px; }
+  #donebox p { font-size: 18px; color: #C9D2FF; }
+  #donebox .cta { font-size: 24px; color: #fff; background: #0E122B; border: 2px solid #00E5FF; border-radius: 10px; padding: 18px; margin: 24px 0; }
+  #donebox .cta b { color: #00E5FF; }
+</style>
+</head>
+<body>
+  <div id="topbar">
+    <h1>Votación de diseños</h1>
+    <span id="progress">0 imágenes votadas de 63</span>
+    <span class="hint">Hacé clic en los puntos (1–5) debajo de cada imagen. Todo se guarda solo. Votar cada criterio es opcional.</span>
+    <span class="spacer"></span>
+    <button id="btn-reveal">Revelar motores</button>
+    <button id="btn-finish">TERMINÉ</button>
+  </div>
+  <div id="conn-error">
+    No se pudo conectar con el servidor. Asegurate de que esté corriendo
+    (<code>node scripts/eval-review-server.js</code>) y de abrir esta página en
+    <b>http://localhost:4545</b> — no como archivo local.
+  </div>
+
+  <table id="gallery"></table>
+
+  <div id="lightbox"><img id="lightbox-img" src="" alt="" /></div>
+
+  <div id="donebox">
+    <div class="inner">
+      <div class="big">¡Listo! 🎉</div>
+      <p>Tus votos quedaron guardados automáticamente.</p>
+      <div class="cta">Volvé al chat de Claude y escribí <b>«votación lista»</b></div>
+      <button id="btn-keep-voting">Seguir votando / ajustar votos</button>
+    </div>
+  </div>
+
+<script>
+'use strict';
+
+// ============================================================
+// Datos del run (solo letras ciegas — ningún nombre de motor
+// existe en este archivo; el mapping vive en el servidor y
+// recién llega al navegador al apretar "Revelar motores").
+// ============================================================
+var COLUMNS = ['D', 'A', 'B', 'C']; // mismo orden que index.html
+var ROWS = [
+  { unit: 'veterinaria-caso-exito_single',          brief: 'veterinaria-caso-exito', format: 'single',   missing: [] },
+  { unit: 'veterinaria-caso-exito_carousel_slide1', brief: 'veterinaria-caso-exito', format: 'carousel', missing: [] },
+  { unit: 'veterinaria-caso-exito_carousel_slide2', brief: 'veterinaria-caso-exito', format: 'carousel', missing: [] },
+  { unit: 'veterinaria-caso-exito_carousel_slide4', brief: 'veterinaria-caso-exito', format: 'carousel', missing: ['C'] },
+  { unit: 'veterinaria-caso-exito_story',           brief: 'veterinaria-caso-exito', format: 'story',    missing: [] },
+  { unit: 'estetica-educativo_single',              brief: 'estetica-educativo',     format: 'single',   missing: [] },
+  { unit: 'estetica-educativo_carousel_slide1',     brief: 'estetica-educativo',     format: 'carousel', missing: [] },
+  { unit: 'estetica-educativo_carousel_slide2',     brief: 'estetica-educativo',     format: 'carousel', missing: ['C'] },
+  { unit: 'estetica-educativo_carousel_slide5',     brief: 'estetica-educativo',     format: 'carousel', missing: ['C'] },
+  { unit: 'estetica-educativo_story',               brief: 'estetica-educativo',     format: 'story',    missing: ['C'] },
+  { unit: 'gimnasio-gpt4o_single',                  brief: 'gimnasio-gpt4o',         format: 'single',   missing: [] },
+  { unit: 'gimnasio-gpt4o_carousel_slide1',         brief: 'gimnasio-gpt4o',         format: 'carousel', missing: [] },
+  { unit: 'gimnasio-gpt4o_carousel_slide2',         brief: 'gimnasio-gpt4o',         format: 'carousel', missing: [] },
+  { unit: 'gimnasio-gpt4o_carousel_slide3',         brief: 'gimnasio-gpt4o',         format: 'carousel', missing: ['C'] },
+  { unit: 'gimnasio-gpt4o_story',                   brief: 'gimnasio-gpt4o',         format: 'story',    missing: [] },
+  { unit: 'diacritics-1_single',                    brief: 'diacritics-1',           format: 'single',   missing: [] },
+  { unit: 'diacritics-2_single',                    brief: 'diacritics-2',           format: 'single',   missing: [] }
+];
+var CRITERIA = [
+  { key: 'legibilidad', label: 'Legibilidad' },
+  { key: 'marca',       label: 'Marca' },
+  { key: 'layout',      label: 'Layout' },
+  { key: 'diacriticos', label: 'Diacríticos' }
+];
+var TOTAL_IMAGES = ROWS.reduce(function (n, r) { return n + (COLUMNS.length - r.missing.length); }, 0); // 63
+
+// Estado en memoria: voto efectivo por imagen+criterio.
+// Clave: unit|letter|criterion  →  { value, phase, voted_at }
+var votes = {};
+var revealed = false;
+
+// ============================================================
+// Construcción de la tabla
+// ============================================================
+function buildTable() {
+  var html = '<thead><tr><th class="row-head"></th>';
+  COLUMNS.forEach(function (L) {
+    html += '<th class="engine-head" data-label="' + L + '">' + L + '<span class="real"></span></th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  ROWS.forEach(function (row) {
+    html += '<tr><th>' + row.unit + '<br/><span class="muted">' + row.brief + ' / ' + row.format + '</span></th>';
+    COLUMNS.forEach(function (L) {
+      if (row.missing.indexOf(L) !== -1) {
+        html += '<td class="cell empty"><span class="label">' + L + '</span><div class="muted">no render</div></td>';
+        return;
+      }
+      html += '<td class="cell" data-unit="' + row.unit + '" data-letter="' + L + '">' +
+        '<span class="label">' + L + '<span class="engine-tag"></span></span>' +
+        '<img class="render" src="blind/' + L.toLowerCase() + '/' + row.unit + '.png" loading="lazy" alt="' + row.unit + ' — ' + L + '" />' +
+        '<div class="crits">';
+      CRITERIA.forEach(function (c) {
+        html += '<div class="crit" data-crit="' + c.key + '">' +
+          '<span class="crit-name">' + c.label + '</span><span class="dots">';
+        for (var v = 1; v <= 5; v++) {
+          html += '<button class="dot" data-v="' + v + '" title="' + v + '" aria-label="' + c.label + ': ' + v + ' de 5"></button>';
+        }
+        html += '</span><span class="saved"></span></div>';
+      });
+      html += '</div></td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('gallery').innerHTML = html;
+}
+
+// ============================================================
+// UI helpers
+// ============================================================
+function critRowEl(unit, letter, crit) {
+  var cell = document.querySelector('.cell[data-unit="' + unit + '"][data-letter="' + letter + '"]');
+  if (!cell) return null;
+  return cell.querySelector('.crit[data-crit="' + crit + '"]');
+}
+
+function paintDots(critRow, value) {
+  var dots = critRow.querySelectorAll('.dot');
+  for (var i = 0; i < dots.length; i++) {
+    dots[i].classList.toggle('on', Number(dots[i].dataset.v) <= value);
+  }
+}
+
+function flashSaved(critRow, ok) {
+  var el = critRow.querySelector('.saved');
+  el.textContent = ok ? 'guardado ✓' : 'error al guardar ✗';
+  el.classList.toggle('err', !ok);
+  el.classList.add('show');
+  if (ok) {
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.classList.remove('show'); }, 1400);
+  }
+}
+
+function updateProgress() {
+  var imgs = {};
+  Object.keys(votes).forEach(function (k) {
+    var parts = k.split('|');
+    imgs[parts[0] + '|' + parts[1]] = true;
+  });
+  var n = Object.keys(imgs).length;
+  document.getElementById('progress').textContent = n + ' imágenes votadas de ' + TOTAL_IMAGES;
+}
+
+function connError(show) {
+  document.getElementById('conn-error').style.display = show ? 'block' : 'none';
+}
+
+// ============================================================
+// API
+// ============================================================
+function api(method, path, body) {
+  return fetch(path, {
+    method: method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+function sendVote(unit, letter, crit, value) {
+  var phase = revealed ? 'revealed' : 'blind';
+  var critRow = critRowEl(unit, letter, crit);
+  paintDots(critRow, value); // UI optimista
+  api('POST', '/api/vote', {
+    image_id: unit, letter: letter, criterion: crit, value: value, phase: phase
+  }).then(function () {
+    votes[unit + '|' + letter + '|' + crit] = { value: value, phase: phase };
+    connError(false);
+    flashSaved(critRow, true);
+    updateProgress();
+  }).catch(function () {
+    connError(true);
+    flashSaved(critRow, false);
+  });
+}
+
+// ============================================================
+// Revelar motores (mapping llega del servidor recién acá)
+// ============================================================
+function applyReveal(engineByLabel) {
+  revealed = true;
+  if (engineByLabel) {
+    document.querySelectorAll('.engine-head').forEach(function (th) {
+      th.querySelector('.real').textContent = engineByLabel[th.dataset.label] || '';
+    });
+    document.querySelectorAll('.cell[data-letter]').forEach(function (cell) {
+      var tag = cell.querySelector('.engine-tag');
+      if (tag) tag.textContent = '(' + (engineByLabel[cell.dataset.letter] || '?') + ')';
+    });
+  }
+  var btn = document.getElementById('btn-reveal');
+  btn.textContent = 'Motores revelados';
+  btn.disabled = true;
+}
+
+document.getElementById('btn-reveal').addEventListener('click', function () {
+  var msg = 'Vas a revelar qué motor es cada letra.\n\n' +
+    'Tus votos hasta ahora quedan guardados como fase "ciega". ' +
+    'Los que hagas o cambies después se guardan como fase "revelada".\n\n¿Revelar ahora?';
+  if (!window.confirm(msg)) return;
+  api('POST', '/api/reveal', {}).then(function (r) {
+    applyReveal(r.engineByLabel);
+  }).catch(function () { connError(true); });
+});
+
+// ============================================================
+// TERMINÉ
+// ============================================================
+document.getElementById('btn-finish').addEventListener('click', function () {
+  api('POST', '/api/finish', {}).then(function () {
+    document.getElementById('donebox').style.display = 'flex';
+  }).catch(function () { connError(true); });
+});
+document.getElementById('btn-keep-voting').addEventListener('click', function () {
+  document.getElementById('donebox').style.display = 'none';
+});
+
+// ============================================================
+// Clicks en la galería (delegación): dots + zoom
+// ============================================================
+document.getElementById('gallery').addEventListener('click', function (e) {
+  var dot = e.target.closest('.dot');
+  if (dot) {
+    var cell = dot.closest('.cell');
+    var critRow = dot.closest('.crit');
+    sendVote(cell.dataset.unit, cell.dataset.letter, critRow.dataset.crit, Number(dot.dataset.v));
+    return;
+  }
+  var img = e.target.closest('img.render');
+  if (img) {
+    document.getElementById('lightbox-img').src = img.src;
+    document.getElementById('lightbox').style.display = 'flex';
+  }
+});
+document.getElementById('lightbox').addEventListener('click', function () {
+  this.style.display = 'none';
+});
+
+// ============================================================
+// Restaurar estado guardado al cargar
+// ============================================================
+function restore() {
+  api('GET', '/api/scores').then(function (state) {
+    connError(false);
+    // Voto efectivo por imagen+criterio: "revealed" pisa a "blind";
+    // dentro de la misma fase gana el más reciente.
+    var saved = state.votes || {};
+    Object.keys(saved).forEach(function (k) {
+      var v = saved[k];
+      var ek = v.image_id + '|' + v.letter + '|' + v.criterion;
+      var cur = votes[ek];
+      var replace = !cur ||
+        (v.phase === 'revealed' && cur.phase === 'blind') ||
+        (v.phase === cur.phase && String(v.voted_at) > String(cur.voted_at));
+      if (replace) votes[ek] = { value: v.value, phase: v.phase, voted_at: v.voted_at };
+    });
+    Object.keys(votes).forEach(function (ek) {
+      var parts = ek.split('|');
+      var critRow = critRowEl(parts[0], parts[1], parts[2]);
+      if (critRow) paintDots(critRow, votes[ek].value);
+    });
+    updateProgress();
+    if (state.revealed_at) applyReveal(state.engineByLabel);
+  }).catch(function () {
+    connError(true);
+  });
+}
+
+buildTable();
+updateProgress();
+restore();
+</script>
+</body>
+</html>
