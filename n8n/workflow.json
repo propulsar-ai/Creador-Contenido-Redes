@@ -2736,7 +2736,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json;\nlet err = {};\ntry {\n  const rawErr = raw.error || {};\n  if (rawErr.code && typeof rawErr.code === 'number') {\n    // Direct Meta error object with numeric code\n    err = rawErr;\n  } else if (rawErr.message) {\n    // AxiosError message format: \"400 - \\\"<json_encoded_string>\\\"\"\n    // The inner string is double-encoded JSON, need two-stage decode\n    const msg = rawErr.message;\n    // Find the outer JSON-encoded string (between first and last double-quote)\n    const qStart = msg.indexOf('\"');\n    const qEnd = msg.lastIndexOf('\"');\n    if (qStart !== -1 && qEnd > qStart) {\n      try {\n        // First decode: get the JSON string out of the quoted wrapper\n        const jsonStr = msg.slice(qStart, qEnd + 1);\n        const inner = JSON.parse(jsonStr);  // gives us the raw JSON text\n        const parsed = JSON.parse(inner);   // gives us the actual object\n        err = parsed.error || parsed;\n      } catch(e) {\n        // Fallback: try direct JSON extraction (first { to last })\n        const start = msg.indexOf('{');\n        const end = msg.lastIndexOf('}');\n        if (start !== -1 && end !== -1) {\n          try { const p = JSON.parse(msg.slice(start, end + 1)); err = p.error || p; } catch(e2) {}\n        }\n      }\n    }\n  }\n  // Fallback: raw.cause.response.body (alternate error shape)\n  if (!err.code && raw.cause && raw.cause.response && raw.cause.response.body) {\n    try { const p = JSON.parse(raw.cause.response.body); err = p.error || err; } catch(e) {}\n  }\n} catch(e) {}\n\n// Primary: Merge Rehost Output (structural guarantee: all Meta nodes downstream)\n// Fallback: Prep Re-host Input\nlet mergeData = {};\ntry { mergeData = $('🔗 Merge Rehost Output').first().json; } catch(e) {\n  try { mergeData = $('🔧 Prep Re-host Input').first().json; } catch(e2) {}\n}\n\nreturn [{\n  json: {\n    error_code: err.code || 0,\n    error_message: err.message || 'Error desconocido de Meta API',\n    error_type: err.type || '',\n    fbtrace_id: err.fbtrace_id || '',\n    platform_failed: raw._platform || 'Meta',\n    is_token_expired: (err.type === 'OAuthException' && err.code === 190),\n    approval_number: mergeData.approval_number || '',\n    topic: mergeData.topic || '',\n    blob_urls: mergeData.blob_urls || [],\n    format: mergeData.format || 'single',\n  }\n}];",
+        "jsCode": "const raw = $input.first().json;\nlet err = {};\ntry {\n  const rawErr = raw.error || {};\n  if (rawErr.code && typeof rawErr.code === 'number') {\n    // Direct Meta error object with numeric code\n    err = rawErr;\n  } else if (rawErr.message) {\n    // AxiosError message format: \"400 - \\\"<json_encoded_string>\\\"\"\n    // The inner string is double-encoded JSON, need two-stage decode\n    const msg = rawErr.message;\n    // Find the outer JSON-encoded string (between first and last double-quote)\n    const qStart = msg.indexOf('\"');\n    const qEnd = msg.lastIndexOf('\"');\n    if (qStart !== -1 && qEnd > qStart) {\n      try {\n        // First decode: get the JSON string out of the quoted wrapper\n        const jsonStr = msg.slice(qStart, qEnd + 1);\n        const inner = JSON.parse(jsonStr);  // gives us the raw JSON text\n        const parsed = JSON.parse(inner);   // gives us the actual object\n        err = parsed.error || parsed;\n      } catch(e) {\n        // Fallback: try direct JSON extraction (first { to last })\n        const start = msg.indexOf('{');\n        const end = msg.lastIndexOf('}');\n        if (start !== -1 && end !== -1) {\n          try { const p = JSON.parse(msg.slice(start, end + 1)); err = p.error || p; } catch(e2) {}\n        }\n      }\n    }\n  }\n  // Fallback: raw.cause.response.body (alternate error shape)\n  if (!err.code && raw.cause && raw.cause.response && raw.cause.response.body) {\n    try { const p = JSON.parse(raw.cause.response.body); err = p.error || err; } catch(e) {}\n  }\n} catch(e) {}\n\n// Primary: Merge Rehost Output (structural guarantee: all Meta nodes downstream)\n// Fallback: Prep Re-host Input\nlet mergeData = {};\ntry { mergeData = $('🔗 Merge Rehost Output').first().json; } catch(e) {\n  try { mergeData = $('🔧 Prep Re-host Input').first().json; } catch(e2) {}\n}\n\nreturn [{\n  json: {\n    error_code: err.code || 0,\n    error_message: err.message || 'Error desconocido de Meta API',\n    error_type: err.type || '',\n    fbtrace_id: err.fbtrace_id || '',\n    platform_failed: raw._platform || 'Meta',\n    is_token_expired: (err.type === 'OAuthException' && err.code === 190),\n    approval_number: mergeData.approval_number || '',\n    topic: mergeData.topic || '',\n    blob_urls: mergeData.blob_urls || [],\n    format: mergeData.format || 'single',\n    platforms: mergeData.platforms || [],\n    session_id: (() => { try { return $('🔧 Prep Re-host Input').first().json.session_id || null; } catch (e) { return null; } })(),\n  }\n}];",
         "mode": "runOnceForAllItems"
       },
       "id": "parse-meta-error",
@@ -3180,6 +3180,110 @@
       "maxTries": 2,
       "waitBetweenTries": 5000,
       "notes": "Calls the Hybrid Image sub-workflow (n8n/subworkflow-hybrid-image.json) ONCE with all N exploded slide items pre-shaped by 🧩 Map Hybrid Input (Slides) — the sub-workflow loops internally over them (splitInBatches(1), per its 16-02 contract), NOT one Execute Workflow call per slide. Replaces 🔤 Ideogram — Slide (INTEG-01). workflowId is YegOtsUONrRx7v2J, the real live sub-workflow ID (substituted by Plan 16-06). mappingMode:'passthrough' matches the sub-workflow trigger's inputSource:'passthrough'. retryOnFail/maxTries(2)/waitBetweenTries(5000ms) cover transient Creatomate/FAL failures — the expensive case on a 5-slide batch. Output: N items { index, imageUrl }, re-sorted by index by the sub-workflow's own 🗂️ Collect Results — read by 🗂️ Collect Image URLs via item.json.imageUrl (not Ideogram's data[0].url)."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO publications (session_id, topic, type, angle, platforms, image_model, image_url, status, ig_status, fb_status, ig_permalink, fb_permalink, published_at, format) VALUES ($1,$2,$3,$4,$5,$6,$7,'published','published','published',$8,$9,now(),'single')",
+        "options": {
+          "queryBatching": "independently",
+          "queryReplacement": "={{ [ $('🔧 Prep Re-host Input').item.json.session_id || null, $('🔗 Merge Rehost Output').item.json.topic, $('🔗 Merge Rehost Output').item.json.type, $('🔗 Merge Rehost Output').item.json.angle || null, $('🔗 Merge Rehost Output').item.json.platforms || [], $('🔗 Merge Rehost Output').item.json.image_model, ($('🔗 Merge Rehost Output').item.json.blob_urls && $('🔗 Merge Rehost Output').item.json.blob_urls[0] && $('🔗 Merge Rehost Output').item.json.blob_urls[0].url) || $('🔗 Merge Rehost Output').item.json.final_image_url || null, $('🔗 IG: Get Permalink').item.json.permalink, 'https://www.facebook.com/' + $('🌐 FB: Publish Photo').item.json.post_id ] }}"
+        }
+      },
+      "id": "pg-log-single",
+      "name": "🗄️ PG Log (Single)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "onError": "continueRegularOutput",
+      "position": [
+        5480,
+        320
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      },
+      "notes": "Studio Phase 2 (DATA-02): logs the single-format publish outcome to publications (content_engine). In SERIES before the Sheets log node during the dual-write verification window. onError continueRegularOutput: a log failure can never break publishing or blob cleanup."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO publications (session_id, topic, type, angle, platforms, image_model, image_url, status, ig_status, fb_status, ig_permalink, fb_permalink, published_at, format) VALUES ($1,$2,$3,$4,$5,$6,$7,'published','published','published',$8,$9,now(),'carousel')",
+        "options": {
+          "queryBatching": "independently",
+          "queryReplacement": "={{ [ $('🔧 Prep Re-host Input').first().json.session_id || null, $('🗂️ FB: Collect Photo IDs').first().json.topic, $('🗂️ FB: Collect Photo IDs').first().json.type, $('🗂️ FB: Collect Photo IDs').first().json.angle || null, (Array.isArray($('🗂️ FB: Collect Photo IDs').first().json.blob_urls) ? ['instagram', 'facebook'] : []), $('🗂️ FB: Collect Photo IDs').first().json.image_model, ($('🗂️ FB: Collect Photo IDs').first().json.blob_urls && $('🗂️ FB: Collect Photo IDs').first().json.blob_urls[0] && $('🗂️ FB: Collect Photo IDs').first().json.blob_urls[0].url) || null, $('🗂️ FB: Collect Photo IDs').first().json.instagram_permalink, 'https://www.facebook.com/' + $('🌐 FB: Publish Carousel Feed').first().json.id ] }}"
+        }
+      },
+      "id": "pg-log-carousel",
+      "name": "🗄️ PG Log (Carousel)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "onError": "continueRegularOutput",
+      "position": [
+        7020,
+        40
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      },
+      "notes": "Studio Phase 2 (DATA-02): logs the carousel publish outcome to publications. Values sourced from FB: Collect Photo IDs (.first()) mirroring the Sheets carousel node; session_id from Prep Re-host Input. onError continueRegularOutput."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO publications (session_id, topic, type, angle, platforms, image_model, image_url, status, ig_status, fb_status, ig_permalink, fb_permalink, published_at, format, expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'published','published',$8,$9,NULL,now(),'story',$10)",
+        "options": {
+          "queryBatching": "independently",
+          "queryReplacement": "={{ [ $('🔧 Prep Re-host Input').item.json.session_id || null, $('🔗 Merge Rehost Output').item.json.topic, $('🔗 Merge Rehost Output').item.json.type, $('🔗 Merge Rehost Output').item.json.angle || null, $('🔗 Merge Rehost Output').item.json.platforms || [], $('🔗 Merge Rehost Output').item.json.image_model || 'ideogram', ($('🔗 Merge Rehost Output').item.json.blob_urls && $('🔗 Merge Rehost Output').item.json.blob_urls[0] && $('🔗 Merge Rehost Output').item.json.blob_urls[0].url) || null, ($('🔗 Merge Rehost Output').item.json.platforms || []).includes('facebook') ? 'published' : 'skipped', $('🔧 IG: Compute Story Expiry').item.json.ig_story_permalink || null, $('🔧 IG: Compute Story Expiry').item.json.story_expires_at ] }}"
+        }
+      },
+      "id": "pg-log-story",
+      "name": "🗄️ PG Log (Story)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "onError": "continueRegularOutput",
+      "position": [
+        6040,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      },
+      "notes": "Studio Phase 2 (DATA-02): logs the story publish outcome to publications. fb_permalink NULL (FB Stories have no public URL); fb_status published/skipped from platforms.includes('facebook'); expires_at from Compute Story Expiry. onError continueRegularOutput."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO publications (session_id, topic, platforms, status, ig_status, fb_status, error_msg, format) VALUES ($1,$2,$3,'failed',$4,$5,$6,$7)",
+        "options": {
+          "queryBatching": "independently",
+          "queryReplacement": "={{ [ $('🚨 Parse Meta Error').item.json.session_id || null, $('🚨 Parse Meta Error').item.json.topic, $('🚨 Parse Meta Error').item.json.platforms || [], $('🚨 Parse Meta Error').item.json.platform_failed === 'Instagram' ? 'failed' : 'unknown', $('🚨 Parse Meta Error').item.json.platform_failed === 'Facebook' ? 'failed' : 'unknown', $('🚨 Parse Meta Error').item.json.error_message + ' [' + $('🚨 Parse Meta Error').item.json.fbtrace_id + ']', $('🚨 Parse Meta Error').item.json.format ] }}"
+        }
+      },
+      "id": "pg-fail-log",
+      "name": "🗄️ PG Fail Log",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "onError": "continueRegularOutput",
+      "position": [
+        5000,
+        1540
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      },
+      "notes": "Studio Phase 2 (DATA-02): logs publish FAILURES to publications. Every value reads ONLY from Parse Meta Error (structurally always runs on the fail path; session_id resolved there inside try/catch - Pitfall B). ig/fb_status: failed for the failed platform, 'unknown' for the other (sequential chain - it may already be live; never infer success). onError continueRegularOutput."
     }
   ],
   "connections": {
@@ -3827,7 +3931,7 @@
       "main": [
         [
           {
-            "node": "📊 Google Sheets Log (Story)",
+            "node": "🗄️ PG Log (Story)",
             "type": "main",
             "index": 0
           }
@@ -4041,7 +4145,7 @@
       "main": [
         [
           {
-            "node": "📊 Google Sheets Log (Carousel)",
+            "node": "🗄️ PG Log (Carousel)",
             "type": "main",
             "index": 0
           }
@@ -4135,7 +4239,7 @@
       "main": [
         [
           {
-            "node": "📊 Google Sheets Log",
+            "node": "🗄️ PG Log (Single)",
             "type": "main",
             "index": 0
           }
@@ -4255,14 +4359,14 @@
       "main": [
         [
           {
-            "node": "📊 Sheets Fail Log",
+            "node": "🗄️ PG Fail Log",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "📊 Sheets Fail Log",
+            "node": "🗄️ PG Fail Log",
             "type": "main",
             "index": 0
           }
@@ -4273,14 +4377,14 @@
       "main": [
         [
           {
-            "node": "📊 Sheets Fail Log",
+            "node": "🗄️ PG Fail Log",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "📊 Sheets Fail Log",
+            "node": "🗄️ PG Fail Log",
             "type": "main",
             "index": 0
           }
@@ -4427,6 +4531,50 @@
         [
           {
             "node": "🏷️ Tag FB Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗄️ PG Log (Single)": {
+      "main": [
+        [
+          {
+            "node": "📊 Google Sheets Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗄️ PG Log (Carousel)": {
+      "main": [
+        [
+          {
+            "node": "📊 Google Sheets Log (Carousel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗄️ PG Log (Story)": {
+      "main": [
+        [
+          {
+            "node": "📊 Google Sheets Log (Story)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗄️ PG Fail Log": {
+      "main": [
+        [
+          {
+            "node": "📊 Sheets Fail Log",
             "type": "main",
             "index": 0
           }
