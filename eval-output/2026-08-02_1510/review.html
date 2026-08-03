@@ -143,11 +143,7 @@ var revealed = false;
 // Construcción de la tabla
 // ============================================================
 function buildTable() {
-  var html = '<thead><tr><th class="row-head"></th>';
-  COLUMNS.forEach(function (L) {
-    html += '<th class="engine-head" data-label="' + L + '">' + L + '<span class="real"></span></th>';
-  });
-  html += '</tr></thead><tbody>';
+  var html = '<tbody>';
 
   ROWS.forEach(function (row) {
     html += '<tr><th>' + row.unit + '<br/><span class="muted">' + row.brief + ' / ' + row.format + '</span></th>';
