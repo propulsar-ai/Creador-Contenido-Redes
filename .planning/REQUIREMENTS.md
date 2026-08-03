@@ -9,13 +9,13 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Evaluación (EVAL)
 
-- [ ] **EVAL-01**: Propulsar brand template created in Creatomate (dark `#1a1a2e` background, purple-magenta gradient, bold Spanish typography) — one-time manual authoring in the vendor editor
-- [ ] **EVAL-02**: Propulsar brand theme created in Gamma (equivalent brand kit: colors, fonts, logo)
-- [ ] **EVAL-03**: Standalone eval harness script (`scripts/`) renders the same brief through Creatomate, Gamma, and Ideogram v3 (baseline) — zero contact with n8n, `content_sessions`, Google Sheets, or Meta Graph API
-- [ ] **EVAL-04**: Spanish diacritics stress test set (á/é/í/ó/ú/ñ/¿¡ in headline position) rendered through all candidate engines + Ideogram baseline
-- [ ] **EVAL-05**: Two-stage hybrid variant (Flux/Nano Banana AI background + design-engine typographic overlay) included as a comparison contender
-- [ ] **EVAL-06**: Documented comparison scored against the 7-criteria rubric (text legibility, brand consistency, layout quality, diacritics, render latency, cost/image, n8n integration complexity) + human review → written decision: winning engine AND Ideogram coexistence/replacement
-- [ ] **EVAL-07**: Remotion paper analysis (Automators license $100/month minimum for programmatic rendering, regardless of headcount) documented in the decision report as cost-rejected, with an explicit reconsideration trigger (video/Reels milestone)
+- [x] **EVAL-01**: Propulsar brand template created in Creatomate (dark `#1a1a2e` background, purple-magenta gradient, bold Spanish typography) — one-time manual authoring in the vendor editor
+- [x] **EVAL-02**: Propulsar brand theme created in Gamma (equivalent brand kit: colors, fonts, logo)
+- [x] **EVAL-03**: Standalone eval harness script (`scripts/`) renders the same brief through Creatomate, Gamma, and Ideogram v3 (baseline) — zero contact with n8n, `content_sessions`, Google Sheets, or Meta Graph API
+- [x] **EVAL-04**: Spanish diacritics stress test set (á/é/í/ó/ú/ñ/¿¡ in headline position) rendered through all candidate engines + Ideogram baseline
+- [x] **EVAL-05**: Two-stage hybrid variant (Flux/Nano Banana AI background + design-engine typographic overlay) included as a comparison contender
+- [x] **EVAL-06**: Documented comparison scored against the 7-criteria rubric (text legibility, brand consistency, layout quality, diacritics, render latency, cost/image, n8n integration complexity) + human review → written decision: winning engine AND Ideogram coexistence/replacement
+- [x] **EVAL-07**: Remotion paper analysis (Automators license $100/month minimum for programmatic rendering, regardless of headcount) documented in the decision report as cost-rejected, with an explicit reconsideration trigger (video/Reels milestone)
 
 ### Integración (INTEG)
 
@@ -69,13 +69,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | VERIF-01 | Phase 14 | Complete (2026-08-01) |
 | VERIF-02 | Phase 14 | Complete (2026-08-01) |
-| EVAL-01 | Phase 15 | Pending |
-| EVAL-02 | Phase 15 | Pending |
-| EVAL-03 | Phase 15 | Pending |
-| EVAL-04 | Phase 15 | Pending |
-| EVAL-05 | Phase 15 | Pending |
-| EVAL-06 | Phase 15 | Pending |
-| EVAL-07 | Phase 15 | Pending |
+| EVAL-01 | Phase 15 | Complete (2026-08-03) |
+| EVAL-02 | Phase 15 | Complete (2026-08-03) |
+| EVAL-03 | Phase 15 | Complete (2026-08-03) |
+| EVAL-04 | Phase 15 | Complete (2026-08-03) |
+| EVAL-05 | Phase 15 | Complete (2026-08-03) |
+| EVAL-06 | Phase 15 | Complete (2026-08-03) |
+| EVAL-07 | Phase 15 | Complete (2026-08-03) |
 | INTEG-01 | Phase 16 | Pending |
 | INTEG-02 | Phase 16 | Pending |
 | INTEG-03 | Phase 16 | Pending |
