@@ -3078,7 +3078,7 @@
         "workflowId": {
           "__rl": true,
           "mode": "list",
-          "value": "HYBRID_SUBWORKFLOW_ID",
+          "value": "YegOtsUONrRx7v2J",
           "cachedResultName": "🎨 Hybrid Image — Flux + Creatomate"
         },
         "workflowInputs": {
@@ -3096,7 +3096,7 @@
         1520,
         160
       ],
-      "notes": "Calls the Hybrid Image sub-workflow (n8n/subworkflow-hybrid-image.json) for the single-post format, replacing 🔤 Ideogram v3 for image_model:'ideogram' (INTEG-01, full replacement per Phase 15's decision). workflowId is the literal placeholder HYBRID_SUBWORKFLOW_ID, substituted at deploy time by Plan 16-06 — mirrors 🔁 Re-host Images' hardcoded-ID pattern. mappingMode:'passthrough' matches the sub-workflow trigger's inputSource:'passthrough'. Input pre-shaped by 🧩 Map Hybrid Input (Single). Output: { index, imageUrl } — read by 🔗 Normalizar URL imagen via imageData.imageUrl (not Ideogram's data[0].url)."
+      "notes": "Calls the Hybrid Image sub-workflow (n8n/subworkflow-hybrid-image.json) for the single-post format, replacing 🔤 Ideogram v3 for image_model:'ideogram' (INTEG-01, full replacement per Phase 15's decision). workflowId is YegOtsUONrRx7v2J, the real live sub-workflow ID (substituted by Plan 16-06, same project as this workflow) — mirrors 🔁 Re-host Images' hardcoded-ID pattern. mappingMode:'passthrough' matches the sub-workflow trigger's inputSource:'passthrough'. Input pre-shaped by 🧩 Map Hybrid Input (Single). Output: { index, imageUrl } — read by 🔗 Normalizar URL imagen via imageData.imageUrl (not Ideogram's data[0].url)."
     },
     {
       "parameters": {
@@ -3118,7 +3118,7 @@
         "workflowId": {
           "__rl": true,
           "mode": "list",
-          "value": "HYBRID_SUBWORKFLOW_ID",
+          "value": "YegOtsUONrRx7v2J",
           "cachedResultName": "🎨 Hybrid Image — Flux + Creatomate"
         },
         "workflowInputs": {
@@ -3136,7 +3136,7 @@
         1456,
         800
       ],
-      "notes": "Calls the Hybrid Image sub-workflow (n8n/subworkflow-hybrid-image.json) for the Story format, replacing 🔤 Ideogram v3 — Story (INTEG-01). workflowId is the literal placeholder HYBRID_SUBWORKFLOW_ID, substituted at deploy time by Plan 16-06 — mirrors 🔁 Re-host Images' hardcoded-ID pattern. mappingMode:'passthrough' matches the sub-workflow trigger's inputSource:'passthrough'. Input pre-shaped by 🧩 Map Hybrid Input (Story). Output: { index, imageUrl } — read by 🔗 Normalizar URL imagen — Story via imageData.imageUrl (not Ideogram's data[0].url)."
+      "notes": "Calls the Hybrid Image sub-workflow (n8n/subworkflow-hybrid-image.json) for the Story format, replacing 🔤 Ideogram v3 — Story (INTEG-01). workflowId is YegOtsUONrRx7v2J, the real live sub-workflow ID (substituted by Plan 16-06, same project as this workflow) — mirrors 🔁 Re-host Images' hardcoded-ID pattern. mappingMode:'passthrough' matches the sub-workflow trigger's inputSource:'passthrough'. Input pre-shaped by 🧩 Map Hybrid Input (Story). Output: { index, imageUrl } — read by 🔗 Normalizar URL imagen — Story via imageData.imageUrl (not Ideogram's data[0].url)."
     },
     {
       "parameters": {
@@ -3158,7 +3158,7 @@
         "workflowId": {
           "__rl": true,
           "mode": "list",
-          "value": "HYBRID_SUBWORKFLOW_ID",
+          "value": "YegOtsUONrRx7v2J",
           "cachedResultName": "🎨 Hybrid Image — Flux + Creatomate"
         },
         "workflowInputs": {
@@ -3179,7 +3179,7 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 5000,
-      "notes": "Calls the Hybrid Image sub-workflow (n8n/subworkflow-hybrid-image.json) ONCE with all N exploded slide items pre-shaped by 🧩 Map Hybrid Input (Slides) — the sub-workflow loops internally over them (splitInBatches(1), per its 16-02 contract), NOT one Execute Workflow call per slide. Replaces 🔤 Ideogram — Slide (INTEG-01). workflowId is the literal placeholder HYBRID_SUBWORKFLOW_ID, substituted at deploy time by Plan 16-06. mappingMode:'passthrough' matches the sub-workflow trigger's inputSource:'passthrough'. retryOnFail/maxTries(2)/waitBetweenTries(5000ms) cover transient Creatomate/FAL failures — the expensive case on a 5-slide batch. Output: N items { index, imageUrl }, re-sorted by index by the sub-workflow's own 🗂️ Collect Results — read by 🗂️ Collect Image URLs via item.json.imageUrl (not Ideogram's data[0].url)."
+      "notes": "Calls the Hybrid Image sub-workflow (n8n/subworkflow-hybrid-image.json) ONCE with all N exploded slide items pre-shaped by 🧩 Map Hybrid Input (Slides) — the sub-workflow loops internally over them (splitInBatches(1), per its 16-02 contract), NOT one Execute Workflow call per slide. Replaces 🔤 Ideogram — Slide (INTEG-01). workflowId is YegOtsUONrRx7v2J, the real live sub-workflow ID (substituted by Plan 16-06). mappingMode:'passthrough' matches the sub-workflow trigger's inputSource:'passthrough'. retryOnFail/maxTries(2)/waitBetweenTries(5000ms) cover transient Creatomate/FAL failures — the expensive case on a 5-slide batch. Output: N items { index, imageUrl }, re-sorted by index by the sub-workflow's own 🗂️ Collect Results — read by 🗂️ Collect Image URLs via item.json.imageUrl (not Ideogram's data[0].url)."
     }
   ],
   "connections": {
