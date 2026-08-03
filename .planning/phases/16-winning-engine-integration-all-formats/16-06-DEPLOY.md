@@ -98,4 +98,38 @@ Commit: `1edba83` covers Task 1's repo edits; this DEPLOY.md documents Task 2's 
 
 ## Task 3 — Standalone live smoke via disposable harness
 
-See below (appended after execution).
+### Harness
+
+Created a throwaway workflow (`ZZ-SMOKE-16-06-hybrid (disposable)`, id `IEvrjfQIxumRmI6W`) via `POST /api/v1/workflows`: `Webhook → Extract Body (Code) → Execute Workflow (real Hybrid sub-workflow id, waitForSubWorkflow:true) → Respond to Webhook (allIncomingItems)`. Activated via `POST /activate`.
+
+**Deviation found (Rule 1 — Bug, auto-fixed):** first fire (execution `1826884`) errored inside the sub-workflow's `🧩 Prep Render` node — `unknown layout "undefined"`. Root cause: n8n's Webhook node (typeVersion 2) wraps the POST body under `$json.body` (alongside `headers`/`params`/`query`), so passing the webhook's raw output straight into the Execute Workflow node with `mappingMode:'passthrough'` sent the wrong shape. Fixed by inserting an `Extract Body` Code node (`return $input.all().map(item => ({ json: item.json.body }))`) between the Webhook and the Execute Workflow node, then re-PUT the harness (still `active:true`). This is a harness-only bug — the production main workflow's own `🧩 Map Hybrid Input (*)` nodes already shape their input correctly and were never affected.
+
+### Smoke payload (a) — single layout, real Flux background
+
+Payload: `{index:0, layout:"single", headline:"Automatización para tu clínica veterinaria", body:"Atendé consultas 24/7 sin contratar más personal. Así funciona.", badge:"CASO: VETERINARIA", cta:"Escribinos → propulsar.ai", background_prompt:"Man sitting on a dark blue couch late at night, comforting a sick dog resting on his lap, warm lamp light in background, phone visible on side table, emotional atmosphere, photorealistic, no text overlays, dark background #070A18, purple and magenta gradient accents", width:1080, height:1080}` (fired via a Node `https` request — Windows Git Bash curl+heredoc UTF-8 mangling avoided per the known gotcha; diacritics/em-dash/arrow all confirmed intact in the live execution's captured webhook body).
+
+- **Response:** HTTP 200, `[{"index":0,"imageUrl":"https://f002.backblazeb2.com/file/creatomate-c8xg3hsxdu/1f741d1a-49ce-4ebe-af19-9e9fb76c0828.png"}]`
+- **`curl -sI` on the URL:** `200`, `Content-Type: image/png`, `Content-Length: 986146`
+- **Visual read (direct image inspection):** headline/body/badge/cta all correct verbatim Spanish text, correct brand palette (dark background, magenta badge pill, cyan CTA pill), photorealistic Flux background (man + dog on a couch, warm lamp) with **no legible text drawn into the photo itself** — confirms the text-bearing-object avoidance rule from Plan 16-05 held on a real render.
+- **Sub-execution trace (id `1826902`):** `runData` includes `⚡ Flux Background` — confirms the Flux leg fired for this layout, as expected (`needs_flux:true`).
+
+### Smoke payload (b) — carousel-closing layout, Flux-skip / Creatomate-only
+
+Payload: `{index:0, layout:"carousel-closing", headline:"Empezá hoy con Propulsar", body:"Automatizá tu negocio con IA, sin complicaciones técnicas.", badge:"RESULTADOS REALES", cta:"Escribinos → propulsar.ai", background_prompt:null, width:1080, height:1080}`
+
+- **Response:** HTTP 200, `[{"index":0,"imageUrl":"https://f002.backblazeb2.com/file/creatomate-c8xg3hsxdu/37e9cf58-1c80-418c-a0b2-96ccd18d0e58.png"}]`
+- **`curl -sI` on the URL:** `200`, `Content-Type: image/png`, `Content-Length: 50760` (≈19x smaller than payload (a)'s render — consistent with a flat gradient background instead of a photographic Flux image)
+- **Visual read (direct image inspection):** headline/body/badge/cta all correct verbatim Spanish text, correct brand palette (near-black gradient background per the `carousel-closing` template's `#070A18`→`#13082B`→`#08031A` stops, magenta badge pill, cyan CTA pill) — no photographic background present, consistent with the Flux-skip path.
+- **Sub-execution trace (id `1826916`):** `runData` does **NOT** include `⚡ Flux Background` — took `🧩 Insertar Fondo (Skip)` instead — **proves Flux was skipped for the closing layout**, exactly the intended `needs_flux:false` behavior. Duration 4.5s vs. payload (a)'s 13.2s, consistent with skipping the FAL round-trip.
+
+### Cleanup
+
+- `DELETE /api/v1/workflows/IEvrjfQIxumRmI6W` → HTTP 200
+- `GET /api/v1/workflows/IEvrjfQIxumRmI6W` → HTTP 404 (`{"message":"Not Found"}`) — harness confirmed gone.
+
+### Spend (this task)
+
+- 1 Flux call (payload a) ≈ $0.03 — cumulative Phase 16 Flux spend now ≈ $1.02 of the ~$3 budget (never approached).
+- 2 Creatomate renders (payload a + b) — cumulative Phase 16 Creatomate credits now ≈ 43 of 2000/month (Essential plan).
+
+**Both smokes PASS. INTEG-01 is now proven live end-to-end via the real production sub-workflow, standalone (no WhatsApp sends, no Meta calls, no real pipeline execution occurred) — live-fires (Plans 16-07..16-09) can proceed.**
