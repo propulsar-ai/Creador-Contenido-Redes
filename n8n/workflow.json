@@ -139,7 +139,7 @@
         1520,
         528
       ],
-      "notes": "Ideogram v2 per carousel slide — called once per slide via SplitInBatches loop"
+      "notes": "Ideogram v2 per carousel slide — called once per slide via SplitInBatches loop.\n\nDORMANTE desde Phase 16 — fallback manual de emergencia durante la ventana de validación de 10 posts. Restaurar = reconectar la entrada (🎠 Explode Slides → este nodo)."
     },
     {
       "parameters": {
@@ -319,7 +319,7 @@
         1312,
         448
       ],
-      "notes": "Costo: ~$0.06/img\nFortaleza: texto legible en imagen (90-95% precisión)\nRequiere IDEOGRAM_API_KEY"
+      "notes": "Costo: ~$0.06/img\nFortaleza: texto legible en imagen (90-95% precisión)\nRequiere IDEOGRAM_API_KEY\n\nDORMANTE desde Phase 16 — fallback manual de emergencia durante la ventana de validación de 10 posts. Restaurar = reconectar la entrada (🎨 ¿Ideogram? TRUE → este nodo)."
     },
     {
       "parameters": {
@@ -351,7 +351,7 @@
         1232,
         640
       ],
-      "notes": "Story 9:16 variant. Mirrors ideogram-generate exactly — V_2_TURBO endpoint, ASPECT_9_16 enum, 1080x1920 target. NOT the true Ideogram v3 endpoint (/v1/ideogram-v3/generate has different Content-Type + multipart body)."
+      "notes": "Story 9:16 variant. Mirrors ideogram-generate exactly — V_2_TURBO endpoint, ASPECT_9_16 enum, 1080x1920 target. NOT the true Ideogram v3 endpoint (/v1/ideogram-v3/generate has different Content-Type + multipart body).\n\nDORMANTE desde Phase 16 — fallback manual de emergencia durante la ventana de validación de 10 posts. Restaurar = reconectar la entrada (🔀 ¿Story? TRUE → este nodo)."
     },
     {
       "parameters": {
@@ -3057,6 +3057,129 @@
       "waitBetweenTries": 2000,
       "onError": "continueErrorOutput",
       "notes": "Deletes the rehosted file from the Hostinger rehost-service (Phase 12.2, replaces Azure Blob DELETE). DELETE is idempotent (404 = already deleted, acceptable). retryOnFail=true. onError=continueErrorOutput so 404 does not block execution."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Phase 16 (Plan 16-04): shapes 🔧 Parsear contenido's design fields into the\n// Hybrid sub-workflow's expected input contract — see n8n/subworkflow-hybrid-image.json\n// (▶️ Execute Sub-workflow Trigger notes): { index, layout, headline, body, badge,\n// cta, background_prompt, width, height }. Single post = 1 image = index 0.\nconst d = $input.first().json;\nreturn [{\n  json: {\n    index: 0,\n    layout: 'single',\n    headline: d.headline,\n    body: d.body,\n    badge: d.badge,\n    cta: d.cta,\n    background_prompt: d.background_prompt,\n    width: 1080,\n    height: 1080,\n  }\n}];"
+      },
+      "id": "map-hybrid-input-single",
+      "name": "🧩 Map Hybrid Input (Single)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        160
+      ],
+      "notes": "Phase 16 (Plan 16-04): pre-shapes the input for 🎨 Hybrid — Single. Inserted between 🎨 ¿Ideogram? (TRUE) and the Execute Workflow node because executeWorkflow 1.2's workflowInputs mapping can't cleanly express this reshape inline."
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "HYBRID_SUBWORKFLOW_ID",
+          "cachedResultName": "🎨 Hybrid Image — Flux + Creatomate"
+        },
+        "workflowInputs": {
+          "mappingMode": "passthrough"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "hybrid-single",
+      "name": "🎨 Hybrid — Single",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1520,
+        160
+      ],
+      "notes": "Calls the Hybrid Image sub-workflow (n8n/subworkflow-hybrid-image.json) for the single-post format, replacing 🔤 Ideogram v3 for image_model:'ideogram' (INTEG-01, full replacement per Phase 15's decision). workflowId is the literal placeholder HYBRID_SUBWORKFLOW_ID, substituted at deploy time by Plan 16-06 — mirrors 🔁 Re-host Images' hardcoded-ID pattern. mappingMode:'passthrough' matches the sub-workflow trigger's inputSource:'passthrough'. Input pre-shaped by 🧩 Map Hybrid Input (Single). Output: { index, imageUrl } — read by 🔗 Normalizar URL imagen via imageData.imageUrl (not Ideogram's data[0].url)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Phase 16 (Plan 16-04): shapes 🔧 Parsear contenido's design fields into the\n// Hybrid sub-workflow's expected input contract — see n8n/subworkflow-hybrid-image.json\n// (▶️ Execute Sub-workflow Trigger notes): { index, layout, headline, body, badge,\n// cta, background_prompt, width, height }. Story = 1 image = index 0, 1080x1920.\nconst d = $input.first().json;\nreturn [{\n  json: {\n    index: 0,\n    layout: 'story',\n    headline: d.headline,\n    body: d.body,\n    badge: d.badge,\n    cta: d.cta,\n    background_prompt: d.background_prompt,\n    width: 1080,\n    height: 1920,\n  }\n}];"
+      },
+      "id": "map-hybrid-input-story",
+      "name": "🧩 Map Hybrid Input (Story)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        800
+      ],
+      "notes": "Phase 16 (Plan 16-04): pre-shapes the input for 🎨 Hybrid — Story. Inserted between 🔀 ¿Story? (TRUE) and the Execute Workflow node — Story hardcodes Ideogram directly (Research Finding 1 / Pitfall 1), it does not go through the image_model router, so this is an independent repoint from the single-post site."
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "HYBRID_SUBWORKFLOW_ID",
+          "cachedResultName": "🎨 Hybrid Image — Flux + Creatomate"
+        },
+        "workflowInputs": {
+          "mappingMode": "passthrough"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "hybrid-story",
+      "name": "🎨 Hybrid — Story",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1456,
+        800
+      ],
+      "notes": "Calls the Hybrid Image sub-workflow (n8n/subworkflow-hybrid-image.json) for the Story format, replacing 🔤 Ideogram v3 — Story (INTEG-01). workflowId is the literal placeholder HYBRID_SUBWORKFLOW_ID, substituted at deploy time by Plan 16-06 — mirrors 🔁 Re-host Images' hardcoded-ID pattern. mappingMode:'passthrough' matches the sub-workflow trigger's inputSource:'passthrough'. Input pre-shaped by 🧩 Map Hybrid Input (Story). Output: { index, imageUrl } — read by 🔗 Normalizar URL imagen — Story via imageData.imageUrl (not Ideogram's data[0].url)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Phase 16 (Plan 16-04): shapes each exploded slide item (🎠 Explode Slides —\n// slide_num/texto_overlay/prompt/approval_number/num_images/topic/type, legacy\n// Ideogram-only fields) into the Hybrid sub-workflow's expected input contract.\n// The design fields (layout/headline/body/badge/cta/background_prompt) are NOT\n// on the Explode Slides item — pulled here from 🔧 Parsear prompts carrusel's own\n// `slides` array (16-03's design_slides), matched by slide_num, so 🎠 Explode\n// Slides itself stays byte-identical (its legacy fields still feed the dormant\n// 🔤 Ideogram — Slide fallback if manually reconnected).\n//\n// Runs once for ALL items: all N slides are mapped here and sent to 🎨 Hybrid —\n// Slides as ONE batch (the sub-workflow loops internally via splitInBatches(1),\n// per its 16-02 contract) — not one Execute Workflow call per slide.\nconst carousel = $('🔧 Parsear prompts carrusel').first().json;\nconst designSlides = carousel.slides || [];\n\nconst items = $input.all();\nreturn items.map(item => {\n  const s = item.json;\n  const design = designSlides.find(ds => ds.slide_num === s.slide_num) || {};\n  return {\n    json: {\n      index: (s.slide_num || 1) - 1,\n      layout: design.layout,\n      headline: design.headline,\n      body: design.body,\n      badge: design.badge,\n      cta: design.cta,\n      background_prompt: design.background_prompt,\n      width: 1080,\n      height: 1080,\n    }\n  };\n});"
+      },
+      "id": "map-hybrid-input-slides",
+      "name": "🧩 Map Hybrid Input (Slides)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        700
+      ],
+      "notes": "Phase 16 (Plan 16-04): pre-shapes the input for 🎨 Hybrid — Slides. Inserted between 🎠 Explode Slides and the Execute Workflow node."
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "HYBRID_SUBWORKFLOW_ID",
+          "cachedResultName": "🎨 Hybrid Image — Flux + Creatomate"
+        },
+        "workflowInputs": {
+          "mappingMode": "passthrough"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "hybrid-slides",
+      "name": "🎨 Hybrid — Slides",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        700
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "notes": "Calls the Hybrid Image sub-workflow (n8n/subworkflow-hybrid-image.json) ONCE with all N exploded slide items pre-shaped by 🧩 Map Hybrid Input (Slides) — the sub-workflow loops internally over them (splitInBatches(1), per its 16-02 contract), NOT one Execute Workflow call per slide. Replaces 🔤 Ideogram — Slide (INTEG-01). workflowId is the literal placeholder HYBRID_SUBWORKFLOW_ID, substituted at deploy time by Plan 16-06. mappingMode:'passthrough' matches the sub-workflow trigger's inputSource:'passthrough'. retryOnFail/maxTries(2)/waitBetweenTries(5000ms) cover transient Creatomate/FAL failures — the expensive case on a 5-slide batch. Output: N items { index, imageUrl }, re-sorted by index by the sub-workflow's own 🗂️ Collect Results — read by 🗂️ Collect Image URLs via item.json.imageUrl (not Ideogram's data[0].url)."
     }
   ],
   "connections": {
@@ -3131,7 +3254,29 @@
       "main": [
         [
           {
-            "node": "🔤 Ideogram — Slide",
+            "node": "🧩 Map Hybrid Input (Slides)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Map Hybrid Input (Slides)": {
+      "main": [
+        [
+          {
+            "node": "🎨 Hybrid — Slides",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎨 Hybrid — Slides": {
+      "main": [
+        [
+          {
+            "node": "🗂️ Collect Image URLs",
             "type": "main",
             "index": 0
           }
@@ -3414,7 +3559,7 @@
       "main": [
         [
           {
-            "node": "🔤 Ideogram v3",
+            "node": "🧩 Map Hybrid Input (Single)",
             "type": "main",
             "index": 0
           }
@@ -3422,6 +3567,28 @@
         [
           {
             "node": "🎨 ¿NanoBanana?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Map Hybrid Input (Single)": {
+      "main": [
+        [
+          {
+            "node": "🎨 Hybrid — Single",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎨 Hybrid — Single": {
+      "main": [
+        [
+          {
+            "node": "🔗 Normalizar URL imagen",
             "type": "main",
             "index": 0
           }
@@ -4168,7 +4335,7 @@
       "main": [
         [
           {
-            "node": "🔤 Ideogram v3 — Story",
+            "node": "🧩 Map Hybrid Input (Story)",
             "type": "main",
             "index": 0
           }
@@ -4176,6 +4343,28 @@
         [
           {
             "node": "🎨 ¿Ideogram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Map Hybrid Input (Story)": {
+      "main": [
+        [
+          {
+            "node": "🎨 Hybrid — Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎨 Hybrid — Story": {
+      "main": [
+        [
+          {
+            "node": "🔗 Normalizar URL imagen — Story",
             "type": "main",
             "index": 0
           }
