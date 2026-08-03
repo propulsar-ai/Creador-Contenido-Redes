@@ -1,0 +1,69 @@
+{
+  "_readme": "Static background-prompt bank (Phase 16, Plan 16-03) — the 3rd of 3 coexisting background_prompt sources for the Hybrid engine (FAL Flux 2 Pro background + Creatomate typographic overlay). Precedence order everywhere it's consulted: (1) an optional background_prompt field on the incoming brief (user-provided, wins) > (2) GPT-4o's hardened design.background_prompt (openai-text/openai-carousel, see n8n/workflow.json) > (3) this bank, used as the final fallback. Entries seeded from real production briefs in scripts/eval-briefs.json (human-validated in Phase 15) plus new curated variants. The single/story entries for each type are kept byte-identical (first array element) to the inline BACKGROUND_BANK fallback embedded in n8n/workflow.json's parse-content node — if you edit one, edit both.",
+
+  "_rules": [
+    "NEVER ask for readable text, words, letters, numbers, logos, captions, signs, or any legible UI text of any kind — Flux draws NO text, Creatomate composes ALL text on top.",
+    "If a phone/laptop/screen appears in the scene, its screen must show only an abstract glow or blurred shapes — never legible content, not even in English (castellano/legibility hard rule: any chat or phone screen a user actually needs to READ must be composed by Creatomate as real text elements, never left to Flux).",
+    "Atmosphere follows brand + slide position: case_study -> warm/emotional human scenes; educational/authority -> tech/modern scenes; carousel slide 1 (opening) -> warm/emotional; carousel middle slides -> tech/modern; carousel closing slide has NO entry here by design (text-only render, no Flux call).",
+    "Style always targets the canonical palette: dark background #070A18, purple-to-magenta gradient accents (#8000A8 to #BA00E0), cyan accent #00E5FF. Never the legacy palette.",
+    "Every prompt is in English, photorealistic, and fully self-contained (no 'same as above' / 'idem' references)."
+  ],
+
+  "educational": {
+    "single": [
+      "Modern smartphone resting on a clean desk showing an abstract glowing app interface, soft daylight, tech/modern atmosphere, photorealistic, no text overlays, dark background #070A18, purple and magenta gradient accents (#8000A8 to #BA00E0)",
+      "Person typing on a laptop at a minimalist home office desk, soft window light, calm focused atmosphere, photorealistic, no text overlays, dark background #070A18, cyan accent glow"
+    ],
+    "story": [
+      "Modern smartphone resting on a clean desk showing an abstract glowing app interface, soft daylight, vertical 9:16 composition, subject centered in upper-middle third, safe zone top and bottom 14%, photorealistic, no text overlays, dark background #070A18",
+      "Person typing on a laptop at a minimalist home office desk, soft window light, vertical 9:16 composition, subject centered in upper-middle third, safe zone top and bottom 14%, photorealistic, no text overlays, dark background #070A18"
+    ],
+    "carousel-opening": [
+      "Small business owner sitting at a tidy desk in the early morning, laptop closed beside a coffee cup, calm contemplative atmosphere, photorealistic, no text overlays, dark background #070A18, purple and magenta gradient accents (#8000A8 to #BA00E0)",
+      "Person reviewing paperwork at a reception desk, warm morning light through a window, thoughtful atmosphere, photorealistic, no text overlays, dark background #070A18"
+    ],
+    "carousel-middle": [
+      "Modern dashboard interface glowing on a tablet screen, abstract charts and shapes only, tech/modern atmosphere, photorealistic close-up, no text overlays, dark background #070A18 to #13082B gradient",
+      "Smartphone screen showing an abstract glowing chat-app interface, dark background, tech/modern atmosphere, photorealistic, no text overlays, purple and magenta gradient accents (#8000A8 to #BA00E0)"
+    ]
+  },
+
+  "authority": {
+    "single": [
+      "Modern office desk with a laptop showing an abstract glowing dashboard, confident professional atmosphere, photorealistic, no text overlays, dark background #070A18, purple and magenta gradient accents (#8000A8 to #BA00E0)",
+      "Modern hair salon interior, stylist working with a client, warm professional lighting, photorealistic, no text overlays, dark background #070A18"
+    ],
+    "story": [
+      "Modern office desk with a laptop showing an abstract glowing dashboard, confident professional atmosphere, vertical 9:16 composition, subject centered in upper-middle third, safe zone top and bottom 14%, photorealistic, no text overlays, dark background #070A18",
+      "Modern hair salon interior, stylist working with a client, warm professional lighting, vertical 9:16 composition, subject centered in upper-middle third, safe zone top and bottom 14%, photorealistic, no text overlays, dark background #070A18"
+    ],
+    "carousel-opening": [
+      "Modern hair salon interior, stylist working with a client, warm professional lighting, photorealistic, no text overlays, dark background #070A18, purple and magenta gradient accents (#8000A8 to #BA00E0)",
+      "Confident business owner standing in their storefront at opening time, warm morning light, photorealistic, no text overlays, dark background #070A18"
+    ],
+    "carousel-middle": [
+      "Busy small business reception desk with a short queue of customers, warm professional lighting, photorealistic, no text overlays, dark background #070A18",
+      "Modern dashboard interface glowing on a laptop screen, abstract charts and shapes only, confident professional atmosphere, photorealistic close-up, no text overlays, dark background #070A18 to #13082B gradient"
+    ]
+  },
+
+  "case_study": {
+    "single": [
+      "Small business owner smiling while checking a smartphone at their counter, warm emotional atmosphere, photorealistic, no text overlays, dark background #070A18, purple and magenta gradient accents (#8000A8 to #BA00E0)",
+      "Man sitting on a dark blue couch late at night, comforting a sick dog resting on his lap, warm lamp light in background, phone visible on side table, emotional atmosphere, photorealistic, no text overlays, dark background #070A18, purple and magenta gradient accents"
+    ],
+    "story": [
+      "Small business owner smiling while checking a smartphone at their counter, warm emotional atmosphere, vertical 9:16 composition, subject centered in upper-middle third, safe zone top and bottom 14%, photorealistic, no text overlays, dark background #070A18",
+      "Man sitting on a dark blue couch late at night, comforting a sick dog resting on his lap, warm lamp light, vertical 9:16 composition, subject centered in upper-middle third, safe zone top and bottom 14%, photorealistic, no text overlays, dark background #070A18"
+    ],
+    "carousel-opening": [
+      "Man sitting on a dark blue couch late at night, comforting a sick dog resting on his lap, warm lamp light in background, phone visible on side table, emotional atmosphere, photorealistic, no text overlays, dark background #070A18, purple and magenta gradient accents",
+      "Beautician applying a spa facial treatment to a relaxed client lying back on a treatment chair, dark moody studio with cosmetic product shelves in background, warm atmosphere, photorealistic, no text overlays, dark background #070A18",
+      "Modern gym floor with equipment, dramatic moody lighting, empty at night, photorealistic, no text overlays, dark background #070A18"
+    ],
+    "carousel-middle": [
+      "Smartphone screen showing missed call notification banners, dark purple gradient background, tech/modern atmosphere, photorealistic close-up, no text overlays, dark background #070A18 to #13082B gradient",
+      "Smartphone screen close-up showing an abstract glowing chat-app interface, dark background, tech/modern atmosphere, photorealistic, no text overlays, dark background #070A18 to #13082B gradient"
+    ]
+  }
+}
