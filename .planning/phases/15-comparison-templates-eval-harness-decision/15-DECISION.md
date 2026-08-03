@@ -1,7 +1,7 @@
 # Decisión de Motor de Diseño — Fase 15 (v1.3 Diseño Premium)
 
-**Estado:** BORRADOR — pendiente de revisión a ciegas y firma (Plan 15-05, Tareas 2-4)
-**Fecha del borrador:** 2026-08-02
+**Estado:** Puntajes finalizados y regla del ganador aplicada (Plan 15-05, Tarea 3 completa) — pendiente firma dual (Tarea 4)
+**Fecha del borrador:** 2026-08-02 · **Fecha de cierre de puntajes:** 2026-08-03
 **Requisitos que cierra:** EVAL-06 (decisión escrita) y EVAL-07 (análisis Remotion solo-papel)
 
 ---
@@ -111,7 +111,7 @@ Regla: `delta = visual_ponderado_candidato − visual_ponderado_ideogram (28)`. 
 | Gamma | +32 | Sí | Sí (9/6/7/8 vs. 4/4/3/3) |
 | Híbrido | +50 | Sí | Sí (10/9/10/10 vs. 4/4/3/3) |
 
-> Nota: los 3 candidatos nuevos superan a Ideogram en los 4 criterios visuales individuales según la propuesta de Claude — pero **"domina en los 4 individuales" no es lo mismo que "domina con margen amplio"**. Este documento no decide reemplazo total automáticamente por esto; ver sección 5 para la traza completa de la regla aplicada con los puntajes finales (post-revisión humana).
+> Nota: los 3 candidatos nuevos superan a Ideogram en los 4 criterios visuales individuales según la propuesta de Claude — pero **"domina en los 4 individuales" no es lo mismo que "domina con margen amplio"**. Este documento no decide reemplazo total automáticamente por esto; ver **sección 8** para la traza completa de la regla aplicada con los puntajes finales (post-revisión humana).
 
 ---
 
@@ -139,29 +139,117 @@ Control total de tipografía y layout vía React/código — el techo teórico d
 
 ## 5. Puntajes ciegos de los revisores
 
-_Pendiente — se completa en la Tarea 3 del Plan 15-05 con los puntajes ciegos de Felix y Susana (por letra A/B/C/D) capturados durante el checkpoint de revisión._
+**Sesión:** Felix + Susana, 2026-08-03 (`eval-output/2026-08-02_1510/index.html`, protocolo del checkpoint de Tarea 2). Fase ciega iniciada, completada y galería revelada (`revealed_at: 2026-08-03T11:53:46Z`, 13s después de `finished_at: 2026-08-03T11:53:33Z`) — ver `human-scores.json`.
 
-<!-- ESCALA: 1-10 por criterio visual. Completar con los puntajes ciegos verbatim de cada revisor, o "coinciden con los propuestos" si validan sin cambios. -->
+### Patrón real de votación (importante para leer los datos correctamente)
+
+Los revisores **no puntuaron los 4 motores en cada uno de los 17 grupos brief×formato** — puntuaron, por grupo, **únicamente el/los motor(es) que efectivamente les gustó/gustaron**, y en la mayoría de los casos eso fue un solo motor por grupo, en los 4 criterios visuales completos. Total de votos emitidos: exactamente **17 imágenes puntuadas de 68 posibles (17 grupos × 4 letras)** — 11 para C, 5 para B, 1 (parcial, solo legibilidad) para D, **0 para A**.
+
+Esto **no es un vacío de datos accidental** — es la aplicación literal de la regla explícita del usuario capturada en el checkpoint (Tarea 2, regla 1): *"las únicas que votamos son las únicas que nos gustaron"*. Una imagen no votada = rechazada por los revisores, no un dato neutro. Se trata como evidencia de preferencia legítima, tal como especifica el protocolo de decisión.
+
+### Tabla de resultados ciegos (verbatim de `human-scores.json`)
+
+| Letra | Motor real | Grupos elegidos como favorito (de 17) | % de preferencia | Legibilidad (1-5) | Marca (1-5) | Layout (1-5) | Diacríticos (1-5) |
+|---|---|---|---|---|---|---|---|
+| **C** | **Híbrido** | **11** | **65%** | 4.18 | 5.00 | 5.00 | 4.82 |
+| **B** | **Gamma** | **5** | **29%** | 5.00 | 5.00 | 5.00 | 5.00 |
+| **D** | **Ideogram** | **1** | **6%** | 4.00 | *(sin voto)* | *(sin voto)* | *(sin voto)* |
+| **A** | **Creatomate (standalone)** | **0** | **0%** | *(sin voto)* | *(sin voto)* | *(sin voto)* | *(sin voto)* |
+
+**Lectura de los revisores (capturada verbatim del checkpoint):**
+1. **C (Híbrido) fue el favorito claro por preferencia de compromiso** — elegido en 11 de 17 grupos (65%), más del doble que el segundo lugar.
+2. **B (Gamma) fue perfecto en calidad cuando fue elegido** (5.00 en los 4 criterios), pero elegido en menos de la mitad de los grupos que Híbrido (5/17 vs 11/17).
+3. **D (Ideogram) solo ganó 1 grupo** (`gimnasio-gpt4o_story`), y únicamente en legibilidad — ni siquiera se molestaron en puntuar marca/layout/diacríticos de esa imagen. Consistente con que el resto de los 16 renders de Ideogram en esta corrida no despertó preferencia alguna.
+4. **A (Creatomate standalone) no ganó ni un solo grupo** — la señal de rechazo más fuerte de los 4 candidatos, peor incluso que Ideogram (0/17 vs 1/17).
+
+**Causa raíz diagnosticada por los revisores para los puntajes de legibilidad 3-4 en Híbrido** (no aplicable a Ideogram, que no usa fondos generados con mockups): los fondos generados por Flux en varios renders incluyen mockups de chats de teléfono (ej. el "neon WhatsApp-chat phone" citado como evidencia positiva de marca en la sección 3.2) que resultaron **ilegibles y NO estaban en castellano**. Es un problema de generación de fondo (prompt engineering de Flux), **no un defecto del motor de tipografía Creatomate** — el mismo motor de texto, en las mismas imágenes, obtuvo 5.00/5.00 en marca y prácticamente perfecto en diacríticos. Ver la nueva **regla dura para Fase 16** en la sección 8.
 
 ## 6. Puntajes ajustados post-revelado
 
-_Pendiente — ajustes de los revisores, si los hay, después de revelar la identidad de los motores y comparar contra la sección 3. El ajuste del revisor es final sobre la propuesta de Claude._
+**Sin ajustes.** Felix confirmó explícitamente que, tras revelar el mapeo A/B/C/D → motor real y comparar contra la propuesta de Claude (sección 3), **no hicieron cambios** — los puntajes ciegos de la sección 5 son finales. La regla bloqueada ("el ajuste del revisor es final") se cumple trivialmente: no hubo divergencia entre lo puntuado a ciegas y lo que confirmaron después de revelar.
 
 ## 7. Totales ponderados finales
 
-_Pendiente — recalculados con los puntajes finales (ciegos + ajustados donde aplique) de la sección 6._
+Reglas de reconciliación aplicadas mecánicamente:
+- **Donde existe puntaje humano** (Gamma en los 4 criterios; Híbrido en los 4 criterios), **reemplaza** el puntaje propuesto por Claude (escala 1-5 humana → ×2 para la escala 1-10 del rubric).
+- **Ideogram:** se mantiene el puntaje propuesto por Claude en los 4 criterios visuales (4/4/3/3). El único dato humano (voto D, legibilidad=4/5=8/10 en `gimnasio-gpt4o_story`) **no reemplaza el agregado** — es precisamente el único render de Ideogram sin los defectos documentados en la sección 3.2 (headline corto, sin degradación), y usar ese caso fácil aislado para representar el criterio completo sería sesgo de selección. Los otros 16 renders de Ideogram de esta corrida, muchos con los defectos citados (diacríticos corruptos, texto largo ilegible, sin badge/CTA consistente), no obtuvieron ni un voto — lo cual corrobora, no contradice, el puntaje bajo propuesto.
+- **Creatomate (standalone):** sin ningún dato humano (0/17). Regla 1 del usuario: el rechazo total (0/17, peor que el 1/17 de Ideogram) se trata como señal activa, no neutra. **Legibilidad y diacríticos** se mantienen en el valor técnico propuesto por Claude (10/10 cada uno) porque son criterios de tipografía superpuesta, independientes del fondo, y están validados indirectamente: el **mismo motor de texto Creatomate**, dentro del Híbrido, sí fue elegido 11/17 veces con marca/diacríticos casi perfectos. **Marca y layout** — los dos criterios que capturan la sensación visual del *paquete completo*, no solo el texto — se ajustan a la baja (9→2, 10→2) para reflejar que el fondo placeholder genérico (Lorem Picsum sembrado) hizo que el conjunto se sintiera ajeno a la marca en la práctica, al punto de no ganar ni una sola comparación directa contra los otros 3 candidatos. Esto es intencional: cuantifica la brecha entre "el componente de texto es técnicamente sólido" (cierto, y por eso sobrevive dentro del Híbrido) y "el producto standalone es adoptable" (falso, según el compromiso real de los revisores).
+
+| Motor | Visual crudo | Visual ponderado (×2) | Operativo crudo | Operativo ponderado (×1) | **Total ponderado** | Δ visual vs. Ideogram |
+|---|---|---|---|---|---|---|
+| Ideogram (baseline) | 14 | 28 | 23 | 23 | **51 / 110** | — |
+| Creatomate (standalone, ajustado por rechazo) | 24 | 48 | 21 | 21 | **69 / 110** | +20 |
+| Gamma (puntaje humano) | 40 | 80 | 12 | 12 | **92 / 110** | +52 |
+| Híbrido (puntaje humano) | 38 | 76 | 16 | 16 | **92 / 110** | +48 |
+
+> **Corrección de aritmética (deviation Rule 1 — bug):** el operativo crudo de Híbrido en el borrador de la sección 3.3 decía "17" pero la suma real de sus 3 puntajes operativos propuestos (latencia 6 + costo 6 + complejidad 4) es **16**. Corregido acá; el total ponderado final de Híbrido usa 16, no 17. No cambia ninguna conclusión (la sección 3.3 sigue siendo la propuesta original de Claude, sin tocar, para trazabilidad).
+
+**Gamma y Híbrido empatan exactamente en 92/110.** Esto no es un error — con puntajes visuales humanos que favorecen a Gamma por su perfección de calidad-cuando-fue-elegido (80 vs 76, por el hueco de legibilidad diagnosticado arriba) y puntajes operativos que favorecen a Híbrido por casi el mismo margen (16 vs 12, por el costo recurrente y la latencia de Gamma), el total ponderado cae en empate matemático exacto. La sección 8 rompe el empate con criterios explícitos, ya que el rubric por sí solo no alcanza.
 
 ## 8. Decisión final
 
-_Pendiente — traza explícita de la regla del ganador aplicada a los puntajes finales (margen vs. Ideogram mostrado explícitamente), llamada convivir/reemplazar con verificación criterio-por-criterio, implicaciones para la Fase 16 (qué motor se integra, rama del router `image_model` esperada), implicaciones de costo/latencia a volumen de producción, y cualquier condición pendiente (ej. decisión de plan pago de Gamma, que queda explícitamente para el usuario, no decidida acá)._
+### 8.1 Test del ganador (regla bloqueada: "debe superar claramente a Ideogram en el sub-puntaje visual ponderado")
+
+| Candidato | Visual ponderado | Δ vs. Ideogram (28) | Δ relativo | ¿Supera claramente? |
+|---|---|---|---|---|
+| Creatomate (standalone) | 48 | +20 | +71% | Numéricamente sí, **pero ver 8.2** |
+| Gamma | 80 | +52 | +186% | **Sí, contundente** |
+| Híbrido | 76 | +48 | +171% | **Sí, contundente** |
+
+Los márgenes de Gamma e Híbrido (+52 y +48 sobre un máximo posible de 80 puntos visuales) no son un artefacto de redondeo — son casi el triple del puntaje base de Ideogram. Ambos limpian el umbral del ganador con margen amplio.
+
+### 8.2 Por qué Creatomate standalone NO es candidato a ganador pese a superar numéricamente a Ideogram
+
+La regla del ganador asume que el puntaje visual refleja satisfacción humana real. El puntaje de 48 de Creatomate standalone es, en más de la mitad de su composición (legibilidad+diacríticos=20 de los 24 puntos crudos), un valor **técnico aislado** que la evidencia de compromiso real (0/17, la peor de las 4) contradice directamente. Aplicar la fórmula de forma literal aquí produciría un resultado perverso: nombrar ganador a un producto que los propios revisores nunca eligieron ni una sola vez. Por eso Creatomate standalone **queda fuera de la comparación de ganador** — su rol en esta decisión es el de proveedor de motor de tipografía dentro del Híbrido (sección 8.3), no el de candidato a reemplazar/convivir con Ideogram por derecho propio.
+
+### 8.3 Híbrido vs. Gamma — desempate
+
+Con el rubric ponderado empatado exactamente en 92/110, el desempate se apoya en tres criterios explícitos, todos a favor de Híbrido:
+
+1. **Preferencia de compromiso real:** Híbrido fue el favorito de los revisores en 11/17 grupos (65%) contra 5/17 (29%) de Gamma — más del doble. Cuando ambos candidatos estaban disponibles para el mismo grupo, los revisores se inclinaron por Híbrido de forma consistente.
+2. **Conformidad estructural con la tipología de layout canónica** (no solo el puntaje agregado): Gamma **reinterpreta el layout en su propia estructura de tarjetas** — el formato Story se convierte en una composición multi-tarjeta desplazable en vez del frame único 9:16 que exige el spec, y las slides de cierre retienen imagen cuando el spec exige fondo oscuro sin imagen (evidencia citada en `rubric-scores.json`, criterio `brand_consistency`/`layout_quality`). Esto es una **limitación estructural del producto Gamma** (su motor de layout propio toma el control), no algo ajustable por prompt. Híbrido, en cambio, usa las plantillas Creatomate ya bloqueadas (15-01) que sí respetan la tipología exacta — closing slides sin imagen, framing 9:16 seguro, badge/CTA consistentes — en el 100% de los renders.
+3. **Costo operativo y riesgo:** Gamma requiere el plan Pro pago (~216 €/año recurrente, ya contratado por Susana el 2026-08-02, sección de costos en `15-02-GAMMA-ACCESS.md`) sin nivel gratuito disponible para esta cuenta, con la latencia más alta de los 4 candidatos (avg ~20.7s vs. Híbrido ~10.7s) y la mayor complejidad de integración n8n (exportación .zip sin nodo nativo de descompresión, parámetros no documentados que hubo que hacer ingeniería inversa). Híbrido es pago-por-uso (~$0.05/render, sin piso de suscripción) y reutiliza dos patrones de integración ya probados (FAL, ya en producción vía Flux; Creatomate, ya construido en 15-01).
+
+El único punto a favor de Gamma frente a Híbrido — su perfección de legibilidad (10/10 vs. 8.4/10 humano) — tiene una **causa raíz diagnosticada y corregible**: los mockups de chat ilegibles/no-castellano en algunos fondos Flux (sección 5), no una limitación estructural del pipeline Híbrido. Se convierte en un requisito duro para Fase 16 (ver 8.5), no en un motivo para descartar Híbrido.
+
+**Decisión: el motor ganador es el Híbrido (FAL Flux 2 Pro para el fondo + plantillas Creatomate para la tipografía/overlay).**
+
+### 8.4 Convivir vs. reemplazar — verificación criterio por criterio
+
+Regla bloqueada: reemplazo total solo si el ganador domina a Ideogram en **los 4 criterios visuales individuales** (no solo el agregado).
+
+| Criterio | Ideogram | Híbrido | ¿Domina? |
+|---|---|---|---|
+| Legibilidad | 4 | 8.4 | Sí (+4.4) |
+| Marca | 4 | 10.0 | Sí (+6.0) |
+| Layout | 3 | 10.0 | Sí (+7.0) |
+| Diacríticos | 3 | 9.6 | Sí (+6.6) |
+
+**Dominación confirmada en los 4 criterios individuales, con márgenes amplios en todos** (mínimo +4.4, no un caso límite). Por la regla bloqueada, esto habilita **reemplazo total** — Híbrido se convierte en la rama por defecto/única en el router `image_model`, no una rama adicional junto a Ideogram.
+
+**Condición operativa que se adjunta a esta llamada (no cambia la regla, la acota):** el pipeline Híbrido nunca corrió en producción real — a diferencia de Ideogram, que tiene historial productivo sin incidentes reportados en este ciclo — y tiene un defecto diagnosticado pendiente de corregir (mockups de chat, sección 8.5). Se recomienda que Fase 16 **mantenga el código de Ideogram en el repo como fallback manual durante un período de validación en producción** (número de publicaciones reales sin incidentes a definir por Felix/Susana) antes de eliminarlo por completo, en vez de borrarlo el mismo día que se activa el Híbrido. Esto es una recomendación de gestión de riesgo, no una reversión de la regla de reemplazo — queda para la firma en la Tarea 4 confirmar si aceptan esta condición o prefieren reemplazo inmediato sin período de gracia.
+
+### 8.5 Implicaciones para Fase 16
+
+- **Motor a integrar:** Híbrido — FAL Flux 2 Pro (fondo) + Creatomate (overlay tipográfico, las 5 plantillas ya construidas y bloqueadas en `creatomate/templates/`, Plan 15-01). No se necesita trabajo adicional de plantillas.
+- **Rama del router `image_model` esperada:** el identificador interno usado en todo este harness es `"hybrid"` — Fase 16 puede reutilizarlo tal cual para consistencia de trazabilidad, o adoptar un nombre más amigable de cara al Wizard (a decidir en Fase 16, discreción de implementación).
+- **Reemplazo, con salvaguarda:** Híbrido pasa a ser el motor por defecto; Ideogram queda en el repo como fallback manual durante el período de validación en producción (ver 8.4) en vez de eliminarse el mismo día del corte.
+- **REQUISITO DURO NUEVO para Fase 16 (prompt engineering de fondos):** cualquier mockup de teléfono/chat que aparezca en una imagen generada **debe estar siempre en castellano y ser legible**. Este es un hallazgo directo de la revisión humana (sección 5) — hay que reflejarlo en las plantillas de prompt de Flux (instrucción explícita o negative-prompt) y validarlo antes de enviar nada a producción. Es un problema de generación de fondo, no del motor de tipografía Creatomate (que se mantiene intacto).
+- **Costo/latencia a volumen de producción:** ~$0.05/render (FAL $0.03 + Creatomate ~$0.02, sin piso de suscripción) vs. el $0.06/render plano actual de Ideogram — comparable o ligeramente más barato. Latencia: 2 llamadas asíncronas encadenadas (~8-13s en esta corrida) vs. 1 llamada síncrona de Ideogram (~9.5s) — ligeramente más lento pero dentro de rango aceptable para un flujo con aprobación humana por WhatsApp (no es tiempo real).
+- **Complejidad de integración:** Híbrido encadena 2 llamadas async que deben tener éxito ambas (FAL, ya probado en producción vía el nodo `⚡ Flux 2 Pro`; Creatomate, patrón de poll-loop nuevo pero simple, probado en 15-01/15-04) — más superficie de fallo que Ideogram (llamada única), requiere diseño explícito de retry/error-handling en Fase 16.
+
+### 8.6 Condiciones pendientes — explícitamente para el usuario, no decididas acá
+
+- **Precio real de Creatomate post-trial:** esta evaluación corrió sobre los 50 créditos de la cuenta trial gratuita (~36 restantes tras 15-01, consumidos en 15-04). No hay confirmación de precio real por render a volumen de producción — hay que confirmarlo en el dashboard de Creatomate **antes** de que Fase 16 comprometa volumen real.
+- **Gamma Pro — ¿mantener o cancelar?** Susana ya pagó el upgrade a Pro (~216 €/año, facturación anual, `15-02-GAMMA-ACCESS.md`) para poder evaluarlo en esta fase. Dado que Gamma **no** es el motor que se integra en Fase 16 (perdió el desempate de la sección 8.3), la suscripción activa queda sin un caso de uso productivo inmediato. Esta decisión de cancelar o mantener (por ejemplo, como opción de respaldo visual de alta calidad para casos puntuales, o simplemente para no perder el pago anual ya hecho) **queda explícitamente para Felix y Susana** — no se decide en este documento.
 
 ## 9. Firma
 
-_Pendiente._
+_Pendiente — se completa en la Tarea 4 del Plan 15-05 tras la confirmación dual (Felix directo, conformidad de Susana transmitida por Felix)._
 
 **Aprobado por:** Felix ____________________ / Susana ____________________ (fecha: ____________)
 
 ---
 
 *Fase: 15-comparison-templates-eval-harness-decision*
-*Borrador generado: 2026-08-02*
+*Borrador generado: 2026-08-02 · Puntajes finalizados y decisión escrita: 2026-08-03*
