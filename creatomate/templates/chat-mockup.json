@@ -76,8 +76,16 @@
       "y": "64%",
       "width": "78%",
       "height": "58%",
-      "fill_color": "rgba(14,18,43,0.92)",
-      "border_radius": "6%",
+      "fill_mode": "linear",
+      "fill_x0": "50%",
+      "fill_y0": "0%",
+      "fill_x1": "50%",
+      "fill_y1": "100%",
+      "fill_color": [
+        { "offset": "0%", "color": "rgba(14,18,43,0.92)" },
+        { "offset": "100%", "color": "rgba(14,18,43,0.92)" }
+      ],
+      "border_radius": "48px",
       "stroke_color": "rgba(0,229,255,0.25)",
       "stroke_width": "2px"
     },
