@@ -104,7 +104,18 @@ Plans:
   3. A carousel (N slides, visually consistent) generated with the winning engine publishes live to Instagram + Facebook.
   4. A 9:16 Story generated with the winning engine publishes live to Instagram + Facebook.
   5. Auto-fit/overflow handling is tuned against real (long, accented, punctuation-heavy) GPT-4o caption variance without visual breakage, and the winning engine's output flows through the existing rehost-service → WhatsApp preview → Meta publish chain with zero downstream changes.
-**Plans**: TBD
+**Plans**: 9 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — Creatomate paid plan contracted at phase start (live-verified pricing checkpoint, cap ~$50/mes) + CREATOMATE_API_KEY wired into the production n8n Container App
+- [ ] 16-02-PLAN.md — Hybrid sub-workflow authored (FAL Flux background + Creatomate render + poll loop, closing-slide Creatomate-only fix)
+- [ ] 16-03-PLAN.md — GPT-4o schema hardening: headline/body/badge/cta/background_prompt for all 3 formats, canonical palette, castellano/text-free rule, 3-source background prompts + bank + chat-mockup template
+- [ ] 16-04-PLAN.md — All 3 Ideogram call sites repointed to the Hybrid sub-workflow (single/story/carousel), Ideogram dormant fallback, 3 extraction nodes fixed to the Hybrid output shape
+- [ ] 16-05-PLAN.md — INTEG-05: offline auto-fit batch (~10 real GPT-4o caption sets, long/accented/punctuation-heavy) rendered + tuned before production
+- [ ] 16-06-PLAN.md — Deploy: sub-workflow created live + patch-based main deploy + canary checks + standalone smoke (incl. closing-slide path)
+- [ ] 16-07-PLAN.md — Live-fire 1: single post end-to-end (INTEG-02), Phase 14 protocol, evidence + cleanup
+- [ ] 16-08-PLAN.md — Live-fire 2: carousel N slides incl. Creatomate-only closing slide, visual consistency (INTEG-03)
+- [ ] 16-09-PLAN.md — Live-fire 3: 9:16 Story (INTEG-04) + immediate story deletion + end-of-phase IG cleanup + INTEG-01..06 baseline + Gamma standalone docs
 
 ### Phase 17: Wizard Update & Milestone Close
 **Goal**: The Wizard surfaces the winning engine as a real user-facing choice, completing the milestone's user-visible surface and closing v1.3.
