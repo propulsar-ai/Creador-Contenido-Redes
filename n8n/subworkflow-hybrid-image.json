@@ -116,7 +116,7 @@
         1180,
         120
       ],
-      "notes": "FAL Flux 2 Pro synchronous endpoint — params byte-identical to production's flux-generate node / the proven scripts/eval-design-engines.js callFalFluxBackground(): num_inference_steps 28, guidance_scale 3.5, num_images 1, enable_safety_checker true, image_size square_hd when width===height else {width,height} (story 1080x1920). Prompt suffix uses the CANONICAL palette #070A18/#8000A8-#BA00E0, NOT the legacy #1a1a2e palette (Research Pitfall 4)."
+      "notes": "FAL Flux 2 Pro synchronous endpoint — params byte-identical to production's flux-generate node / the proven scripts/eval-design-engines.js callFalFluxBackground(): num_inference_steps 28, guidance_scale 3.5, num_images 1, enable_safety_checker true, image_size square_hd when width===height else {width,height} (story 1080x1920). Prompt suffix uses the CANONICAL palette #070A18/#8000A8-#BA00E0 (Research Pitfall 4 — NOT the pre-Phase-15 dark-navy palette)."
     },
     {
       "parameters": {
