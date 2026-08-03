@@ -1,0 +1,182 @@
+{
+  "_readme": "Claude's PROPOSED scores for the Phase 15 design-engine comparison (EVAL-06 input). NOT a decision — Plan 15-05 is the human-validated (Felix + Susana) step that reveals engine identities, adjusts scores, and applies the winner rule. Scale: 1-10 per criterion. Weights are locked per 15-CONTEXT.md: visual criteria (text_legibility, brand_consistency, diacritics, layout_quality) count 2x; operational criteria (render_latency, cost_per_image, n8n_integration_complexity) count 1x. Evidence for visual criteria cites specific render filenames (relative to this run dir, real engine folder — NOT the blind/ folder, since this file is for the evidence-backed proposal, not the blind pass itself); evidence for operational criteria cites run-meta.json numbers.",
+  "run_dir": "eval-output/2026-08-02_1510",
+  "candidates": ["ideogram", "creatomate", "gamma", "hybrid"],
+  "baseline": "ideogram",
+
+  "methodology_notes": [
+    "Standalone 'creatomate' has no image-generation capability of its own. It renders over a deterministic, zero-cost, seeded Lorem Picsum placeholder photo (Task 1 preflight decision, documented in scripts/eval-design-engines.js) rather than an AI-generated background — this isolates what EVAL-03 needs to test (template/typography/auto-fit/brand-fidelity compositing) from AI-image quality, but means creatomate's backgrounds are thematically generic/unrelated to the brief, unlike ideogram/gamma/hybrid's on-topic imagery. brand_consistency and layout_quality scores below judge TEXT/TYPOGRAPHY/COLOR fidelity to the canonical spec, not background relevance, to keep the comparison fair to what Creatomate is actually being evaluated for.",
+    "On the gimnasio-gpt4o brief specifically, Ideogram's rendered text is NOT the same source string as the other 3 engines'. Ideogram's caller uses the brief's image_prompt field (which embeds a 'Text says: ...' phrase copied from GPT-4o's own separate image-prompt suggestion), while Creatomate/Gamma/Hybrid render the brief's headline/body/cta fields (deterministically derived from the same GPT-4o caption). For veterinaria and estetica the two sources were manually aligned during brief-freezing (15-03) so this doesn't matter, but for gimnasio they diverge in wording (though not topic) — e.g. ideogram/gimnasio-gpt4o_single.png reads 'AUTOMATIZA EL SEGUIMIENTO POST-BAJA CON WHATSAPP' while the other 3 engines render '¿Tu gimnasio pierde socios por falta de seguimiento?'. This is actually MORE production-representative for Ideogram (production really does source its prompt this way) but means gimnasio-brief comparisons aren't perfectly apples-to-apples in exact wording — noted as a caveat, not scored as a defect for any engine.",
+    "Gamma's 'preserve' textMode (required to stop it rewriting our copy — see scripts/eval-design-engines.js comments) still allows it to DROP/paraphrase content when auto-restructuring into its own card layout. Confirmed on diacritics-2: the frozen brief's ntilde-bearing clause 'cero espanoles esperando' was paraphrased to 'Cero clientes esperando' in gamma/diacritics-2_single.png, removing the one required ntilde character from what Gamma actually rendered. Everything Gamma DID render was diacritically flawless — this is a content-fidelity note, not a character-rendering defect, and is reflected as a partial (not full) deduction on gamma's diacritics score.",
+    "Every engine avoided the exact locked 'veterinaria s.' production overflow bug (veterinaria-caso-exito_carousel_slide2, headline 'Llama a 3 veterinarias.') in this run — Creatomate/Hybrid via vendor-native auto-fit (font_size:null + min/max), Gamma via its own layout engine, and even Ideogram rendered the headline intact this time (though with a spurious accent 'veterinárias' and fully garbled secondary/decorative text elsewhere in the same image). The regression case is resolved for the 3 new candidates; Ideogram's underlying garbling risk on LONGER text (3+ sentences) remains and is visible elsewhere (see text_legibility evidence)."
+  ],
+
+  "scores": {
+
+    "text_legibility": {
+      "weight": 2,
+      "description": "Is on-image text crisp, readable, and free of garbling/artifacts, independent of correctness?",
+      "candidates": {
+        "ideogram": {
+          "score": 4,
+          "evidence": "Short single-sentence headlines are legible (ideogram/veterinaria-caso-exito_carousel_slide1.png). But text degrades severely as length grows: ideogram/veterinaria-caso-exito_carousel_slide4.png (closing slide, ~2 sentences) renders as 'Esa mascota, y ese dueño, ya son clientes de esa [garbled glyph]tícara — no otras dos. ote las dos. Escribinos y te mostr cómo foras funciona.' — largely illegible. ideogram/estetica-educativo_single.png similarly garbles to 'trunənue quı n me importan.' instead of 'que no me importan.' ideogram/estetica-educativo_carousel_slide2.png hallucinates nonsense pseudo-technical labels '000A1' / '#300FF' in the top corners (diffusion noise, not requested text). High variance: fine on ~5-8 word headlines, breaks down on real caption-length copy (which is production's actual daily reality with variable GPT-4o output)."
+        },
+        "creatomate": {
+          "score": 10,
+          "evidence": "Deterministic vector text rendering — every one of the 17 renders is fully crisp regardless of length, e.g. the same veterinaria closing-slide sentence that broke Ideogram renders perfectly in creatomate/veterinaria-caso-exito_carousel_slide4.png, and the auto-fit ('font_size:null' + min/max) visibly shrinks-to-fit on the locked overflow-bug headline in creatomate/veterinaria-caso-exito_carousel_slide2.png with zero clipping."
+        },
+        "gamma": {
+          "score": 9,
+          "evidence": "Real typography (not diffusion) — always crisp, e.g. gamma/estetica-educativo_carousel_slide2.png, gamma/veterinaria-caso-exito_carousel_slide4.png. Gamma's own card layout adds tasteful visual hierarchy (varying weights/sizes per content block) not present in the brief. Scored just under Creatomate/Hybrid only because Gamma restructures content into a different visual grammar (see brand_consistency), which occasionally makes individual text blocks shorter/simpler than the canonical single-headline layout would produce."
+        },
+        "hybrid": {
+          "score": 10,
+          "evidence": "Same Creatomate text-compositing engine as the standalone candidate — identical crispness, e.g. hybrid/gimnasio-gpt4o_carousel_slide2.png, hybrid/veterinaria-caso-exito_story.png. No degradation from the two-stage pipeline (FAL background does not touch the text layer)."
+        }
+      }
+    },
+
+    "brand_consistency": {
+      "weight": 2,
+      "description": "Does the render match Propulsar's canonical brand spec (colors, Syne/Arimo typography, badge/CTA chip styling, and the locked layout typology — slide1 image-behind-centered-text, middle image-right-text-left, closing no-image-centered-text)?",
+      "candidates": {
+        "ideogram": {
+          "score": 4,
+          "evidence": "Color palette instructions are followed loosely (dark background, purple/magenta gradient visible in e.g. ideogram/gimnasio-gpt4o_carousel_slide1.png) but there is no distinct badge chip, no consistent CTA styling, and no controllable layout template — each render's composition is a fresh diffusion guess (compare the very different visual structures of ideogram/veterinaria-caso-exito_carousel_slide1.png vs slide4.png vs the single-format renders). This is the same fundamental limitation that motivated this whole phase."
+        },
+        "creatomate": {
+          "score": 9,
+          "evidence": "Every render enforces the exact canonical layout from the repo-committed templates (15-01): badge chip in brand purple #1E0C42/#C026D3 visible in creatomate/veterinaria-caso-exito_single.png and every carousel slide, Syne headline / Arimo body per spec, closing slides correctly show NO image (creatomate/veterinaria-caso-exito_carousel_slide4.png, creatomate/gimnasio-gpt4o_carousel_slide3.png) matching the canonical typology exactly. Not a 10 only because the background photo itself (placeholder, see methodology_notes) is thematically generic rather than brand-photography-quality."
+        },
+        "gamma": {
+          "score": 6,
+          "evidence": "Uses the correct Propulsar theme colors/fonts (verified via the theme spec in 15-02-GAMMA-ACCESS.md: #070A18 bg, #BA00E0 accent, Syne/Arimo) — visible in gamma/estetica-educativo_carousel_slide2.png's magenta highlight sentence and consistent typography throughout. But Gamma does NOT follow the canonical layout typology: it invents its own card-based multi-block structure (gamma/gimnasio-gpt4o_story.png renders as a scrollable feature-card layout, not a single-glance Story frame), and closing slides retain photographic imagery (gamma/veterinaria-caso-exito_carousel_slide4.png) despite the canonical spec requiring no image on closing slides. Correct palette, reinterpreted composition."
+        },
+        "hybrid": {
+          "score": 9,
+          "evidence": "Same enforced Creatomate template/typography as the standalone candidate (badge/CTA/layout identical), PLUS genuinely on-brand, thematically-fitting Flux backgrounds (e.g. hybrid/veterinaria-caso-exito_carousel_slide1.png's moody couch-and-dog scene, hybrid/gimnasio-gpt4o_carousel_slide2.png's neon WhatsApp-chat phone) that read as more premium/intentional than Creatomate-alone's generic placeholder photos. Arguably the strongest brand fit of the 4 candidates."
+        }
+      }
+    },
+
+    "diacritics": {
+      "weight": 2,
+      "description": "Are á/é/í/ó/ú/ñ/¿/¡ rendered correctly, per the EVAL-04 stress set (diacritics-1: 'peluquería' facturación stat; diacritics-2: 'atención al cliente' pitch)?",
+      "candidates": {
+        "ideogram": {
+          "score": 3,
+          "evidence": "ideogram/diacritics-1_single.png: 'peluqueria española??' — missing accent on 'peluquería' (renders as 'peluqueria') and a spurious doubled question mark. ideogram/diacritics-2_single.png: '¡Automatízá la atención al cliente... cero espaãnoles esperando!' — wrong extra accent on 'Automatízá' (should be 'Automatizá', one accent not two) and 'españoles' is malformed into 'espaãnoles' (ñ hallucinated into a completely different, wrong glyph sequence). Also seen on veterinaria-caso-exito_carousel_slide2.png: 'veterinárias' has a spurious accent (should be 'veterinarias', no accent). Consistent, repeated diacritics corruption across independent renders."
+        },
+        "creatomate": {
+          "score": 10,
+          "evidence": "creatomate/diacritics-1_single.png and creatomate/diacritics-2_single.png both render every required character exactly correct: 'aumentó', 'peluquería', 'española', 'Automatizá', 'atención', 'público', 'líos', 'españoles' — all present and correctly placed. Deterministic text rendering has zero diacritics risk by construction."
+        },
+        "gamma": {
+          "score": 8,
+          "evidence": "gamma/diacritics-1_single.png renders 'aumentó ... peluquería ... española' flawlessly. gamma/diacritics-2_single.png renders 'Automatizá' and 'atención' flawlessly too, but restructured 'cero españoles esperando' into 'Cero clientes esperando' — the ONE ntilde-bearing word in that stress case was paraphrased out (see methodology_notes). Character rendering itself is flawless whenever Gamma keeps the original word; the deduction is for content fidelity under textMode:preserve, not a corruption defect like Ideogram's."
+        },
+        "hybrid": {
+          "score": 10,
+          "evidence": "Same Creatomate text engine as the standalone candidate: hybrid/diacritics-1_single.png and hybrid/diacritics-2_single.png both render every character correctly, including the full unparaphrased 'cero españoles esperando' clause that Gamma dropped."
+        }
+      }
+    },
+
+    "layout_quality": {
+      "weight": 2,
+      "description": "Are canonical layouts respected with no overflow/clipping/broken wrapping — specifically including the locked real production regression case (veterinaria slide 2, 'Llama a 3 veterinarias.')?",
+      "candidates": {
+        "ideogram": {
+          "score": 3,
+          "evidence": "The specific locked regression headline did NOT overflow this run (ideogram/veterinaria-caso-exito_carousel_slide2.png shows 'Llama a 3 veterinarias.' intact, if with a spurious accent — see diacritics), but layout/text-length risk resurfaces elsewhere and worse: ideogram/veterinaria-caso-exito_carousel_slide4.png (a longer 2-sentence closing message) collapses into largely illegible wrapping and word fragments. No auto-fit mechanism exists — each render is a diffusion gamble on whether the requested text fits its own composition."
+        },
+        "creatomate": {
+          "score": 10,
+          "evidence": "The exact locked overflow-bug headline renders cleanly, shrunk to fit via font_size:null + font_size_minimum/maximum, in creatomate/veterinaria-caso-exito_carousel_slide2.png — direct, verified fix for the real production bug this phase exists to address. Zero clipping/overflow observed across all 17 renders, including the longest closing-slide copy (creatomate/veterinaria-caso-exito_carousel_slide4.png)."
+        },
+        "gamma": {
+          "score": 7,
+          "evidence": "Zero overflow/clipping anywhere (Gamma's own layout engine reflows freely) — e.g. gamma/veterinaria-caso-exito_carousel_slide2.png and slide4.png both render fully, cleanly. Deduction is for NOT respecting the canonical layout typology itself: gamma/gimnasio-gpt4o_story.png produces a multi-card scrollable composition rather than the single-glance 9:16 Story frame the canonical spec calls for, which is a layout-fit concern for the Story format specifically, independent of text-overflow correctness."
+        },
+        "hybrid": {
+          "score": 10,
+          "evidence": "Same auto-fit engine as standalone Creatomate — identical zero-overflow result on the locked regression case and every other render, e.g. hybrid/gimnasio-gpt4o_carousel_slide2.png, hybrid/veterinaria-caso-exito_story.png (correct 9:16 safe-zone framing, unlike Gamma's Story layout)."
+        }
+      }
+    },
+
+    "render_latency": {
+      "weight": 1,
+      "description": "Wall-clock time per render, measured (not estimated) from run-meta.json.",
+      "candidates": {
+        "ideogram": { "score": 7, "evidence": "run-meta.json: n=17, avg 9483ms, range 9179-9844ms. Synchronous single call, consistently fast and low-variance." },
+        "creatomate": { "score": 8, "evidence": "run-meta.json: n=17, avg 5072ms, range 3179-28762ms. Fastest on average of the 4, though one outlier (28.7s) suggests occasional trial-tier queueing worth re-checking on a paid plan." },
+        "gamma": { "score": 4, "evidence": "run-meta.json: n=17, avg 20730ms, range 16595-22401ms. Slowest of the 4 by a wide margin — every call is an async AI-orchestrated generation (5s poll interval), even for a single card." },
+        "hybrid": { "score": 6, "evidence": "run-meta.json: n=12, avg 10750ms, range 8349-15980ms. Two sequential calls (FAL then Creatomate) roughly double standalone Creatomate's latency but each leg is individually fast." }
+      }
+    },
+
+    "cost_per_image": {
+      "weight": 1,
+      "description": "Real/effective cost per render — hard dollar cost where metered, credit/subscription burn rate otherwise.",
+      "candidates": {
+        "ideogram": { "score": 6, "evidence": "run-meta.json: 17 renders, $1.02 total ($0.06/render flat, hardcoded from production's known Ideogram pricing) — real, predictable per-render dollar cost, moderate." },
+        "creatomate": { "score": 7, "evidence": "17 renders consumed Creatomate trial credits (harness's own ~$0.02/render estimate is a placeholder pending real post-trial pricing — see 15-01-SUMMARY.md's credit-balance caveat). No hard dollar cost during the trial; real ongoing cost after the 50-credit trial exhausts is NOT yet confirmed — flagged as a decision-doc follow-up, not assumed to be cheap by default." },
+        "gamma": { "score": 5, "evidence": "run-meta.json shows $0 hard cost per render (15-42 credits/generation against a large workspace balance), BUT this rides on a forced ~216EUR/yr Pro subscription (15-02-GAMMA-ACCESS.md) with NO free tier available to this account — worse economics than pay-per-render at low/sporadic volume, better at very high volume. Scored below Ideogram/Creatomate because the fixed cost floor is real and was NOT avoidable during this very evaluation." },
+        "hybrid": { "score": 6, "evidence": "run-meta.json: 12 renders, $0.60 total (~$0.05/render: $0.03 FAL + Creatomate credit). Straightforward pay-as-you-go real dollar cost, slightly higher than Ideogram's flat $0.06 is comparable, no subscription floor." }
+      }
+    },
+
+    "n8n_integration_complexity": {
+      "weight": 1,
+      "description": "Analytical: API shape, polling/async needs, file-format handling, auth model, and this harness's own build experience integrating each engine.",
+      "candidates": {
+        "ideogram": { "score": 10, "evidence": "Already fully integrated and proven in production (n8n/workflow.json's '🔤 Ideogram v3' nodes) — zero new integration work of any kind if kept as-is." },
+        "creatomate": { "score": 6, "evidence": "New vendor but simple REST shape: single POST with inline RenderScript 'source' JSON, poll /renders/{id} until succeeded, download PNG (15-RESEARCH.md Pattern 2, proven live in 15-01/15-04). n8n would need a Set/Code node for {{PLACEHOLDER}} substitution and a decision on where standalone-Creatomate's background photo comes from in production (it has no image-gen of its own — see methodology_notes). No SDK needed, matches existing poll-loop patterns already used elsewhere in the workflow." },
+        "gamma": { "score": 3, "evidence": "Hardest of the 3 new candidates: async poll + export-format branching this preflight had to fix (a single-card generation returns a bare PNG, a multi-card carousel batch returns a .zip needing extraction — n8n has no native unzip node, would need a Code node or external service). Theme can ONLY be created in-app (no API), and the required cardSplit/textMode/exportAs parameter combination was undocumented and had to be reverse-engineered empirically this session (see scripts/eval-design-engines.js's callGamma comments) — higher long-term maintenance risk if Gamma's API evolves." },
+        "hybrid": { "score": 4, "evidence": "Combines an already-proven leg (FAL, production's own '⚡ Flux 2 Pro' node) with Creatomate's leg above — TWO chained async calls that both must succeed, more failure/retry surface than either alone, though each leg's individual pattern is already proven working end-to-end in this harness." }
+      }
+    }
+  },
+
+  "weighted_totals": {
+    "_formula": "sum(visual_criterion_score * 2) + sum(operational_criterion_score * 1), max possible = 4*10*2 + 3*10*1 = 110",
+    "ideogram": {
+      "visual_sum_raw": 14,
+      "visual_weighted": 28,
+      "operational_sum_raw": 23,
+      "operational_weighted": 23,
+      "total_weighted": 51
+    },
+    "creatomate": {
+      "visual_sum_raw": 39,
+      "visual_weighted": 78,
+      "operational_sum_raw": 21,
+      "operational_weighted": 21,
+      "total_weighted": 99
+    },
+    "gamma": {
+      "visual_sum_raw": 30,
+      "visual_weighted": 60,
+      "operational_sum_raw": 12,
+      "operational_weighted": 12,
+      "total_weighted": 72
+    },
+    "hybrid": {
+      "visual_sum_raw": 39,
+      "visual_weighted": 78,
+      "operational_sum_raw": 17,
+      "operational_weighted": 17,
+      "total_weighted": 95
+    }
+  },
+
+  "vs_ideogram_visual_delta": {
+    "_rule": "Per 15-CONTEXT.md: 'A winner exists only if it beats the Ideogram baseline on the weighted visual criteria.' Delta = candidate's visual_weighted - ideogram's visual_weighted (28). A candidate 'dominates on ALL visual criteria' (the full-replacement bar) only if it beats Ideogram on EVERY individual visual criterion, not just the aggregate.",
+    "creatomate": { "delta": 50, "clearly_beats_ideogram": true, "dominates_all_4_individual_visual_criteria": true },
+    "gamma": { "delta": 32, "clearly_beats_ideogram": true, "dominates_all_4_individual_visual_criteria": true },
+    "hybrid": { "delta": 50, "clearly_beats_ideogram": true, "dominates_all_4_individual_visual_criteria": true }
+  },
+
+  "no_winner_declared": "Per Plan 15-04's scope, this file proposes evidence-backed scores only. It does NOT declare a winner, does NOT apply the coexist-vs-replace rule, and does NOT make the final engine decision — that is Plan 15-05's human-validated step (Felix + Susana review the blind gallery, reveal identities, adjust any score they disagree with, then apply the locked winner rule)."
+}

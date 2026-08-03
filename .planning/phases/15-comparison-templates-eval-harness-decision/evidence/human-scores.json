@@ -1,0 +1,536 @@
+{
+  "run": "2026-08-02_1510",
+  "criteria": [
+    "legibilidad",
+    "marca",
+    "layout",
+    "diacriticos"
+  ],
+  "scale": "1-5",
+  "created_at": null,
+  "updated_at": "2026-08-03T11:53:46.585Z",
+  "revealed_at": "2026-08-03T11:53:46.585Z",
+  "finished_at": "2026-08-03T11:53:33.322Z",
+  "votes": {
+    "gimnasio-gpt4o_story|D|legibilidad|blind": {
+      "image_id": "gimnasio-gpt4o_story",
+      "letter": "D",
+      "criterion": "legibilidad",
+      "value": 4,
+      "phase": "blind",
+      "voted_at": "2026-08-03T10:56:23.545Z"
+    },
+    "veterinaria-caso-exito_single|C|legibilidad|blind": {
+      "image_id": "veterinaria-caso-exito_single",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 3,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:46:56.657Z"
+    },
+    "veterinaria-caso-exito_single|C|marca|blind": {
+      "image_id": "veterinaria-caso-exito_single",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:47:00.170Z"
+    },
+    "veterinaria-caso-exito_single|C|layout|blind": {
+      "image_id": "veterinaria-caso-exito_single",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:47:04.058Z"
+    },
+    "veterinaria-caso-exito_single|C|diacriticos|blind": {
+      "image_id": "veterinaria-caso-exito_single",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:48:08.174Z"
+    },
+    "veterinaria-caso-exito_carousel_slide1|C|legibilidad|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide1",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:48:27.029Z"
+    },
+    "veterinaria-caso-exito_carousel_slide1|C|marca|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide1",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:48:27.704Z"
+    },
+    "veterinaria-caso-exito_carousel_slide1|C|layout|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide1",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:48:28.226Z"
+    },
+    "veterinaria-caso-exito_carousel_slide1|C|diacriticos|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide1",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:48:28.760Z"
+    },
+    "veterinaria-caso-exito_carousel_slide2|B|legibilidad|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide2",
+      "letter": "B",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:48:40.541Z"
+    },
+    "veterinaria-caso-exito_carousel_slide2|B|marca|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide2",
+      "letter": "B",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:48:41.178Z"
+    },
+    "veterinaria-caso-exito_carousel_slide2|B|layout|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide2",
+      "letter": "B",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:48:41.748Z"
+    },
+    "veterinaria-caso-exito_carousel_slide2|B|diacriticos|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide2",
+      "letter": "B",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:48:42.446Z"
+    },
+    "veterinaria-caso-exito_carousel_slide2|C|legibilidad|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide2",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 3,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:49:00.422Z"
+    },
+    "veterinaria-caso-exito_carousel_slide2|C|marca|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide2",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:49:02.339Z"
+    },
+    "veterinaria-caso-exito_carousel_slide2|C|layout|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide2",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:49:02.974Z"
+    },
+    "veterinaria-caso-exito_carousel_slide2|C|diacriticos|blind": {
+      "image_id": "veterinaria-caso-exito_carousel_slide2",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 3,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:49:06.467Z"
+    },
+    "veterinaria-caso-exito_story|B|legibilidad|blind": {
+      "image_id": "veterinaria-caso-exito_story",
+      "letter": "B",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:49:51.025Z"
+    },
+    "veterinaria-caso-exito_story|B|marca|blind": {
+      "image_id": "veterinaria-caso-exito_story",
+      "letter": "B",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:49:51.671Z"
+    },
+    "veterinaria-caso-exito_story|B|layout|blind": {
+      "image_id": "veterinaria-caso-exito_story",
+      "letter": "B",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:49:52.215Z"
+    },
+    "veterinaria-caso-exito_story|B|diacriticos|blind": {
+      "image_id": "veterinaria-caso-exito_story",
+      "letter": "B",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:49:52.838Z"
+    },
+    "veterinaria-caso-exito_story|C|legibilidad|blind": {
+      "image_id": "veterinaria-caso-exito_story",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 3,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:03.970Z"
+    },
+    "veterinaria-caso-exito_story|C|marca|blind": {
+      "image_id": "veterinaria-caso-exito_story",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:05.364Z"
+    },
+    "veterinaria-caso-exito_story|C|layout|blind": {
+      "image_id": "veterinaria-caso-exito_story",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:05.956Z"
+    },
+    "veterinaria-caso-exito_story|C|diacriticos|blind": {
+      "image_id": "veterinaria-caso-exito_story",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:06.723Z"
+    },
+    "estetica-educativo_single|B|legibilidad|blind": {
+      "image_id": "estetica-educativo_single",
+      "letter": "B",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:21.538Z"
+    },
+    "estetica-educativo_single|B|marca|blind": {
+      "image_id": "estetica-educativo_single",
+      "letter": "B",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:22.082Z"
+    },
+    "estetica-educativo_single|B|layout|blind": {
+      "image_id": "estetica-educativo_single",
+      "letter": "B",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:22.551Z"
+    },
+    "estetica-educativo_single|B|diacriticos|blind": {
+      "image_id": "estetica-educativo_single",
+      "letter": "B",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:23.018Z"
+    },
+    "estetica-educativo_single|C|legibilidad|blind": {
+      "image_id": "estetica-educativo_single",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:38.263Z"
+    },
+    "estetica-educativo_single|C|marca|blind": {
+      "image_id": "estetica-educativo_single",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:39.088Z"
+    },
+    "estetica-educativo_single|C|layout|blind": {
+      "image_id": "estetica-educativo_single",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:39.529Z"
+    },
+    "estetica-educativo_single|C|diacriticos|blind": {
+      "image_id": "estetica-educativo_single",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:39.958Z"
+    },
+    "estetica-educativo_carousel_slide1|C|legibilidad|blind": {
+      "image_id": "estetica-educativo_carousel_slide1",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:59.411Z"
+    },
+    "estetica-educativo_carousel_slide1|C|marca|blind": {
+      "image_id": "estetica-educativo_carousel_slide1",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:50:59.866Z"
+    },
+    "estetica-educativo_carousel_slide1|C|layout|blind": {
+      "image_id": "estetica-educativo_carousel_slide1",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:51:01.880Z"
+    },
+    "estetica-educativo_carousel_slide1|C|diacriticos|blind": {
+      "image_id": "estetica-educativo_carousel_slide1",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:51:02.316Z"
+    },
+    "gimnasio-gpt4o_single|B|legibilidad|blind": {
+      "image_id": "gimnasio-gpt4o_single",
+      "letter": "B",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:03.132Z"
+    },
+    "gimnasio-gpt4o_single|B|marca|blind": {
+      "image_id": "gimnasio-gpt4o_single",
+      "letter": "B",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:03.729Z"
+    },
+    "gimnasio-gpt4o_single|B|layout|blind": {
+      "image_id": "gimnasio-gpt4o_single",
+      "letter": "B",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:04.190Z"
+    },
+    "gimnasio-gpt4o_single|B|diacriticos|blind": {
+      "image_id": "gimnasio-gpt4o_single",
+      "letter": "B",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:04.654Z"
+    },
+    "gimnasio-gpt4o_single|C|legibilidad|blind": {
+      "image_id": "gimnasio-gpt4o_single",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:12.496Z"
+    },
+    "gimnasio-gpt4o_single|C|marca|blind": {
+      "image_id": "gimnasio-gpt4o_single",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:12.966Z"
+    },
+    "gimnasio-gpt4o_single|C|layout|blind": {
+      "image_id": "gimnasio-gpt4o_single",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:13.395Z"
+    },
+    "gimnasio-gpt4o_single|C|diacriticos|blind": {
+      "image_id": "gimnasio-gpt4o_single",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:14.086Z"
+    },
+    "gimnasio-gpt4o_carousel_slide1|C|legibilidad|blind": {
+      "image_id": "gimnasio-gpt4o_carousel_slide1",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:25.726Z"
+    },
+    "gimnasio-gpt4o_carousel_slide1|C|marca|blind": {
+      "image_id": "gimnasio-gpt4o_carousel_slide1",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:26.214Z"
+    },
+    "gimnasio-gpt4o_carousel_slide1|C|layout|blind": {
+      "image_id": "gimnasio-gpt4o_carousel_slide1",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:26.643Z"
+    },
+    "gimnasio-gpt4o_carousel_slide1|C|diacriticos|blind": {
+      "image_id": "gimnasio-gpt4o_carousel_slide1",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:27.037Z"
+    },
+    "gimnasio-gpt4o_carousel_slide2|C|legibilidad|blind": {
+      "image_id": "gimnasio-gpt4o_carousel_slide2",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 3,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:39.331Z"
+    },
+    "gimnasio-gpt4o_carousel_slide2|C|marca|blind": {
+      "image_id": "gimnasio-gpt4o_carousel_slide2",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:43.865Z"
+    },
+    "gimnasio-gpt4o_carousel_slide2|C|layout|blind": {
+      "image_id": "gimnasio-gpt4o_carousel_slide2",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:44.363Z"
+    },
+    "gimnasio-gpt4o_carousel_slide2|C|diacriticos|blind": {
+      "image_id": "gimnasio-gpt4o_carousel_slide2",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:44.827Z"
+    },
+    "gimnasio-gpt4o_story|C|legibilidad|blind": {
+      "image_id": "gimnasio-gpt4o_story",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 4,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:57.419Z"
+    },
+    "gimnasio-gpt4o_story|C|marca|blind": {
+      "image_id": "gimnasio-gpt4o_story",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:58.418Z"
+    },
+    "gimnasio-gpt4o_story|C|layout|blind": {
+      "image_id": "gimnasio-gpt4o_story",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:58.882Z"
+    },
+    "gimnasio-gpt4o_story|C|diacriticos|blind": {
+      "image_id": "gimnasio-gpt4o_story",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:52:59.395Z"
+    },
+    "diacritics-1_single|C|legibilidad|blind": {
+      "image_id": "diacritics-1_single",
+      "letter": "C",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:53:08.190Z"
+    },
+    "diacritics-1_single|C|marca|blind": {
+      "image_id": "diacritics-1_single",
+      "letter": "C",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:53:08.705Z"
+    },
+    "diacritics-1_single|C|layout|blind": {
+      "image_id": "diacritics-1_single",
+      "letter": "C",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:53:09.336Z"
+    },
+    "diacritics-1_single|C|diacriticos|blind": {
+      "image_id": "diacritics-1_single",
+      "letter": "C",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:53:09.783Z"
+    },
+    "diacritics-2_single|B|legibilidad|blind": {
+      "image_id": "diacritics-2_single",
+      "letter": "B",
+      "criterion": "legibilidad",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:53:20.460Z"
+    },
+    "diacritics-2_single|B|marca|blind": {
+      "image_id": "diacritics-2_single",
+      "letter": "B",
+      "criterion": "marca",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:53:20.981Z"
+    },
+    "diacritics-2_single|B|layout|blind": {
+      "image_id": "diacritics-2_single",
+      "letter": "B",
+      "criterion": "layout",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:53:21.485Z"
+    },
+    "diacritics-2_single|B|diacriticos|blind": {
+      "image_id": "diacritics-2_single",
+      "letter": "B",
+      "criterion": "diacriticos",
+      "value": 5,
+      "phase": "blind",
+      "voted_at": "2026-08-03T11:53:21.928Z"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Decisión de Motor de Diseño — Fase 15 (v1.3 Diseño Premium)
 
-**Estado:** Puntajes finalizados y regla del ganador aplicada (Plan 15-05, Tarea 3 completa) — pendiente firma dual (Tarea 4)
+**Estado:** FIRMADO — decisión final del Fase 15 (Plan 15-05 completo, EVAL-06 y EVAL-07 satisfechos)
 **Fecha del borrador:** 2026-08-02 · **Fecha de cierre de puntajes:** 2026-08-03
 **Requisitos que cierra:** EVAL-06 (decisión escrita) y EVAL-07 (análisis Remotion solo-papel)
 
@@ -245,11 +245,11 @@ Regla bloqueada: reemplazo total solo si el ganador domina a Ideogram en **los 4
 
 ## 9. Firma
 
-_Pendiente — se completa en la Tarea 4 del Plan 15-05 tras la confirmación dual (Felix directo, conformidad de Susana transmitida por Felix)._
+Felix y Susana leyeron la sección 8 ("Decisión final") completa, incluida la condición operativa de 8.4 (Ideogram como fallback manual durante el período de validación en producción) y las dos condiciones pendientes de 8.6 (precio real de Creatomate post-trial, mantener/cancelar Gamma Pro) — ambas quedan explícitamente para ellos, no decididas en este documento. Confirmaron por escrito el 2026-08-03 ("firmamos") que la decisión registrada en la sección 8 refleja exactamente lo acordado en la revisión: motor ganador Híbrido (Flux + Creatomate), reemplazo total con salvaguarda de fallback Ideogram durante validación, y el nuevo requisito duro de mockups de teléfono/chat en castellano y legibles.
 
-**Aprobado por:** Felix ____________________ / Susana ____________________ (fecha: ____________)
+**Aprobado por:** Felix Allende Ricci (directo) / Susana Cuevas (conformidad transmitida por Felix) — fecha: 2026-08-03
 
 ---
 
 *Fase: 15-comparison-templates-eval-harness-decision*
-*Borrador generado: 2026-08-02 · Puntajes finalizados y decisión escrita: 2026-08-03*
+*Borrador generado: 2026-08-02 · Puntajes finalizados y decisión escrita: 2026-08-03 · Firma dual: 2026-08-03*
