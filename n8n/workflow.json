@@ -3284,6 +3284,86 @@
         }
       },
       "notes": "Studio Phase 2 (DATA-02): logs publish FAILURES to publications. Every value reads ONLY from Parse Meta Error (structurally always runs on the fail path; session_id resolved there inside try/catch - Pitfall B). ig/fb_status: failed for the failed platform, 'unknown' for the other (sequential chain - it may already be live; never infer success). onError continueRegularOutput."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "propulsar-gui-approve",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-gui-approve",
+      "name": "📲 Webhook — GUI Approve",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        880
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PH5-CREDENTIAL-ID",
+          "name": "GUI Approve Header Auth (Studio)"
+        }
+      },
+      "notes": "TODO-PH5-CREDENTIAL-ID: placeholder credential ID — backport the real httpHeaderAuth credential ID from 05-01-SUMMARY.md BEFORE the 05-04 deploy (the 05-04 pre-deploy gate MUST fail if this marker remains). Called by POST /api/sessions/:id/approve ONLY after the API wins the CAS pending→approved."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"received\" }",
+        "options": {}
+      },
+      "id": "respond-studio",
+      "name": "✅ Responder Studio",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM content_sessions WHERE session_id = $1 AND status = 'approved' LIMIT 1",
+        "options": {
+          "queryBatching": "independently",
+          "queryReplacement": "={{ [$json.body.session_id] }}"
+        }
+      },
+      "id": "retrieve-session-gui",
+      "name": "🔍 Recuperar sesión (GUI)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "alwaysOutputData": true,
+      "position": [
+        2480,
+        912
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      },
+      "notes": "APPR-03: keyed by session_id + status='approved' — the API CAS (pending→approved) runs first and is the single approval writer; the phone-number collision bug of the retired WA path is structurally dead here. SELECT * returns the identical row shape the WA path fed downstream (zero downstream edits). alwaysOutputData=true + the assert node downstream recreate fail-loud on 0 rows."
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length === 0 || !items[0].json || !items[0].json.session_id) {\n  throw new Error('GUI approve: no session in approved state for this session_id. ' +\n                  'The API CAS must run (and win) before this webhook fires.');\n}\nconst row = items[0].json;\n// Locked decision: generic substitution, cross-ref the trigger (body fields do NOT survive nodes)\nconst chosen = $('📲 Webhook — GUI Approve').first().json.body.chosen_image_url;\nif (typeof chosen === 'string' && chosen.length > 0) row.final_image_url = chosen;\nreturn [{ json: row }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "assert-choose-image-gui",
+      "name": "🛡️ Assert + Elegir Imagen (GUI)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2624,
+        912
+      ],
+      "notes": "Fail-loud if the recovery SELECT returned 0 rows (session not in status='approved' — the API CAS must win first). Then the LOCKED Phase-5 substitution: if the trigger body carries a non-empty chosen_image_url (cross-ref by node name — Pitfall 3: body fields don't survive the SELECT node), overwrite final_image_url on the recovered row. Phase 6 starts varying it; today the GUI sends final_image_url or omits."
     }
   ],
   "connections": {
@@ -4575,6 +4655,44 @@
         [
           {
             "node": "📊 Sheets Fail Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📲 Webhook — GUI Approve": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder Studio",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔍 Recuperar sesión (GUI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Recuperar sesión (GUI)": {
+      "main": [
+        [
+          {
+            "node": "🛡️ Assert + Elegir Imagen (GUI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🛡️ Assert + Elegir Imagen (GUI)": {
+      "main": [
+        [
+          {
+            "node": "🕐 Compute wait_seconds",
             "type": "main",
             "index": 0
           }
