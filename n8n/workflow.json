@@ -3303,11 +3303,11 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "PH5-CREDENTIAL-ID",
-          "name": "GUI Approve Header Auth (Studio)"
+          "id": "CNj8ui32JdCM5etk",
+          "name": "GUI Approve Header Auth"
         }
       },
-      "notes": "TODO-PH5-CREDENTIAL-ID: placeholder credential ID — backport the real httpHeaderAuth credential ID from 05-01-SUMMARY.md BEFORE the 05-04 deploy (the 05-04 pre-deploy gate MUST fail if this marker remains). Called by POST /api/sessions/:id/approve ONLY after the API wins the CAS pending→approved."
+      "notes": "Credential backported 05-03: real httpHeaderAuth id CNj8ui32JdCM5etk (\"GUI Approve Header Auth\", header x-approve-secret, value = KV studio-approve-secret). Called by POST /api/sessions/:id/approve ONLY after the API wins the CAS pending→approved."
     },
     {
       "parameters": {
