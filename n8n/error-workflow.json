@@ -38,7 +38,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract session_id from the FAILED execution's webhook trigger data (deep JSON).\n// The Error Trigger payload carries execution.id + lastNodeExecuted + error but NOT the webhook body,\n// so the previous node fetched GET /api/v1/executions/{id}?includeData=true.\nconst resp = $input.first().json;\nlet data = resp.data;\nif (typeof data === 'string') { try { data = JSON.parse(data); } catch (e) { data = null; } }\nlet sessionId = null;\ntry {\n  const runData = data && data.resultData && data.resultData.runData;\n  const trig = runData && runData['🎯 Webhook Trigger'];\n  const item = trig && trig[0] && trig[0].data && trig[0].data.main && trig[0].data.main[0] && trig[0].data.main[0][0];\n  const body = item && item.json && item.json.body;\n  const sid = body && body.session_id;\n  sessionId = (typeof sid === 'string' && sid.length > 0) ? sid : null;\n} catch (e) { sessionId = null; }\n// CLI runs have no session_id -> {session_id: null} -> IF routes to no-op.\n// NEVER guess \"newest generating row\": a concurrent API session could be mis-marked.\nconst trg = $('Error Trigger').first().json;\nconst errorStage = (trg.execution && trg.execution.lastNodeExecuted) || null;\nconst errorMsg = (trg.execution && trg.execution.error && trg.execution.error.message) || null;\nreturn [{ json: { session_id: sessionId, error_stage: errorStage, error_msg: errorMsg } }];"
+        "jsCode": "// Extract session_id from the FAILED execution's webhook trigger data (deep JSON).\n// The Error Trigger payload carries execution.id + lastNodeExecuted + error but NOT the webhook body,\n// so the previous node fetched GET /api/v1/executions/{id}?includeData=true.\nconst resp = $input.first().json;\nlet data = resp.data;\nif (typeof data === 'string') { try { data = JSON.parse(data); } catch (e) { data = null; } }\nlet sessionId = null;\ntry {\n  const runData = data && data.resultData && data.resultData.runData;\n  const trig = runData && (runData['🎯 Webhook Trigger'] || runData['📲 Webhook — GUI Approve']);\n  const item = trig && trig[0] && trig[0].data && trig[0].data.main && trig[0].data.main[0] && trig[0].data.main[0][0];\n  const body = item && item.json && item.json.body;\n  const sid = body && body.session_id;\n  sessionId = (typeof sid === 'string' && sid.length > 0) ? sid : null;\n} catch (e) { sessionId = null; }\n// CLI runs have no session_id -> {session_id: null} -> IF routes to no-op.\n// NEVER guess \"newest generating row\": a concurrent API session could be mis-marked.\nconst trg = $('Error Trigger').first().json;\nconst errorStage = (trg.execution && trg.execution.lastNodeExecuted) || null;\nconst errorMsg = (trg.execution && trg.execution.error && trg.execution.error.message) || null;\nreturn [{ json: { session_id: sessionId, error_stage: errorStage, error_msg: errorMsg } }];"
       },
       "id": "err-extract-session",
       "name": "🔎 Extract session_id",
@@ -91,6 +91,30 @@
           "name": "Postgres - content_engine"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE content_sessions SET error_stage = $2, error_msg = $3 WHERE session_id = $1 AND status = 'approved'",
+        "options": {
+          "queryReplacement": "={{ [$json.session_id, $json.error_stage, $json.error_msg] }}"
+        }
+      },
+      "id": "err-mark-approval-error",
+      "name": "💾 Mark approval-path error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1080,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      },
+      "notes": "Phase 5 (studio 05-02): records approval-path failures (rehost/SCHED-02/assert throws after a GUI approve) as error_stage/error_msg ONLY — NEVER writes status. A post-media_publish crash must never mislabel a LIVE post as publish_failed and invite a duplicate publish (Pitfall 4). Runs in parallel with 💾 Mark generation_failed: both UPDATEs are status-guarded, at most one matches (no-op ordering safety)."
     }
   ],
   "connections": {
@@ -132,6 +156,11 @@
         [
           {
             "node": "💾 Mark generation_failed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💾 Mark approval-path error",
             "type": "main",
             "index": 0
           }
