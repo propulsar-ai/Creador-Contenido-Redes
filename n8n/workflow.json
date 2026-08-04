@@ -414,10 +414,10 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, format, image_url, final_image_url, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'single',$8,$9,$10,$11,'pending',$12) RETURNING *",
+        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, format, image_url, final_image_url, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'single',$8,$9,$10,$11,'pending',$12) ON CONFLICT (session_id) DO UPDATE SET approval_number = EXCLUDED.approval_number, topic = EXCLUDED.topic, type = EXCLUDED.type, angle = EXCLUDED.angle, platforms = EXCLUDED.platforms, image_model = EXCLUDED.image_model, format = EXCLUDED.format, image_url = EXCLUDED.image_url, final_image_url = EXCLUDED.final_image_url, instagram_caption = EXCLUDED.instagram_caption, facebook_caption = EXCLUDED.facebook_caption, publish_at = EXCLUDED.publish_at, status = 'pending', updated_at = now() RETURNING *",
         "options": {
           "queryBatching": "independently",
-          "queryReplacement": "={{ ['propulsar_' + Date.now(), $json.approval_number, $json.topic, $json.type, $json.angle || null, $json.platforms || [], $json.image_model, $json.image_url || null, $json.final_image_url, ($json.instagram && $json.instagram.caption) || null, ($json.facebook && $json.facebook.caption) || null, $json.publish_at || 'now'] }}"
+          "queryReplacement": "={{ [($('🎯 Webhook Trigger').first().json.body.session_id || ('propulsar_' + Date.now())), $json.approval_number, $json.topic, $json.type, $json.angle || null, $json.platforms || [], $json.image_model, $json.image_url || null, $json.final_image_url, ($json.instagram && $json.instagram.caption) || null, ($json.facebook && $json.facebook.caption) || null, $json.publish_at || 'now'] }}"
         }
       },
       "id": "save-session-supabase",
@@ -1876,10 +1876,10 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, format, image_urls, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'carousel',$8,$9,$10,'pending',$11) RETURNING *",
+        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, format, image_urls, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'carousel',$8,$9,$10,'pending',$11) ON CONFLICT (session_id) DO UPDATE SET approval_number = EXCLUDED.approval_number, topic = EXCLUDED.topic, type = EXCLUDED.type, angle = EXCLUDED.angle, platforms = EXCLUDED.platforms, image_model = EXCLUDED.image_model, format = EXCLUDED.format, image_urls = EXCLUDED.image_urls, instagram_caption = EXCLUDED.instagram_caption, facebook_caption = EXCLUDED.facebook_caption, publish_at = EXCLUDED.publish_at, status = 'pending', updated_at = now() RETURNING *",
         "options": {
           "queryBatching": "independently",
-          "queryReplacement": "={{ ['propulsar_' + Date.now(), $json.approval_number, $json.topic, $json.type, $json.angle || null, $json.platforms || [], $json.image_model || 'ideogram', $json.image_urls, $json.instagram_caption || ($json.instagram && $json.instagram.caption) || null, $json.facebook_caption || ($json.facebook && $json.facebook.caption) || null, $json.publish_at || 'now'] }}"
+          "queryReplacement": "={{ [($('🎯 Webhook Trigger').first().json.body.session_id || ('propulsar_' + Date.now())), $json.approval_number, $json.topic, $json.type, $json.angle || null, $json.platforms || [], $json.image_model || 'ideogram', $json.image_urls, $json.instagram_caption || ($json.instagram && $json.instagram.caption) || null, $json.facebook_caption || ($json.facebook && $json.facebook.caption) || null, $json.publish_at || 'now'] }}"
         }
       },
       "id": "save-session-carousel",
@@ -1904,10 +1904,10 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, format, aspect_ratio, story_expires_at, final_image_url, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'story',$8,$9,$10,$11,$12,'pending',$13) RETURNING *",
+        "query": "INSERT INTO content_sessions (session_id, approval_number, topic, type, angle, platforms, image_model, format, aspect_ratio, story_expires_at, final_image_url, instagram_caption, facebook_caption, status, publish_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'story',$8,$9,$10,$11,$12,'pending',$13) ON CONFLICT (session_id) DO UPDATE SET approval_number = EXCLUDED.approval_number, topic = EXCLUDED.topic, type = EXCLUDED.type, angle = EXCLUDED.angle, platforms = EXCLUDED.platforms, image_model = EXCLUDED.image_model, format = EXCLUDED.format, aspect_ratio = EXCLUDED.aspect_ratio, story_expires_at = EXCLUDED.story_expires_at, final_image_url = EXCLUDED.final_image_url, instagram_caption = EXCLUDED.instagram_caption, facebook_caption = EXCLUDED.facebook_caption, publish_at = EXCLUDED.publish_at, status = 'pending', updated_at = now() RETURNING *",
         "options": {
           "queryBatching": "independently",
-          "queryReplacement": "={{ ['propulsar_' + Date.now(), $json.approval_number, $json.topic, $json.type, $json.angle || null, $json.platforms || [], $json.image_model || 'ideogram', $json.aspect_ratio || '9:16', $json.story_expires_at, $json.final_image_url, ($json.instagram && $json.instagram.caption) || $json.instagram_caption || null, ($json.facebook && $json.facebook.caption) || $json.facebook_caption || null, $json.publish_at || 'now'] }}"
+          "queryReplacement": "={{ [($('🎯 Webhook Trigger').first().json.body.session_id || ('propulsar_' + Date.now())), $json.approval_number, $json.topic, $json.type, $json.angle || null, $json.platforms || [], $json.image_model || 'ideogram', $json.aspect_ratio || '9:16', $json.story_expires_at, $json.final_image_url, ($json.instagram && $json.instagram.caption) || $json.instagram_caption || null, ($json.facebook && $json.facebook.caption) || $json.facebook_caption || null, $json.publish_at || 'now'] }}"
         }
       },
       "id": "save-session-supabase-story",
