@@ -1,0 +1,146 @@
+{
+  "name": "Propulsar — Content Engine v3 — Error Workflow (SESS-03)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "err-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://n8n-azure.propulsar.ai/api/v1/executions/{{ $json.execution.id }}?includeData=true",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "err-fetch-execution",
+      "name": "📥 Fetch Failed Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "AmEeRAT2AzDd6Wo9",
+          "name": "n8n API Key Header (error workflow)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract session_id from the FAILED execution's webhook trigger data (deep JSON).\n// The Error Trigger payload carries execution.id + lastNodeExecuted + error but NOT the webhook body,\n// so the previous node fetched GET /api/v1/executions/{id}?includeData=true.\nconst resp = $input.first().json;\nlet data = resp.data;\nif (typeof data === 'string') { try { data = JSON.parse(data); } catch (e) { data = null; } }\nlet sessionId = null;\ntry {\n  const runData = data && data.resultData && data.resultData.runData;\n  const trig = runData && runData['🎯 Webhook Trigger'];\n  const item = trig && trig[0] && trig[0].data && trig[0].data.main && trig[0].data.main[0] && trig[0].data.main[0][0];\n  const body = item && item.json && item.json.body;\n  const sid = body && body.session_id;\n  sessionId = (typeof sid === 'string' && sid.length > 0) ? sid : null;\n} catch (e) { sessionId = null; }\n// CLI runs have no session_id -> {session_id: null} -> IF routes to no-op.\n// NEVER guess \"newest generating row\": a concurrent API session could be mis-marked.\nconst trg = $('Error Trigger').first().json;\nconst errorStage = (trg.execution && trg.execution.lastNodeExecuted) || null;\nconst errorMsg = (trg.execution && trg.execution.error && trg.execution.error.message) || null;\nreturn [{ json: { session_id: sessionId, error_stage: errorStage, error_msg: errorMsg } }];"
+      },
+      "id": "err-extract-session",
+      "name": "🔎 Extract session_id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ String($json.session_id !== null && $json.session_id !== undefined && $json.session_id !== '') }}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "err-if-session",
+      "name": "🔀 ¿Hay session_id?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE content_sessions SET status='generation_failed', error_stage=$2, error_msg=$3, updated_at=now() WHERE session_id=$1 AND status IN ('created','generating')",
+        "options": {
+          "queryReplacement": "={{ [$json.session_id, $json.error_stage, $json.error_msg] }}"
+        }
+      },
+      "id": "err-mark-failed",
+      "name": "💾 Mark generation_failed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1080,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3k4OsKJRGlUcWDrq",
+          "name": "Postgres - content_engine"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "📥 Fetch Failed Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Fetch Failed Execution": {
+      "main": [
+        [
+          {
+            "node": "🔎 Extract session_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 Extract session_id": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿Hay session_id?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿Hay session_id?": {
+      "main": [
+        [
+          {
+            "node": "💾 Mark generation_failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}
